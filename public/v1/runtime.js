@@ -106,23 +106,25 @@
   function adoptAction(element,{icon,label,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
     const doc=element.ownerDocument,base=new URL(doc.baseURI),asset=new URL(sprite,base);
+    const attr=(node,name,value)=>{value=String(value);if(node.getAttribute(name)!==value)node.setAttribute(name,value);};
+    const add=(node,name)=>{if(!node.classList.contains(name))node.classList.add(name);};
     if(asset.origin!==base.origin||asset.protocol!==base.protocol)throw new TypeError('Icons must be served by the app');
     if(icon!==undefined&&!/^[a-z][a-z0-9-]{0,47}$/.test(icon))throw new TypeError('Invalid icon');
     let text=element.querySelector(':scope > .ui-label');
     const name=String(label??element.getAttribute('aria-label')??text?.textContent??element.textContent??element.getAttribute('title')??'').trim();
     if(!name)throw new TypeError('An action needs an accessible label');
     let glyph=element.querySelector(':scope > svg');
-    if(!glyph&&icon){glyph=doc.createElementNS('http://www.w3.org/2000/svg','svg');glyph.setAttribute('viewBox','0 0 24 24');glyph.setAttribute('fill','none');glyph.setAttribute('stroke','currentColor');const use=doc.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',asset.href+'#ui-'+icon);glyph.append(use);element.prepend(glyph);}
+    if(!glyph&&icon){glyph=doc.createElementNS('http://www.w3.org/2000/svg','svg');glyph.setAttribute('viewBox','0 0 24 24');glyph.setAttribute('fill','none');glyph.setAttribute('stroke','currentColor');const use=doc.createElementNS('http://www.w3.org/2000/svg','use');attr(use,'href',asset.href+'#ui-'+icon);glyph.append(use);element.prepend(glyph);}
     if(glyph){
-      if(icon){let use=glyph.querySelector('use');if(!use){use=doc.createElementNS('http://www.w3.org/2000/svg','use');glyph.replaceChildren(use);}use.setAttribute('href',asset.href+'#ui-'+icon);}
-      glyph.setAttribute('viewBox','0 0 24 24');glyph.setAttribute('fill','none');glyph.setAttribute('stroke','currentColor');glyph.classList.add('ui-icon');glyph.setAttribute('aria-hidden','true');glyph.setAttribute('focusable','false');
+      if(icon){let use=glyph.querySelector('use');if(!use){use=doc.createElementNS('http://www.w3.org/2000/svg','use');glyph.replaceChildren(use);}attr(use,'href',asset.href+'#ui-'+icon);}
+      attr(glyph,'viewBox','0 0 24 24');attr(glyph,'fill','none');attr(glyph,'stroke','currentColor');add(glyph,'ui-icon');attr(glyph,'aria-hidden','true');attr(glyph,'focusable','false');
     }
     if(!text){text=doc.createElement('span');text.className='ui-label';for(const child of [...element.childNodes])if(child!==glyph)text.append(child);element.append(text);}
-    if(label!==undefined)text.textContent=String(label);
-    element.classList.add('ui-action');
-    if(ariaLabel!==undefined)element.setAttribute('aria-label',String(ariaLabel));else if(!element.hasAttribute('aria-label'))element.setAttribute('aria-label',name);
-    if(title!==undefined)element.setAttribute('title',String(title));else if(!element.hasAttribute('title'))element.setAttribute('title',name);
-    if(iconOnly===true)element.dataset.uiLabel='hidden';else if(iconOnly===false&&element.dataset.uiLabel==='hidden')delete element.dataset.uiLabel;
+    if(label!==undefined&&text.textContent!==String(label))text.textContent=String(label);
+    add(element,'ui-action');
+    if(ariaLabel!==undefined)attr(element,'aria-label',ariaLabel);else if(!element.hasAttribute('aria-label'))attr(element,'aria-label',name);
+    if(title!==undefined)attr(element,'title',title);else if(!element.hasAttribute('title'))attr(element,'title',name);
+    if(iconOnly===true&&element.dataset.uiLabel!=='hidden')element.dataset.uiLabel='hidden';else if(iconOnly===false&&element.dataset.uiLabel==='hidden')delete element.dataset.uiLabel;
     return element;
   }
   const api={version:'1.1.0',mount,release,adoptAction,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};

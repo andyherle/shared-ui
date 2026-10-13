@@ -57,6 +57,7 @@
   }
   :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.button)[aria-pressed=true] { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
   :where(html[data-ui]) input::file-selector-button { min-block-size:var(--ui-control-height); margin-inline-end:var(--ui-gap); padding:var(--ui-control-padding); border:1px solid var(--ui-control); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); font:500 var(--ui-control-size)/1.4 var(--ui-font); cursor:pointer; }
+  :where(html[data-ui]) :where(.ui-item,.ui-action):is([aria-current=true],[aria-current=page],[aria-selected=true]) { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
   :where(html[data-ui]) textarea { resize:vertical; }
   :where(html[data-ui]) :where(button.media-button,button.poster,button.home-card,button.card,button.ui-media-button,button[data-ui-surface=media]) { display:block; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:var(--ui-media); font:inherit; }
   :where(html[data-ui]) button[aria-busy=true] { cursor:progress; }
@@ -171,7 +172,7 @@
   :where(html[data-ui]) h5 { font-size:var(--ui-h5); }
   :where(html[data-ui]) h6 { font-size:var(--ui-h6); }
   :where(html[data-ui]) .ui-section-title { font-size:var(--ui-control-size); font-weight:600; line-height:1.4; margin:0; }
-  :where(html[data-ui]) .ui-chrome :where(h1,h2,h3,h4,h5,h6) { font-size:var(--ui-control-size); line-height:1.4; letter-spacing:0; }
+  :where(html[data-ui]) .ui-chrome :where(h1,h2,h3,h4,h5,h6):where(:not(.ui-prose *,.markdown *)) { font-size:var(--ui-control-size); line-height:1.4; letter-spacing:0; }
   :where(html[data-ui]) :where(.markdown,.ui-prose) { line-height:1.65; overflow-wrap:anywhere; }
   :where(html[data-ui]) :where(.markdown,.ui-prose)>:first-child { margin-block-start:0; }
   :where(html[data-ui]) :where(.markdown,.ui-prose)>:last-child { margin-block-end:0; }
