@@ -109,15 +109,15 @@
   :where(html[data-ui]) .ui-label { min-inline-size:0; overflow-wrap:anywhere; }
   :where(html[data-ui]) .ui-search { flex:1 1 12rem; min-inline-size:min(100%,8rem); max-inline-size:100%; }
   :where(html[data-ui]) .ui-search :where(input,select) { inline-size:100%; }
-  :where(html[data-ui]) .ui-fill > :where(button,.ui-button,summary) { flex:1 1 8rem; }
+  :where(html[data-ui]) .ui-fill > :where(button,.ui-button,.ui-action,summary) { flex:1 1 8rem; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-align=start] { justify-content:flex-start; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-align=end] { justify-content:flex-end; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] { flex-direction:column; align-items:stretch; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):where(.ui-inline,[data-ui-layout=inline]) { inline-size:auto; flex:0 1 auto; container-type:normal; }
-  :where(html[data-ui]) [data-ui-layout=vertical] > .ui-action { flex:none; }
+  :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] > * { flex:none; }
   @container ui-actions (max-width:28rem) {
     :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
-    :where(html[data-ui]) .ui-toolbar .ui-search { flex-basis:100%; order:10; }
+    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) .ui-search { flex-basis:100%; order:10; }
   }
   @container ui-actions (max-width:24rem) {
     :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
