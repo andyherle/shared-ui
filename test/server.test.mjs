@@ -34,3 +34,11 @@ test('build errors do not replace the last working manifest or stylesheet',t=>{
  fs.writeFileSync(path.join(directory,'src/icons.json'),' {"bad-icon":["javascript:bad"]}');assert.throws(()=>buildSite(directory),/Invalid icon path/);
  assert.equal(fs.readFileSync(path.join(directory,'public/v1/manifest.json'),'utf8'),before);
 });
+
+test('invalid browser code cannot replace the working lab release',t=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'shared-ui-code-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+ fs.cpSync(path.join(root,'src'),path.join(directory,'src'),{recursive:true});buildSite(directory);
+ const before=fs.readFileSync(path.join(directory,'public/lab.js'),'utf8');
+ fs.writeFileSync(path.join(directory,'src/lab.js'),'(() => { broken syntax');assert.throws(()=>buildSite(directory),SyntaxError);
+ assert.equal(fs.readFileSync(path.join(directory,'public/lab.js'),'utf8'),before);
+});

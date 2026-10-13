@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import vm from 'node:vm';
 import {gzipSync} from 'node:zlib';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function buildCSS(tokens,controls){
@@ -19,6 +20,7 @@ export function buildCSS(tokens,controls){
 export function manifest(css){return {protocol:1,version:'1.0.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
+  for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});
   const css=buildCSS(JSON.parse(read('tokens.json')),read('controls.css'));
   if(Buffer.byteLength(css)>30000||/@import|url\s*\(/i.test(css))throw new Error('Styles must remain below 30 KB with no external imports');
   const release=manifest(css),out=path.join(directory,'public/v1');

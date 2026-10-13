@@ -1,7 +1,7 @@
 {
   "date": "2026-10-13",
   "method": "Manual interaction through the Codex in-app browser, against the Tailscale-served lab",
-  "automatedTests": 12,
+  "automatedTests": 13,
   "verified": [
     "Postvisual and Personal, each in light and dark mode",
     "Required-name and invalid-email validation, recovery, and successful submission",
