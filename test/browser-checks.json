@@ -1,7 +1,7 @@
 {
   "date": "2026-10-13",
   "method": "Manual interaction through the Codex in-app browser, against the Tailscale-served lab",
-  "automatedTests": 13,
+  "automatedTests": 19,
   "verified": [
     "Postvisual and Personal, each in light and dark mode",
     "Required-name and invalid-email validation, recovery, and successful submission",
@@ -24,6 +24,22 @@
   ],
   "limits": [
     "Viewport checks do not emulate every touch device or screen reader",
-    "This is validation of the style lab, not a claim that existing apps have migrated"
+    "The iOS native date/time padding workaround needs physical iPhone confirmation",
+    "This public record covers the Style Lab; application migration evidence is kept privately"
+  ],
+  "version": "1.1.0",
+  "revision": "2bd2a62eaceb54bc3aa06d1aa8bccbab54c0565662f955dca658a2f3ab61cc0e",
+  "responsiveMigrationChecks": [
+    "220px narrow panel in Postvisual dark and Personal light: native fields and in-flow actions stay inside the panel",
+    "180px stress panel: in-flow fields stay contained; native menu floats safely within the viewport",
+    "720px panel: toolbar captions return and search grows with available width",
+    "Compact mixed button/link groups have equal widths on the same row",
+    "Nested vertical groups keep captions while horizontal groups compact to icons",
+    "Intrinsic action group in a grid auto track keeps its content width",
+    "Native disclosure Enter and Space toggles keep the same entered value",
+    "Actual live CSS swaps retain an open disclosure and its entered value",
+    "Shared code field remains monospace",
+    "Two independent viewers keep different pack/theme choices on the same shared revision",
+    "No browser warning/error logs during the responsive checks"
   ]
 }
