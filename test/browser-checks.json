@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-13",
+  "method": "Manual interaction through the Codex in-app browser, against the Tailscale-served lab",
+  "automatedTests": 12,
+  "verified": [
+    "Postvisual and Personal, each in light and dark mode",
+    "Required-name and invalid-email validation, recovery, and successful submission",
+    "Searchable selector: ArrowUp from no selection, ArrowDown, Enter and filtering",
+    "Tabs: click selection and ArrowRight navigation",
+    "Menu Escape dismissal and focus return to its summary",
+    "Table selection, select-all state, name sorting and pagination",
+    "Canvas selection, pointer dragging, width, blend and visibility inspector fields",
+    "Canvas zoom controls",
+    "Timeline frame input, keyframe creation, playback, pause and easing selection",
+    "Lightbox navigation, zoom, close and live layout refresh",
+    "Dialog, drawer and native popover opening and closing",
+    "Live shared CSS update and rollback across two viewers with independent packs",
+    "Shared CSS refresh preserved form text, dialog text, open dialog and input focus",
+    "One live server event stream for two open viewers",
+    "Tailscale header Refresh CSS button completes and retains text",
+    "390px phone and 768px tablet viewport layouts without document overflow",
+    "Distinct H1-H6 computed sizes",
+    "No browser error or warning logs during these checks"
+  ],
+  "limits": [
+    "Viewport checks do not emulate every touch device or screen reader",
+    "This is validation of the style lab, not a claim that existing apps have migrated"
+  ]
+}

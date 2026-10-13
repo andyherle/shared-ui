@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+ui_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ui_node=${SHARED_UI_NODE:-$(command -v node)}
+ui_port=${SHARED_UI_PORT:-41910}
+case ${1:-start} in
+ start|restart|stop|status|uninstall) exec "$ui_node" "$ui_root/scripts/service.mjs" "${1:-start}";;
+ watch) exec "$ui_node" "$ui_root/scripts/watch.mjs";;
+ refresh)
+  "$ui_node" "$ui_root/scripts/service.mjs" sync
+  curl --fail --silent --show-error -X POST -H 'x-ui-lab: refresh' "http://127.0.0.1:$ui_port/refresh"
+  printf '\n';;
+ run) exec "$ui_node" "$ui_root/scripts/serve.mjs";;
+ *) printf 'Usage: ./style-lab start|restart|stop|status|refresh|watch|run|uninstall\n' >&2; exit 2;;
+esac

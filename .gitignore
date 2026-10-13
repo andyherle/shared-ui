@@ -1,0 +1,4 @@
+.style-lab/
+node_modules/
+test-results/
+*.png

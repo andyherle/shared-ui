@@ -1,0 +1,123 @@
+/* One ordered cascade. Application styles belong to the app layer. */
+@layer app, ui.tokens, ui.controls, ui.prose;
+@layer ui.tokens {
+  html[data-ui] {
+    --ui-font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ui-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --ui-radius: 8px; --ui-radius-small: 5px; --ui-gap: 8px;
+    --ui-control-padding: 8px 11px; --ui-field-padding: 8px 10px;
+    --bg: var(--ui-bg); --panel: var(--ui-surface); --solid: var(--ui-surface);
+    --surface: var(--ui-surface); --surface-raised: var(--ui-surface-raised); --surface-soft: var(--ui-surface-soft);
+    --text: var(--ui-text); --muted: var(--ui-muted); --subtle: var(--ui-subtle);
+    --line: var(--ui-line); --line-strong: var(--ui-line-strong); --card-line: var(--ui-line); --control: var(--ui-control);
+    --accent: var(--ui-accent); --accent-hover: var(--ui-accent-hover); --accent-soft: var(--ui-accent-soft);
+    --accent-text: var(--ui-on-primary); --on-accent: var(--ui-on-primary); --soft: var(--ui-surface-soft);
+    --good: var(--ui-good); --bad: var(--ui-bad); --danger: var(--ui-bad); --danger-soft: color-mix(in srgb,var(--ui-bad) 12%,var(--ui-surface));
+    --error: color-mix(in srgb,var(--ui-bad) 12%,var(--ui-surface));
+    --board: var(--ui-bg); --dot: var(--ui-line-strong); --note: var(--ui-note); --note-line: var(--ui-line); --note-text: var(--ui-note-text); --note-heading: var(--ui-muted);
+    --shadow: 0 6px 18px var(--ui-shadow-color); --shadow-raised: 0 12px 32px var(--ui-shadow-color); --scrim: var(--ui-scrim); --media: var(--ui-media);
+    --quiet-panel: var(--ui-surface); --quiet-control: var(--ui-surface-soft); --quiet-control-hover: var(--ui-surface-soft);
+    --workshop-surface: var(--ui-surface); --workshop-line: var(--ui-line); --workshop-muted: var(--ui-muted);
+    --staticref-command-line: var(--ui-line); --staticref-command-line-soft: var(--ui-line); --staticref-command-hover: var(--ui-surface-soft);
+    --staticref-command-text: var(--ui-text); --staticref-command-muted: var(--ui-muted);
+    --body-size: var(--ui-body-size); --small-size: var(--ui-control-size); --heading-size: var(--ui-h1);
+  }
+  html[data-ui=personal] { --line:var(--ui-line-strong); }
+  :where([data-ui-density=compact]) { --ui-control-height:36px; --ui-field-height:36px; --ui-control-size:12px; --ui-control-padding:5px 9px; --ui-field-padding:6px 9px; }
+  :where([data-ui-density=dense]) { --ui-control-height:24px; --ui-field-height:26px; --ui-control-size:12px; --ui-control-padding:2px 5px; --ui-field-padding:3px 6px; }
+  :where([data-ui-density=comfortable]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:14px; --ui-control-padding:9px 14px; --ui-field-padding:12px; }
+  @media(pointer:coarse) {
+    html[data-ui], html[data-ui] :where([data-ui-density]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:16px; --ui-control-padding:9px 12px; --ui-field-padding:12px; }
+  }
+}
+@layer ui.controls {
+  :where(html[data-ui]) { background:var(--ui-bg); color:var(--ui-text); -webkit-text-size-adjust:100%; }
+  :where(html[data-ui]) body { margin:0; font:var(--ui-body-size)/1.55 var(--ui-font); color:var(--ui-text); background:var(--ui-bg); }
+  :where(html[data-ui]) *, :where(html[data-ui]) *::before, :where(html[data-ui]) *::after { box-sizing:border-box; }
+  :where(html[data-ui]) [hidden] { display:none!important; }
+  :where(html[data-ui]) :where(button,input,select,textarea,output) { font:inherit; color:inherit; }
+  :where(html[data-ui]) :where(button,a.ui-button,a.button,summary.ui-button,summary.button,.ui-menu>summary) {
+    display:inline-flex; align-items:center; justify-content:center; gap:var(--ui-gap);
+    min-block-size:var(--ui-control-height); padding:var(--ui-control-padding);
+    border:1px solid var(--ui-control); border-radius:var(--ui-radius);
+    background:var(--ui-surface); color:var(--ui-text); font:500 var(--ui-control-size)/1.4 var(--ui-font);
+    text-decoration:none; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  }
+  :where(html[data-ui]) :where(button,a.ui-button,a.button,.ui-menu>summary):hover { background:var(--ui-surface-soft); }
+  :where(html[data-ui]) :where(button,a.ui-button,a.button)[aria-pressed=true] { background:var(--ui-accent-soft); border-color:var(--ui-accent); }
+  :where(html[data-ui]) :where(.primary,.ui-primary,[data-ui-variant=primary]) { background:var(--ui-primary); color:var(--ui-on-primary); border-color:var(--ui-primary); }
+  :where(html[data-ui]) :where(.primary,.ui-primary,[data-ui-variant=primary]):hover { background:color-mix(in srgb,var(--ui-primary) 88%,var(--ui-bg)); }
+  :where(html[data-ui]) :where(.text-button,.quiet-action,.ui-quiet,[data-ui-variant=quiet]) { border-color:transparent; background:transparent; color:var(--ui-muted); }
+  :where(html[data-ui]) :where(.danger,.ui-danger,[data-ui-variant=danger]) { color:var(--ui-bad); }
+  :where(html[data-ui]) :where(button:disabled,[aria-disabled=true]) { opacity:.45; cursor:default; }
+  :where(html[data-ui]) :where(button,input,select,textarea,a,summary):focus-visible { outline:2px solid var(--ui-accent); outline-offset:2px; }
+  :where(html[data-ui]) :where(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=hidden]):not([type=file]),select,textarea) {
+    min-inline-size:0; min-block-size:var(--ui-field-height); padding:var(--ui-field-padding);
+    border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text);
+    font:400 var(--ui-control-size)/1.4 var(--ui-font);
+  }
+  :where(html[data-ui]) textarea { resize:vertical; }
+  :where(html[data-ui]) :where(button.media-button,button.poster,button.home-card,button.card,button.ui-media-button) { display:block; min-block-size:0; padding:0; border:0; background:var(--ui-media); font:inherit; }
+  :where(html[data-ui]) button[aria-busy=true] { cursor:progress; }
+  :where(html[data-ui]) ::placeholder { color:var(--ui-muted); opacity:1; }
+  :where(html[data-ui]) :where(input[type=checkbox],input[type=radio],input[type=range]) { accent-color:var(--ui-accent); }
+  :where(html[data-ui]) :where(input[type=checkbox],input[type=radio]) { inline-size:18px; block-size:18px; flex:none; }
+  :where(html[data-ui]) :where(.icon-button,.round-button,.header-icon,.ui-icon-button) { display:inline-flex; align-items:center; justify-content:center; min-inline-size:var(--ui-control-height); min-block-size:var(--ui-control-height); padding:5px; }
+  :where(html[data-ui]) :where(.ui-toolbar,.ui-menu-panel) :where(button,select,.ui-button) { border-color:transparent; background:transparent; box-shadow:none; }
+  :where(html[data-ui]) .ui-toolbar :where(button,select,.ui-button) { border-radius:0; }
+  :where(html[data-ui]) :where(.ui-toolbar,.ui-menu-panel) :where(button,select,.ui-button):hover { background:var(--ui-surface-soft); }
+  :where(html[data-ui]) .ui-toolbar :where(.primary,.ui-primary,[data-ui-variant=primary]) { background:var(--ui-primary); color:var(--ui-on-primary); }
+  :where(html[data-ui]) :where(dialog,.ui-menu-panel,.ui-panel) { background:var(--ui-surface); color:var(--ui-text); border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius); }
+  :where(html[data-ui]) dialog { padding:20px; max-inline-size:calc(100vw - 24px); max-block-size:calc(100dvh - 24px); overflow:auto; box-shadow:var(--shadow-raised); }
+  :where(html[data-ui]) dialog::backdrop { background:var(--ui-scrim); }
+  :where(html[data-ui]) .ui-menu { position:relative; }
+  :where(html[data-ui]) .ui-menu>summary { list-style:none; }
+  :where(html[data-ui]) .ui-menu>summary::-webkit-details-marker { display:none; }
+  :where(html[data-ui]) .ui-menu-panel { padding:6px; }
+  :where(html[data-ui]) :where(svg.ui-icon,.ui-icon>svg,button>svg,summary>svg,a.button>svg) { inline-size:18px; block-size:18px; flex:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  :where(html[data-ui]) .ui-icon { display:inline-flex; align-items:center; justify-content:center; color:inherit; }
+  :where(html[data-ui]) .ui-section-title { font-size:var(--ui-control-size); font-weight:600; line-height:1.4; margin:0; }
+  :where(html[data-ui]) .ui-muted { color:var(--ui-muted); }
+  :where(html[data-ui]) .ui-error { color:var(--ui-bad); }
+  :where(html[data-ui]) [aria-invalid=true] { border-color:var(--ui-bad); }
+  :where(html[data-ui]) .ui-combobox { position:relative; display:block; }
+  :where(html[data-ui]) .ui-listbox { position:absolute; z-index:40; inset:calc(100% + 5px) 0 auto; max-block-size:230px; overflow:auto; display:grid; padding:5px; background:var(--ui-surface-raised); border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius); box-shadow:var(--shadow-raised); }
+  :where(html[data-ui]) .ui-option { padding:8px 10px; min-block-size:var(--ui-control-height); color:var(--ui-text); border-radius:var(--ui-radius-small); cursor:pointer; }
+  :where(html[data-ui]) .ui-option:hover, :where(html[data-ui]) .ui-option[aria-selected=true], :where(html[data-ui]) [role=tab][aria-selected=true] { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
+  :where(html[data-ui]) .ui-sr-only { position:absolute; inline-size:1px; block-size:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  :where(html[data-ui]) .ui-table { inline-size:100%; border-collapse:collapse; text-align:start; }
+  :where(html[data-ui]) .ui-table :where(th,td) { padding:10px; border-block-end:1px solid var(--ui-line); }
+  :where(html[data-ui]) .ui-table caption { text-align:start; margin-block-end:10px; color:var(--ui-muted); }
+  :where(html[data-ui]) .ui-switch input { appearance:none; position:relative; inline-size:36px; block-size:22px; border:1px solid var(--ui-control); border-radius:12px; background:var(--ui-surface-soft); }
+  :where(html[data-ui]) .ui-switch input::before { content:""; position:absolute; inline-size:16px; block-size:16px; inset:2px auto auto 2px; border-radius:50%; background:var(--ui-muted); }
+  :where(html[data-ui]) .ui-switch input:checked { background:var(--ui-primary); border-color:var(--ui-primary); }
+  :where(html[data-ui]) .ui-switch input:checked::before { transform:translateX(14px); background:var(--ui-on-primary); }
+  :where(html[data-ui]) .ui-success { color:var(--ui-good); }
+  @media(prefers-reduced-motion:reduce) { :where(html[data-ui]) :where(button,.ui-button) { transition:none; transform:none; } }
+  @media(forced-colors:active) { :where(html[data-ui]) :where(button,input,select,textarea,.ui-button) { border-color:ButtonText; } }
+}
+@layer ui.prose {
+  :where(html[data-ui]) :where(h1,h2,h3,h4,h5,h6) { font-family:var(--ui-font); font-weight:600; line-height:1.25; letter-spacing:-.025em; }
+  :where(html[data-ui]) h1 { font-size:var(--ui-h1); }
+  :where(html[data-ui]) h2 { font-size:var(--ui-h2); }
+  :where(html[data-ui]) h3 { font-size:var(--ui-h3); }
+  :where(html[data-ui]) h4 { font-size:var(--ui-h4); }
+  :where(html[data-ui]) h5 { font-size:var(--ui-h5); }
+  :where(html[data-ui]) h6 { font-size:var(--ui-h6); }
+  :where(html[data-ui]) .ui-section-title { font-size:var(--ui-control-size); font-weight:600; line-height:1.4; margin:0; }
+  :where(html[data-ui]) .ui-chrome :where(h1,h2,h3,h4,h5,h6) { font-size:var(--ui-control-size); line-height:1.4; letter-spacing:0; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) { line-height:1.65; overflow-wrap:anywhere; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose)>:first-child { margin-block-start:0; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose)>:last-child { margin-block-end:0; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) :where(h1,h2,h3,h4,h5,h6) { margin:1.25em 0 .5em; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) :where(p,ul,ol,blockquote,pre,table) { margin:1em 0; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) :where(ul,ol) { padding-inline-start:1.5em; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) a { color:var(--ui-accent); text-decoration:underline; text-underline-offset:3px; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) code { font: .9em/1.5 var(--ui-font-mono); background:var(--ui-surface-soft); border-radius:4px; padding:2px 5px; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) pre { overflow-x:auto; padding:12px; background:var(--ui-surface-soft); border-radius:var(--ui-radius-small); }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) pre code { padding:0; background:transparent; white-space:pre; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) blockquote { margin-inline:0; padding-inline-start:12px; border-inline-start:2px solid var(--ui-line-strong); color:var(--ui-muted); }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) table { display:block; max-inline-size:100%; overflow-x:auto; border-collapse:collapse; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) :where(th,td) { padding:8px; border:1px solid var(--ui-line); text-align:start; }
+  :where(html[data-ui]) :where(.markdown,.ui-prose) img { max-inline-size:100%; block-size:auto; }
+}
