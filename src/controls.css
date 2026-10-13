@@ -135,6 +135,7 @@
     :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-search { flex-basis:100%; order:10; }
   }
   @container ui-actions (max-width:24rem) {
+    :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { flex-basis:var(--ui-control-height); }
     :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
     :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:8px; }
   }
