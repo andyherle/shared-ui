@@ -28,7 +28,7 @@
     "This public record covers the Style Lab; application migration evidence is kept privately"
   ],
   "version": "1.1.0",
-  "revision": "2bd2a62eaceb54bc3aa06d1aa8bccbab54c0565662f955dca658a2f3ab61cc0e",
+  "revision": "8d12d04766927d04c52c59f9718163c2196541bb68a776577fd293b619949c64",
   "responsiveMigrationChecks": [
     "220px narrow panel in Postvisual dark and Personal light: native fields and in-flow actions stay inside the panel",
     "180px stress panel: in-flow fields stay contained; native menu floats safely within the viewport",
@@ -40,6 +40,10 @@
     "Actual live CSS swaps retain an open disclosure and its entered value",
     "Shared code field remains monospace",
     "Two independent viewers keep different pack/theme choices on the same shared revision",
-    "No browser warning/error logs during the responsive checks"
+    "No browser warning/error logs during the responsive checks",
+    "Dense scoped controls measured in the browser: 24 px buttons and icons, 26 px text fields, 4 px gaps",
+    "Compact single-field search remains one row at 220 px",
+    "Native adopted action summaries share button sizing and have no duplicate disclosure marker",
+    "Native partial selection uses the shared dashed state border"
   ]
 }
