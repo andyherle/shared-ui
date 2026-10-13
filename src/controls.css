@@ -23,11 +23,11 @@
     --body-size: var(--ui-body-size); --small-size: var(--ui-control-size); --heading-size: var(--ui-h1);
   }
   html[data-ui=personal] { --line:var(--ui-line-strong); }
-  :where([data-ui-density=compact]) { --ui-control-height:36px; --ui-field-height:36px; --ui-control-size:12px; --ui-control-padding:5px 9px; --ui-field-padding:6px 9px; }
-  :where([data-ui-density=dense]) { --ui-control-height:24px; --ui-field-height:26px; --ui-control-size:12px; --ui-control-padding:2px 5px; --ui-field-padding:3px 6px; }
-  :where([data-ui-density=comfortable]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:14px; --ui-control-padding:9px 14px; --ui-field-padding:12px; }
+  html[data-ui][data-ui-density=compact], html[data-ui] :where([data-ui-density=compact]) { --ui-control-height:36px; --ui-field-height:36px; --ui-control-size:12px; --ui-control-padding:5px 9px; --ui-field-padding:6px 9px; }
+  html[data-ui][data-ui-density=dense], html[data-ui] :where([data-ui-density=dense]) { --ui-gap:4px; --ui-control-height:24px; --ui-field-height:26px; --ui-control-size:12px; --ui-control-padding:2px 5px; --ui-field-padding:3px 6px; }
+  html[data-ui][data-ui-density=comfortable], html[data-ui] :where([data-ui-density=comfortable]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:14px; --ui-control-padding:9px 14px; --ui-field-padding:12px; }
   @media(pointer:coarse) {
-    html[data-ui], html[data-ui] :where([data-ui-density]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:16px; --ui-control-padding:9px 12px; --ui-field-padding:12px; }
+    html[data-ui], html[data-ui][data-ui-density], html[data-ui] :where([data-ui-density]) { --ui-gap:8px; --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:16px; --ui-control-padding:9px 12px; --ui-field-padding:12px; }
   }
 }
 @layer ui.controls {
@@ -65,7 +65,7 @@
   :where(html[data-ui]) ::placeholder { color:var(--ui-muted); opacity:1; }
   :where(html[data-ui]) :where(input[type=checkbox],input[type=radio],input[type=range]) { accent-color:var(--ui-accent); }
   :where(html[data-ui]) :where(input[type=checkbox],input[type=radio]) { inline-size:18px; block-size:18px; flex:none; }
-  :where(html[data-ui]) :where(.icon-button,.round-button,.header-icon,.ui-icon-button) { display:inline-flex; align-items:center; justify-content:center; min-inline-size:var(--ui-control-height); min-block-size:var(--ui-control-height); padding:5px; }
+  :where(html[data-ui]) :where(.icon-button,.round-button,.header-icon,.ui-icon-button) { display:inline-flex; align-items:center; justify-content:center; min-inline-size:var(--ui-control-height); min-block-size:var(--ui-control-height); padding:min(5px,calc((var(--ui-control-height) - 20px)/2)); }
   :where(html[data-ui]) :where(.ui-menu-panel) :where(button,select,.ui-button) { border-color:transparent; background:transparent; box-shadow:none; }
   :where(html[data-ui]) :where(.ui-menu-panel) :where(button,select,.ui-button):not(:disabled):not([aria-disabled=true]):hover { background:var(--ui-surface-soft); }
   :where(html[data-ui]) :where(dialog,.ui-menu-panel,.ui-panel) { background:var(--ui-surface); color:var(--ui-text); border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius); }
@@ -139,17 +139,17 @@
   @container ui-actions (max-width:24rem) {
     :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { flex-basis:var(--ui-control-height); }
     :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
-    :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:8px; }
+    :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:min(8px,calc((var(--ui-control-height) - 20px)/2)); }
   }
   /* Structured/domain controls retain their own geometry, with common states and focus. */
   :where(html[data-ui]) .ui-item { display:revert-layer; align-items:revert-layer; justify-content:revert-layer; gap:revert-layer; padding:revert-layer; text-align:start; white-space:normal; }
-  :where(html[data-ui]) button[data-ui-surface=graphic] { display:revert-layer; min-inline-size:0; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:transparent; font:inherit; }
+  :where(html[data-ui]) button[data-ui-surface=graphic] { touch-action:revert-layer; display:revert-layer; min-inline-size:0; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:transparent; font:inherit; }
   :where(html[data-ui]) button[data-ui-surface=graphic][aria-pressed=true] { color:var(--ui-accent); }
   :where(html[data-ui]) :where(.ui-card,.ui-notice) { color:var(--ui-text); background:var(--ui-surface); border:1px solid var(--ui-line); border-radius:var(--ui-radius); }
   :where(html[data-ui]) :where(.ui-swatch,[data-ui-variant=swatch]) { background:transparent; padding:5px; border-color:transparent; min-inline-size:var(--ui-control-height); }
   :where(html[data-ui]) :where(.ui-swatch,[data-ui-variant=swatch])::before { content:""; inline-size:18px; block-size:18px; border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius-small); background:var(--colour,var(--ui-swatch-value,currentColor)); }
   :where(html[data-ui]) :where(.ui-swatch,[data-ui-variant=swatch])[aria-pressed=true]::before { outline:2px solid var(--ui-accent); outline-offset:3px; }
-  :where(html[data-ui]) .ui-resize-handle { min-inline-size:var(--ui-control-height); min-block-size:var(--ui-control-height); inline-size:var(--ui-control-height); block-size:var(--ui-control-height); padding:0; border:0; border-radius:0; background:transparent; color:var(--ui-accent); }
+  :where(html[data-ui]) .ui-resize-handle { touch-action:none; min-inline-size:var(--ui-control-height); min-block-size:var(--ui-control-height); inline-size:var(--ui-control-height); block-size:var(--ui-control-height); padding:0; border:0; border-radius:0; background:transparent; color:var(--ui-accent); }
   :where(html[data-ui]) .ui-resize-handle::after { content:""; inline-size:7px; block-size:7px; background:currentColor; border:1px solid var(--ui-text); }
   :where(html[data-ui]) .ui-icon-choice { display:flex; align-items:center; justify-content:center; gap:var(--ui-gap); min-block-size:var(--ui-control-height); padding:var(--ui-control-padding); border:1px solid var(--ui-control); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); cursor:pointer; }
   :where(html[data-ui]) .ui-icon-choice:has(input:checked) { background:var(--ui-accent-soft); border-color:var(--ui-accent); }
