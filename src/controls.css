@@ -120,7 +120,8 @@
   :where(html[data-ui]) .ui-action { flex:0 1 auto; min-inline-size:var(--ui-control-height); }
   :where(html[data-ui]) .ui-action[data-ui-label=hidden]:has(>svg.ui-icon) > .ui-label { display:none; }
   :where(html[data-ui]) .ui-label { min-inline-size:0; overflow-wrap:anywhere; }
-  :where(html[data-ui]) .ui-search { flex:1 1 12rem; min-inline-size:min(100%,8rem); max-inline-size:100%; }
+  :where(html[data-ui]) .ui-search { flex:1 1 auto; inline-size:100%; min-inline-size:min(100%,8rem); max-inline-size:100%; }
+  :where(html[data-ui]) :where(.ui-actions,.ui-toolbar) > .ui-search { inline-size:12rem; }
   :where(html[data-ui]) .ui-search :where(input,select) { inline-size:100%; }
   :where(html[data-ui]) .ui-fill > :where(button,.ui-button,.ui-action,summary) { flex:1 1 8rem; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-align=start] { justify-content:flex-start; }
@@ -128,6 +129,7 @@
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] { flex-direction:column; align-items:stretch; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):where(.ui-inline,[data-ui-layout=inline]) { inline-size:auto; flex:0 1 auto; container-type:normal; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] > * { flex:none; }
+  :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] > .ui-search { inline-size:100%; }
   @container ui-actions (max-width:28rem) {
     :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
     :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-search { flex-basis:100%; order:10; }
