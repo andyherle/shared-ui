@@ -39,6 +39,9 @@
     function schedule(delay=PERIOD){view.clearTimeout(timer);if(!stopped&&doc.visibilityState!=='hidden')timer=view.setTimeout(tick,delay);}
     async function apply(value){
       const item=release(value,source);
+      const minimum=/^1\.\d+\.\d+$/.test(root.dataset.uiVersion||'')?root.dataset.uiVersion:'1.0.0';
+      const candidate=item.version.split('.').map(Number),floor=minimum.split('.').map(Number);
+      if(candidate[1]<floor[1]||(candidate[1]===floor[1]&&candidate[2]<floor[2]))return false;
       if(stopped||root.dataset.uiRevision===item.revision||pendingLink?.dataset.uiRevision===item.revision)return false;
       cancelStyle?.();
       const link=doc.createElement('link');
@@ -89,6 +92,7 @@
       else if(event.key===leaseKey&&!event.newValue)schedule(100);
       else if(event.key===preference&&root.dataset.ui==='postvisual'&&!localTheme)setMode(event.newValue||'system',{persist:false});
     });
+    on(doc,'click',event=>{const control=event.target.closest?.('[aria-disabled=true]');if(control?.matches?.('button,a,summary')){event.preventDefault();event.stopImmediatePropagation();}},true);
     function closeMenu(menu,{focus=false}={}){if(!menu.open)return;menu.open=false;openedMenus.delete(menu);if(focus)menu.querySelector(':scope>summary')?.focus();}
     on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open)openedMenus.add(menu);else openedMenus.delete(menu);}},true);
     on(doc,'click',event=>{for(const menu of openedMenus)if(!menu.contains(event.target))closeMenu(menu);});
@@ -99,7 +103,29 @@
     schedule(100);
     return {dispose,refresh,setMode,applyRelease:apply,acceptRelease};
   }
-  const api={mount,release,source:DEFAULT_SOURCE};
+  function adoptAction(element,{icon,label,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
+    if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
+    const doc=element.ownerDocument,base=new URL(doc.baseURI),asset=new URL(sprite,base);
+    if(asset.origin!==base.origin||asset.protocol!==base.protocol)throw new TypeError('Icons must be served by the app');
+    if(icon!==undefined&&!/^[a-z][a-z0-9-]{0,47}$/.test(icon))throw new TypeError('Invalid icon');
+    let text=element.querySelector(':scope > .ui-label');
+    const name=String(label??element.getAttribute('aria-label')??text?.textContent??element.textContent??element.getAttribute('title')??'').trim();
+    if(!name)throw new TypeError('An action needs an accessible label');
+    let glyph=element.querySelector(':scope > svg');
+    if(!glyph&&icon){glyph=doc.createElementNS('http://www.w3.org/2000/svg','svg');glyph.setAttribute('viewBox','0 0 24 24');glyph.setAttribute('fill','none');glyph.setAttribute('stroke','currentColor');const use=doc.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',asset.href+'#ui-'+icon);glyph.append(use);element.prepend(glyph);}
+    if(glyph){
+      if(icon){let use=glyph.querySelector('use');if(!use){use=doc.createElementNS('http://www.w3.org/2000/svg','use');glyph.replaceChildren(use);}use.setAttribute('href',asset.href+'#ui-'+icon);}
+      glyph.setAttribute('viewBox','0 0 24 24');glyph.setAttribute('fill','none');glyph.setAttribute('stroke','currentColor');glyph.classList.add('ui-icon');glyph.setAttribute('aria-hidden','true');glyph.setAttribute('focusable','false');
+    }
+    if(!text){text=doc.createElement('span');text.className='ui-label';for(const child of [...element.childNodes])if(child!==glyph)text.append(child);element.append(text);}
+    if(label!==undefined)text.textContent=String(label);
+    element.classList.add('ui-action');
+    if(ariaLabel!==undefined)element.setAttribute('aria-label',String(ariaLabel));else if(!element.hasAttribute('aria-label'))element.setAttribute('aria-label',name);
+    if(title!==undefined)element.setAttribute('title',String(title));else if(!element.hasAttribute('title'))element.setAttribute('title',name);
+    if(iconOnly===true)element.dataset.uiLabel='hidden';else if(iconOnly===false&&element.dataset.uiLabel==='hidden')delete element.dataset.uiLabel;
+    return element;
+  }
+  const api={version:'1.1.0',mount,release,adoptAction,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

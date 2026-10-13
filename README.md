@@ -26,7 +26,7 @@ Allow `https://andyherle.github.io` in `style-src` and `connect-src` when using 
 
 ## Style Lab
 
-The catalogue demonstrates working controls rather than a sheet of static mockups: buttons and busy states; native fields and validation; selects, suggestions, searchable choices and tags; menus, tabs and disclosures; dialogs, drawers, popovers, tooltips and feedback; tables, selection and pagination; draggable Canvas cards and inspectors; timeline scrubbing and easing; images, audio, video, ratings and lightboxes; H1–H6 and Markdown-shaped content; a 31-icon SVG sprite.
+The catalogue demonstrates working controls rather than a sheet of static mockups: buttons and busy states; native fields and validation; selects, suggestions, searchable choices and tags; menus, tabs and disclosures; dialogs, drawers, popovers, tooltips and feedback; tables, selection and pagination; draggable Canvas cards and inspectors; timeline scrubbing and easing; images, audio, video, ratings and lightboxes; H1–H6 and Markdown-shaped content; a shared SVG icon sprite.
 
 Choose Postvisual or Personal, light or dark, and density in the header. Appearance choices belong to that browser tab, so different viewers can compare packs independently. The lab uses one live event stream per origin when Web Locks is available, and shares style releases across views. Hidden pages relinquish the stream, pause sample media and stop the sample playback loop. Standard browser media controls retain platform behavior.
 
@@ -75,4 +75,32 @@ For a standalone page, CSS alone is sufficient:
 
 For an application, bundle a baseline and `public/v1/runtime.js` with its own assets to enable compatible CSS updates. Add the baseline revision as `data-ui-revision` to avoid loading the same CSS twice. Place the UI CSS after layout CSS, or put all application CSS in the app cascade layer. Unlayered legacy declarations win over layered rules, so adopting the source contract requires removing competing page-level control styles. A single additional stylesheet cannot remove drift from existing unlayered CSS by itself.
 
-The lab is a reviewable foundation for app adoption. Creating it does not rewrite Aura, StaticRef or Portal. Adopt one app surface at a time, preserve domain behavior and renderer isolation, and verify the actual app before shipping. Studio Blanc is excluded.
+Aura and StaticRef use Postvisual; Portal uses Personal. Their layout and domain behavior remain in their own repositories. They receive validated generated baseline assets from this source, rather than maintaining independent button or palette definitions. Studio Blanc is excluded.
+
+
+## Responsive controls and state
+
+`.ui-actions` centers and wraps controls to the available container width. `.ui-toolbar` adds a shared command-bar surface. `.ui-fill` gives actions equal flexible space; `data-ui-layout="vertical"` stacks them with visible labels. For an intrinsic group beside other content, use `.ui-inline`; its width follows its content instead of establishing a size query. No per-page button breakpoint is needed.
+
+An action consists of a decorative `svg.ui-icon` and a `span.ui-label`, plus a complete accessible name. At small container widths, the label gives way to the icon; text-only controls stay readable. `data-ui-label="always"` keeps a visible label and `hidden` requests an icon-only control. Native selectors retain their selected value. `.ui-search` flexes with its group and takes a full row in narrow toolbars. Coarse pointers retain 44 px targets and 16 px field text. Native date/time fields include the [iOS padding containment workaround](https://bugs.webkit.org/show_bug.cgi?id=301648), preserving native pickers.
+
+Use `SharedUI.adoptAction(element, {icon, label, ariaLabel, iconOnly, title, sprite})` when creating a native action. It retains the element and its handlers, preserves existing ARIA and titles unless explicitly replaced, and uses the app's same-origin sprite. `SharedUI.setActionLabel(element, label, {ariaLabel})` changes a label without removing its icon. There is no global observer, resize loop, framework, or automatic DOM rebuilding.
+
+`--ui-range-thumb` fixes shared slider geometry for sibling timeline markers. `.ui-range` is the optional common track/thumb skin.
+
+`aria-pressed`, `aria-selected`, `aria-invalid`, `aria-busy`, native `disabled` and `aria-disabled` express shared states. `.ui-status` and `.ui-notice` accept `data-state="pending|success|error|warning"`; empty status rows disappear. Native menu summaries, buttons, button links, radio choices, and fields share focus and state definitions.
+
+`.ui-card` is a quiet surface; `.ui-panel` is a raised overlay. `.ui-item` keeps a structured clickable row's app layout with common control paint. `.ui-swatch` renders a data color inside the standard touch target. `.ui-resize-handle` separates the visual handle from its hit area. Use `data-ui-surface="graphic"` for positioned interactive diagrams, `media` for preview buttons, and `.ui-inline-field` for in-place canvas text. These explicit roles preserve domain geometry without creating new palettes or control implementations.
+
+## Packaging the baseline
+
+Run from this repository to update an app's generated assets:
+
+```sh
+node scripts/install.mjs --target /path/to/app/shared-ui-assets
+node scripts/install.mjs --target /path/to/app/shared-ui-assets --check
+```
+
+The installer validates the canonical release and browser code before writing exactly `styles.css`, `runtime.js`, `icons.svg`, `manifest.json`, and `bundle.json`. Identical bytes are left untouched. The bundle records every file hash; `--check` rejects generated drift. Deployment uses those local assets with no Node runtime requirement.
+
+Set `data-ui-version` and `data-ui-revision` from the bundled manifest. A page rejects automatic CSS older than its bundled contract, accepts compatible v1 releases, and keeps its working baseline on failure. Automatic updates carry CSS; helper code and icon additions ship through the normal app release and the same installer.

@@ -53,3 +53,8 @@ test('untrusted style source and incompatible broadcasts are rejected',async()=>
  assert.throws(()=>environment({dataset:{uiSource:'https://other.example/manifest.json'}}),/Unknown UI source/);
  const e=environment();e.channels[0].onmessage({data:{protocol:2}});await e.next();assert.equal(e.links.length,0);e.instance.dispose();
 });
+test('a newer bundled contract rejects older remote CSS without touching the working document',async()=>{
+ const e=environment({dataset:{uiVersion:'1.1.0',uiRevision:release.revision}});
+ assert.equal(await e.instance.applyRelease({...other,version:'1.0.9'}),false);assert.equal(e.links.length,0);assert.equal(e.doc.documentElement.dataset.uiRevision,release.revision);
+ const next=e.instance.applyRelease({...other,version:'1.1.1'});e.load();assert.equal(await next,true);e.instance.dispose();
+});

@@ -5,6 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {spawnSync} from 'node:child_process';
+import {buildSite} from './build.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const label='com.andyherle.shared-ui-style-lab',domain=`gui/${process.getuid()}`,job=`${domain}/${label}`;
 const plist=path.join(os.homedir(),'Library/LaunchAgents',label+'.plist'),state=path.join(os.homedir(),'Library/Application Support/Background Services/Shared UI Style Lab');
@@ -16,8 +17,7 @@ function copyChanged(source,target){
  const temporary=target+'.'+process.pid+'.tmp';fs.writeFileSync(temporary,bytes);fs.renameSync(temporary,target);
 }
 function sync(){
- const build=spawnSync(process.execPath,[path.join(root,'scripts/build.mjs')],{cwd:root,encoding:'utf8',timeout:10000});
- if(build.status!==0)throw new Error(build.stderr||'Style build failed');
+ buildSite(root);
  fs.mkdirSync(hosted,{recursive:true});
  for(const name of ['package.json','src','public','scripts'])copyChanged(path.join(root,name),path.join(hosted,name));
 }

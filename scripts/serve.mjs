@@ -4,14 +4,14 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
-import {spawnSync} from 'node:child_process';
+import {buildSite} from './build.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),publicRoot=path.join(root,'public');
 export function createStyleLabServer({watch=true}={}){
  const clients=new Set(),cache=new Map();let debounce=null,building=false;const changes=new Set();
  const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
  function build(kind='styles'){
   if(building)return;building=true;
-  try{const result=spawnSync(process.execPath,[path.join(root,'scripts/build.mjs')],{cwd:root,encoding:'utf8',timeout:10000});if(result.status!==0)throw new Error(result.stderr.slice(-1000));cache.clear();const manifest=JSON.parse(fs.readFileSync(path.join(publicRoot,'v1/manifest.json'),'utf8'));const data={...manifest,kind,labRevision:hash(fs.readFileSync(path.join(publicRoot,'lab.css')))};for(const response of clients)response.write('data: '+JSON.stringify(data)+'\n\n');return data;
+  try{buildSite(root);cache.clear();const manifest=JSON.parse(fs.readFileSync(path.join(publicRoot,'v1/manifest.json'),'utf8'));const data={...manifest,kind,labRevision:hash(fs.readFileSync(path.join(publicRoot,'lab.css')))};for(const response of clients)response.write('data: '+JSON.stringify(data)+'\n\n');return data;
   }finally{building=false;}
  }
  const server=http.createServer((request,response)=>{
@@ -55,7 +55,7 @@ export function createStyleLabServer({watch=true}={}){
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const port=Number(process.env.SHARED_UI_PORT||41910),host='127.0.0.1';
- const result=spawnSync(process.execPath,[path.join(root,'scripts/build.mjs')],{cwd:root,encoding:'utf8'});if(result.status!==0)throw new Error(result.stderr);
+ buildSite(root);
  const server=createStyleLabServer();server.listen(port,host,()=>console.log(`Style Lab: http://${host}:${port}/`));
  for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),1000).unref();});
 }

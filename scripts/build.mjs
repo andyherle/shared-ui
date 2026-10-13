@@ -17,7 +17,7 @@ export function buildCSS(tokens,controls){
   }
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+controls.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\s+/g,' ').replace(/\s*([{};])\s*/g,'$1').trim()+'\n';
 }
-export function manifest(css){return {protocol:1,version:'1.0.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
+export function manifest(css){return {protocol:1,version:'1.1.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
   for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});
