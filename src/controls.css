@@ -56,6 +56,7 @@
     font:400 var(--ui-control-size)/1.4 var(--ui-font);
   }
   :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.button)[aria-pressed=true] { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
+  :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.button)[aria-pressed=mixed] { background:color-mix(in srgb,var(--ui-accent-soft) 50%,var(--ui-surface)); border-color:var(--ui-accent); border-style:dashed; }
   :where(html[data-ui]) input::file-selector-button { min-block-size:var(--ui-control-height); margin-inline-end:var(--ui-gap); padding:var(--ui-control-padding); border:1px solid var(--ui-control); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); font:500 var(--ui-control-size)/1.4 var(--ui-font); cursor:pointer; }
   :where(html[data-ui]) :where(.ui-item,.ui-action):is([aria-current=true],[aria-current=page],[aria-selected=true]) { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
   :where(html[data-ui]) textarea { resize:vertical; }
@@ -163,7 +164,7 @@
     :where(html[data-ui]) input::-webkit-date-and-time-value { display:block; box-sizing:border-box; min-block-size:1.4em; inline-size:100%; padding:var(--ui-field-padding); text-align:start; }
   }
   :where(html[data-ui]) :where(input,select,textarea)::-webkit-datetime-edit { min-inline-size:0; }
-  :where(html[data-ui]) :where(input,textarea).ui-inline-field { min-block-size:0; padding:0; border-color:transparent; border-radius:0; background:transparent; font:inherit; text-align:inherit; }
+  :where(html[data-ui]) :where(input,textarea).ui-inline-field { min-block-size:0; padding:revert-layer; resize:revert-layer; border-color:transparent; border-radius:0; background:transparent; font:inherit; text-align:inherit; }
   :where(html[data-ui]) [aria-invalid=true] { border-color:var(--ui-bad); }
   :where(html[data-ui]) .ui-status { display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-inline-size:0; overflow-wrap:anywhere; color:var(--ui-muted); }
   :where(html[data-ui]) .ui-status:empty { display:none; }
