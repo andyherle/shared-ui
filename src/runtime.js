@@ -53,7 +53,7 @@
         function finish(ok){
           if(done)return;done=true;view.clearTimeout(timeout);link.onload=null;link.onerror=null;
           if(pendingLink!==link||stopped)ok=false;
-          if(ok){link.media='all';const previous=activeLink;activeLink=link;root.dataset.uiRevision=item.revision;previous?.remove();doc.dispatchEvent(new view.CustomEvent('ui:styles',{detail:{revision:item.revision}}));}
+          if(ok){link.media='all';for(const baseline of doc.querySelectorAll('link[data-ui-baseline],style[data-ui-baseline]'))baseline.remove();const previous=activeLink;activeLink=link;root.dataset.uiRevision=item.revision;previous?.remove();doc.dispatchEvent(new view.CustomEvent('ui:styles',{detail:{revision:item.revision}}));}
           else link.remove();
           if(pendingLink===link){pendingLink=null;cancelStyle=null;}
           resolve(ok);

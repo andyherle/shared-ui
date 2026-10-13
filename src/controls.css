@@ -6,6 +6,7 @@
     --ui-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --ui-radius: 8px; --ui-radius-small: 5px; --ui-gap: 8px; --ui-range-thumb:12px;
     --ui-control-padding: 8px 11px; --ui-field-padding: 8px 10px;
+    --ui-playhead-color:var(--ui-primary); --ui-playhead-outline:var(--ui-bg); --ui-playhead-width:2px;
     --bg: var(--ui-bg); --panel: var(--ui-surface); --solid: var(--ui-surface);
     --surface: var(--ui-surface); --surface-raised: var(--ui-surface-raised); --surface-soft: var(--ui-surface-soft);
     --text: var(--ui-text); --muted: var(--ui-muted); --subtle: var(--ui-subtle);
@@ -36,17 +37,16 @@
   :where(html[data-ui]) *, :where(html[data-ui]) *::before, :where(html[data-ui]) *::after { box-sizing:border-box; }
   :where(html[data-ui]) [hidden] { display:none!important; }
   :where(html[data-ui]) :where(button,input,select,textarea,output) { font:inherit; color:inherit; }
-  :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.ui-action,summary.button,.ui-menu>summary) {
+  :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.ui-action,summary.button,.ui-menu>summary,.ui-disclosure>summary) {
     display:inline-flex; align-items:center; justify-content:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; overflow-wrap:anywhere;
     min-block-size:var(--ui-control-height); padding:var(--ui-control-padding);
     border:1px solid var(--ui-control); border-radius:var(--ui-radius);
     background:var(--ui-surface); color:var(--ui-text); font:500 var(--ui-control-size)/1.4 var(--ui-font);
     text-decoration:none; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
   }
-  :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.ui-action,summary.button,.ui-menu>summary):not(:disabled):not([aria-disabled=true]):hover { background:var(--ui-surface-soft); }
+  :where(html[data-ui]) :where(button,a.ui-button,a.ui-action,a.button,summary.ui-button,summary.ui-action,summary.button,.ui-menu>summary,.ui-disclosure>summary):not(:disabled):not([aria-disabled=true]):hover { background:var(--ui-surface-soft); }
   :where(html[data-ui]) :where(.primary,.ui-primary,[data-ui-variant=primary]) { background:var(--ui-primary); color:var(--ui-on-primary); border-color:var(--ui-primary); }
   :where(html[data-ui]) :where(.primary,.ui-primary,[data-ui-variant=primary]):hover { background:color-mix(in srgb,var(--ui-primary) 88%,var(--ui-bg)); }
-  :where(html[data-ui]) :where(.text-button,.quiet-action,.ui-quiet,[data-ui-variant=quiet]) { border-color:transparent; background:transparent; color:var(--ui-muted); }
   :where(html[data-ui]) :where(.danger,.ui-danger,[data-ui-variant=danger]) { color:var(--ui-bad); }
   :where(html[data-ui]) :where(button:disabled,[aria-disabled=true]) { opacity:.45; cursor:default; }
   :where(html[data-ui]) :where(button,input,select,textarea,a,summary):focus-visible { outline:2px solid var(--ui-accent); outline-offset:var(--ui-focus-offset,2px); }
@@ -61,6 +61,9 @@
   :where(html[data-ui]) :where(.ui-item,.ui-action):is([aria-current=true],[aria-current=page],[aria-selected=true]) { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
   :where(html[data-ui]) textarea { resize:vertical; }
   :where(html[data-ui]) :where(button.media-button,button.poster,button.home-card,button.card,button.ui-media-button,button[data-ui-surface=media]) { display:block; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:var(--ui-media); font:inherit; }
+  :where(html[data-ui]) .ui-selectable:is([aria-selected=true],[aria-pressed=true],[aria-checked=true],[data-ui-selected=true],[aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed]) { outline:calc(2px / var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(-2px / var(--ui-graphic-scale,1)); }
+  :where(html[data-ui]) .ui-selectable:is([aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed]) { outline-style:dashed; }
+  :where(html[data-ui]) .ui-selectable:focus-visible { outline:calc(2px / var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(2px / var(--ui-graphic-scale,1)); }
   :where(html[data-ui]) button[aria-busy=true] { cursor:progress; }
   :where(html[data-ui]) ::placeholder { color:var(--ui-muted); opacity:1; }
   :where(html[data-ui]) :where(input[type=checkbox],input[type=radio],input[type=range]) { accent-color:var(--ui-accent); }
@@ -72,6 +75,7 @@
   :where(html[data-ui]) dialog { padding:20px; max-inline-size:calc(100vw - 24px); max-block-size:calc(100dvh - 24px); overflow:auto; box-shadow:var(--shadow-raised); }
   :where(html[data-ui]) dialog::backdrop { background:var(--ui-scrim); }
   :where(html[data-ui]) .ui-menu { position:relative; }
+  :where(html[data-ui]) .ui-menu[data-ui-position=overlay] { position:revert-layer; }
   :where(html[data-ui]) :where(.ui-menu>summary,summary.ui-action) { list-style:none; }
   :where(html[data-ui]) :where(.ui-menu>summary,summary.ui-action)::-webkit-details-marker { display:none; }
   :where(html[data-ui]) .ui-menu-panel { padding:6px; }
@@ -105,11 +109,18 @@
   :where(html[data-ui]) .ui-container { container:ui-actions / inline-size; }
   :where(html[data-ui]) fieldset.ui-group { border:0; margin:0; padding:0; }
   :where(html[data-ui]) .ui-group > legend { padding:0; margin-block-end:var(--ui-gap); font-size:var(--ui-control-size); color:var(--ui-muted); }
-  :where(html[data-ui]) .ui-disclosure > summary { display:flex; align-items:center; gap:var(--ui-gap); min-block-size:var(--ui-control-height); min-inline-size:0; padding:var(--ui-control-padding); border:1px solid var(--ui-line); border-radius:var(--ui-radius); color:var(--ui-text); background:var(--ui-surface); font:500 var(--ui-control-size)/1.4 var(--ui-font); overflow-wrap:anywhere; cursor:pointer; list-style:none; }
+  :where(html[data-ui]) .ui-disclosure > summary { display:flex; inline-size:100%; justify-content:flex-start; list-style:none; }
   :where(html[data-ui]) .ui-disclosure > summary::-webkit-details-marker { display:none; }
   :where(html[data-ui]) .ui-disclosure > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
   :where(html[data-ui]) .ui-disclosure[open] > summary::after { transform:rotate(225deg); }
-  :where(html[data-ui]) .ui-disclosure > summary:hover { background:var(--ui-surface-soft); }
+  :where(html[data-ui]) .ui-field { display:flex; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-gap); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text); }
+  :where(html[data-ui]) .ui-field > input { flex:1 1 0; inline-size:0; min-block-size:calc(var(--ui-field-height) - 2px); padding-inline:0; border:0; background:transparent; }
+  :where(html[data-ui]) .ui-field:focus-within { outline:2px solid var(--ui-accent); outline-offset:var(--ui-focus-offset,2px); }
+  :where(html[data-ui]) .ui-field > input:focus-visible { outline:none; }
+  :where(html[data-ui]) progress { inline-size:100%; max-inline-size:100%; block-size:8px; border:0; border-radius:var(--ui-radius); overflow:hidden; appearance:none; background:var(--ui-surface-soft); color:var(--ui-accent); accent-color:var(--ui-accent); }
+  :where(html[data-ui]) progress::-webkit-progress-bar { background:var(--ui-surface-soft); }
+  :where(html[data-ui]) progress::-webkit-progress-value { background:var(--ui-accent); }
+  :where(html[data-ui]) progress::-moz-progress-bar { background:var(--ui-accent); }
   :where(html[data-ui]) .ui-disclosure-body { min-inline-size:0; padding:var(--ui-gap); }
 
   /* Container-owned responsiveness; the same row works in a panel, pop-out or page. */
@@ -125,7 +136,8 @@
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar) > .ui-search { inline-size:12rem; }
   :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-search { flex-basis:0; }
   :where(html[data-ui]) .ui-search :where(input,select) { inline-size:100%; }
-  :where(html[data-ui]) .ui-fill > :where(button,.ui-button,.ui-action,summary) { flex:1 1 8rem; }
+  :where(html[data-ui]) .ui-fill > :where(button,.ui-button,.ui-action,summary,details.ui-disclosure) { flex:1 1 8rem; }
+  :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > details.ui-disclosure[open] { flex-basis:100%; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-align=start] { justify-content:flex-start; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-align=end] { justify-content:flex-end; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] { flex-direction:column; align-items:stretch; }
@@ -137,6 +149,9 @@
     :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-search { flex-basis:100%; order:10; }
   }
   @container ui-actions (max-width:24rem) {
+    :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]):has(>summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always])) { flex-basis:var(--ui-control-height); }
+    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]) > summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
+    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]) > summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always])::after { display:none; }
     :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { flex-basis:var(--ui-control-height); }
     :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
     :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:min(8px,calc((var(--ui-control-height) - 20px)/2)); }
@@ -165,6 +180,8 @@
     :where(html[data-ui]) input::-webkit-date-and-time-value { display:block; box-sizing:border-box; min-block-size:1.4em; inline-size:100%; padding:var(--ui-field-padding); text-align:start; }
   }
   :where(html[data-ui]) :where(input,select,textarea)::-webkit-datetime-edit { min-inline-size:0; }
+  :where(html[data-ui]) .ui-graphic-action { min-inline-size:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); min-block-size:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); padding:calc(min(5px,(var(--ui-control-height) - 20px) / 2) / var(--ui-graphic-scale,1)); border-width:calc(1px / var(--ui-graphic-scale,1)); border-radius:calc(var(--ui-radius) / var(--ui-graphic-scale,1)); }
+  :where(html[data-ui]) .ui-graphic-action > svg.ui-icon { inline-size:calc(18px / var(--ui-graphic-scale,1)); block-size:calc(18px / var(--ui-graphic-scale,1)); }
   :where(html[data-ui]) :where(input,textarea).ui-inline-field { min-block-size:0; padding:revert-layer; resize:revert-layer; border-color:transparent; border-radius:0; background:transparent; font:inherit; text-align:inherit; }
   :where(html[data-ui]) [aria-invalid=true] { border-color:var(--ui-bad); }
   :where(html[data-ui]) .ui-status { display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-inline-size:0; overflow-wrap:anywhere; color:var(--ui-muted); }

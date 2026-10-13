@@ -12,12 +12,12 @@ class Events {
  removeEventListener(type,fn){this.listeners.get(type)?.delete(fn);}
  dispatchEvent(event){for(const fn of this.listeners.get(event.type)||[])fn(event);return true;}
 }
-function environment({storage=new Map(),dataset={},request,channels=[]}={}){
+function environment({storage=new Map(),dataset={},request,channels=[],baselines=[]}={}){
  const timers=new Map();let timerID=0;const view=new Events(),doc=new Events(),links=[];
  const localStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)};
  class Channel {constructor(name){this.name=name;channels.push(this);}postMessage(value){for(const item of channels)if(item!==this&&item.name===this.name&&!item.closed)item.onmessage?.({data:value});}close(){this.closed=true;}}
  Object.assign(view,{localStorage,BroadcastChannel:Channel,crypto:{randomUUID:()=>String(Math.random())},fetch:request||(async()=>({ok:true,text:async()=>JSON.stringify(release)})),AbortController,CustomEvent:class{constructor(type,{detail}={}){this.type=type;this.detail=detail;}},setTimeout:(fn,delay)=>{const id=++timerID;timers.set(id,{fn,delay});return id;},clearTimeout:id=>timers.delete(id)});
- Object.assign(doc,{defaultView:view,baseURI:'https://app.example/',visibilityState:'visible',documentElement:{dataset:{ui:'postvisual',...dataset}},head:{append(link){links.push(link);}},createElement:()=>({dataset:{},remove(){this.removed=true;}})});
+ Object.assign(doc,{defaultView:view,baseURI:'https://app.example/',visibilityState:'visible',querySelectorAll:selector=>selector==='link[data-ui-baseline],style[data-ui-baseline]'?baselines:[],documentElement:{dataset:{ui:'postvisual',...dataset}},head:{append(link){links.push(link);}},createElement:()=>({dataset:{},remove(){this.removed=true;}})});
  const instance=module.exports.mount(doc);
  return {doc,view,links,timers,instance,storage,channels,async next(){for(let i=0;i<10;i++)await Promise.resolve();},load(link=links.at(-1)){link.onload?.();},fail(link=links.at(-1)){link.onerror?.();},tick(){const entry=[...timers].find(([,value])=>value.delay===100);assert.ok(entry);timers.delete(entry[0]);entry[1].fn();}};
 }
@@ -57,4 +57,11 @@ test('a newer bundled contract rejects older remote CSS without touching the wor
  const e=environment({dataset:{uiVersion:'1.1.0',uiRevision:release.revision}});
  assert.equal(await e.instance.applyRelease({...other,version:'1.0.9'}),false);assert.equal(e.links.length,0);assert.equal(e.doc.documentElement.dataset.uiRevision,release.revision);
  const next=e.instance.applyRelease({...other,version:'1.1.1'});e.load();assert.equal(await next,true);e.instance.dispose();
+});
+
+test('a validated replacement retires the marked bundled UI sheet only after load',async()=>{
+ const baseline={removed:false,remove(){this.removed=true;}};const e=environment({baselines:[baseline]});
+ const failed=e.instance.applyRelease(other);assert.equal(baseline.removed,false);e.fail();assert.equal(await failed,false);assert.equal(baseline.removed,false);
+ const accepted=e.instance.applyRelease(release);assert.equal(baseline.removed,false);e.load();assert.equal(await accepted,true);assert.equal(baseline.removed,true);
+ const unavailable=e.instance.applyRelease(other);e.fail();assert.equal(await unavailable,false);assert.equal(e.links[1].removed,undefined);e.instance.dispose();
 });

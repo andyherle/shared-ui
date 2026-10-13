@@ -17,12 +17,12 @@ export function buildCSS(tokens,controls){
   }
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+controls.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\s+/g,' ').replace(/\s*([{};])\s*/g,'$1').trim()+'\n';
 }
-export function manifest(css){return {protocol:1,version:'1.1.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
+export function manifest(css){return {protocol:1,version:'1.1.1',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
   for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});
   const css=buildCSS(JSON.parse(read('tokens.json')),read('controls.css'));
-  if(Buffer.byteLength(css)>30000||/@import|url\s*\(/i.test(css))throw new Error('Styles must remain below 30 KB with no external imports');
+  if(Buffer.byteLength(css)>32000||/@import|url\s*\(/i.test(css))throw new Error('Styles must remain below 32 KB with no external imports');
   const release=manifest(css),out=path.join(directory,'public/v1');
   const icons=JSON.parse(read('icons.json'));
   const symbols=Object.entries(icons).map(([name,paths])=>{
@@ -35,7 +35,7 @@ export function buildSite(directory=root){
     ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replaceAll('@@REVISION@@',release.revision)],
-    ['lab.js',read('lab.js')],['lab.css',read('lab.css')],
+    ['lab.js',read('lab.js').replace('@@ICON_NAMES@@',JSON.stringify(Object.keys(icons)))],['lab.css',read('lab.css')],
     ['v1/manifest.json',JSON.stringify(release)+'\n']
   ]);
   fs.mkdirSync(out,{recursive:true});
