@@ -99,6 +99,18 @@
   :where(html[data-ui]) .ui-switch input:checked::before { transform:translateX(14px); background:var(--ui-on-primary); }
   :where(html[data-ui]) .ui-success { color:var(--ui-good); }
 
+  :where(html[data-ui]) :where(input,select,textarea):is(.ui-mono,[data-ui-font=mono]) { font-family:var(--ui-font-mono); }
+  :where(html[data-ui]) :where(.ui-container,.ui-group,.ui-disclosure) { min-inline-size:0; max-inline-size:100%; inline-size:100%; }
+  :where(html[data-ui]) .ui-container { container:ui-actions / inline-size; }
+  :where(html[data-ui]) fieldset.ui-group { border:0; margin:0; padding:0; }
+  :where(html[data-ui]) .ui-group > legend { padding:0; margin-block-end:var(--ui-gap); font-size:var(--ui-control-size); color:var(--ui-muted); }
+  :where(html[data-ui]) .ui-disclosure > summary { display:flex; align-items:center; gap:var(--ui-gap); min-block-size:var(--ui-control-height); min-inline-size:0; padding:var(--ui-control-padding); border:1px solid var(--ui-line); border-radius:var(--ui-radius); color:var(--ui-text); background:var(--ui-surface); font:500 var(--ui-control-size)/1.4 var(--ui-font); overflow-wrap:anywhere; cursor:pointer; list-style:none; }
+  :where(html[data-ui]) .ui-disclosure > summary::-webkit-details-marker { display:none; }
+  :where(html[data-ui]) .ui-disclosure > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
+  :where(html[data-ui]) .ui-disclosure[open] > summary::after { transform:rotate(225deg); }
+  :where(html[data-ui]) .ui-disclosure > summary:hover { background:var(--ui-surface-soft); }
+  :where(html[data-ui]) .ui-disclosure-body { min-inline-size:0; padding:var(--ui-gap); }
+
   /* Container-owned responsiveness; the same row works in a panel, pop-out or page. */
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar,.ui-tabs) { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; inline-size:100%; container:ui-actions / inline-size; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar) > * { min-inline-size:0; max-inline-size:100%; }
@@ -117,12 +129,12 @@
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):where(.ui-inline,[data-ui-layout=inline]) { inline-size:auto; flex:0 1 auto; container-type:normal; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] > * { flex:none; }
   @container ui-actions (max-width:28rem) {
-    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
-    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) .ui-search { flex-basis:100%; order:10; }
+    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
+    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-search { flex-basis:100%; order:10; }
   }
   @container ui-actions (max-width:24rem) {
-    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
-    :where(html[data-ui]) :where(.ui-actions,.ui-toolbar) .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:8px; }
+    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
+    :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:8px; }
   }
   /* Structured/domain controls retain their own geometry, with common states and focus. */
   :where(html[data-ui]) .ui-item { display:revert-layer; align-items:revert-layer; justify-content:revert-layer; gap:revert-layer; padding:revert-layer; text-align:start; white-space:normal; }
