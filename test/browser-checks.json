@@ -45,5 +45,37 @@
     "Compact single-field search remains one row at 220 px",
     "Native adopted action summaries share button sizing and have no duplicate disclosure marker",
     "Native partial selection uses the shared dashed state border"
-  ]
+  ],
+  "forwardFocusValidation": {
+    "date": "2026-10-13",
+    "method": "Isolated local browser using canonical CSS; two simultaneous desktop/touch-phone viewers; no user browser or app state access",
+    "revision": "be5e8a0ec909679ae390a7dad80d589dbb8827ed3446a249e1c4054bab8af271",
+    "checksPassed": 96,
+    "packs": [
+      "postvisual",
+      "personal"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "zoom": [
+      0.21,
+      1,
+      3
+    ],
+    "nativeControls": [
+      "normal action",
+      "scaled graphic action",
+      "selected object",
+      "resize handle"
+    ],
+    "verified": [
+      "Tab focus follows native order and focus-visible state",
+      "Graphic target follows shared desktop/touch control height",
+      "Inverse focus width and offset remain visible at every checked zoom, accounting for browser stroke quantization",
+      "Normal unscaled focus remains unchanged",
+      "No browser errors"
+    ]
+  }
 }

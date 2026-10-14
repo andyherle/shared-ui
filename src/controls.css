@@ -49,7 +49,7 @@
   :where(html[data-ui]) :where(.primary,.ui-primary,[data-ui-variant=primary]):hover { background:color-mix(in srgb,var(--ui-primary) 88%,var(--ui-bg)); }
   :where(html[data-ui]) :where(.danger,.ui-danger,[data-ui-variant=danger]) { color:var(--ui-bad); }
   :where(html[data-ui]) :where(button:disabled,[aria-disabled=true]) { opacity:.45; cursor:default; }
-  :where(html[data-ui]) :where(button,input,select,textarea,a,summary):focus-visible { outline:2px solid var(--ui-accent); outline-offset:var(--ui-focus-offset,2px); }
+  :where(html[data-ui]) :where(button,input,select,textarea,a,summary):focus-visible { outline:calc(2px / var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(var(--ui-focus-offset,2px) / var(--ui-graphic-scale,1)); }
   :where(html[data-ui]) :where(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=hidden]):not([type=file]),select,textarea) {
     min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding:var(--ui-field-padding);
     border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text);
