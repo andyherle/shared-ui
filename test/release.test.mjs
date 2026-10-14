@@ -36,3 +36,5 @@ test('workspace scale has shared chrome, metadata, rhythm, and native tabs',()=>
  assert.ok(catalogue.includes('id="workspace-density"'));
  assert.ok(catalogue.includes('class="ui-card ui-pad ui-stack"'));
 });
+
+test('shared CSS preserves native label row placement',()=>{assert.doesNotMatch(css, /\) label(?:\{| >)/);});
