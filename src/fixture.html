@@ -1,0 +1,59 @@
+<section id="control-fixture" class="lab-section">
+  <header><h2>Control fixture</h2></header>
+  <div class="ui-actions" aria-label="Fixture widths">
+    <button type="button" data-fixture-width="320">Phone</button><button type="button" data-fixture-width="480">Panel</button><button type="button" data-fixture-width="960">Desktop</button><button type="button" data-fixture-width="fit">Fit</button>
+    <label class="ui-field"><span class="ui-label">Width</span><input class="ui-range" id="fixture-width" type="range" min="240" max="1120" value="960" aria-label="Control fixture width"><output id="fixture-width-value">960 px</output></label>
+  </div>
+  <div id="fixture-container" class="lab-fixture ui-stack ui-container">
+    <header class="ui-toolbar ui-header ui-chrome" aria-label="Fixture gallery header">
+      <span class="ui-meta">526 media</span>
+      <div class="ui-actions ui-inline" aria-label="Fixture header commands">
+        <label class="ui-field"><span class="ui-label">Sort</span><select aria-label="Fixture sort"><option>Date</option><option>Name</option><option>Rating</option></select></label>
+        <button type="button" data-ui-icon="filter" data-toast="Filters opened">Filters</button><button type="button" data-ui-icon="upload" data-toast="Ingest opened">Ingest</button><button type="button" data-ui-icon="menu" data-toast="Menu opened">Menu</button>
+      </div>
+    </header>
+    <div class="lab-fixture-pair">
+      <section class="ui-menu-panel ui-chrome ui-stack" data-ui-icons="none" aria-label="Fixture gallery menu">
+        <nav class="ui-actions" data-ui-layout="vertical" aria-label="Fixture gallery actions">
+          <button type="button" data-ui-icon="grid" data-toast="Canvas opened">Open Canvas</button><a class="ui-action" href="#control-fixture" data-ui-icon="layers">Collections</a><button type="button" data-ui-icon="folder" data-toast="Libraries opened">Libraries</button><button type="button" data-ui-icon="refresh" data-toast="Scan started">Scan for changes</button>
+        </nav>
+        <fieldset class="ui-group ui-stack">
+          <label class="ui-field"><span class="ui-label">Gallery mode</span><select aria-label="Fixture gallery mode"><option>Browse</option><option>Rate</option><option>Review</option><option>Export</option></select></label>
+          <label class="ui-check ui-field"><span class="ui-label">Audio on hover</span><input type="checkbox"></label>
+          <label class="ui-check ui-field"><span class="ui-label">Autoplay videos</span><input type="checkbox"></label>
+          <label class="ui-field"><span class="ui-label">Drag</span><select aria-label="Fixture drag"><option>Copy media</option><option>Download</option></select></label>
+        </fieldset>
+      </section>
+      <section class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture choice variants">
+        <h3 class="ui-section-title">Native choices</h3>
+        <label class="ui-field"><span class="ui-label">Mode</span><select aria-label="Fixture long selection"><option>A long selected value in a narrow panel</option><option>Short</option></select></label>
+        <label class="ui-check ui-field"><span class="ui-label">Include metadata</span><input type="checkbox" checked></label>
+        <label class="ui-check ui-field"><span class="ui-label">Unavailable</span><input type="checkbox" disabled></label>
+        <div class="ui-tags" aria-label="Fixture tag states"><button class="ui-tag" type="button" aria-pressed="true">Selected</button><button class="ui-tag" type="button" disabled>Disabled</button><span class="ui-tag">Read only</span></div>
+        <label class="ui-field"><input readonly aria-label="Fixture stable link" value="https://example.test/reference/collection"><button type="button" data-ui-icon="copy" data-copy-field>Copy</button></label>
+      </section>
+    </div>
+    <article class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture media dock">
+      <div class="ui-actions" data-ui-layout="bar" aria-label="Fixture lightbox actions">
+        <div class="ui-actions ui-inline" role="group" aria-label="Fixture rating"><button type="button" data-ui-icon="star" data-ui-label="hidden" aria-label="Rate 1 star" data-toggle>1 star</button><button type="button" data-ui-icon="star" data-ui-label="hidden" aria-label="Rate 2 stars" data-toggle>2 stars</button><button type="button" data-ui-icon="star" data-ui-label="hidden" aria-label="Rate 3 stars" data-toggle>3 stars</button></div>
+        <button type="button" data-ui-icon="check" data-toggle>Select</button><button type="button" data-ui-icon="close" data-toggle>Reject</button>
+        <label class="ui-field"><span class="ui-label">Zoom</span><select aria-label="Fixture zoom"><option>100%</option><option>150%</option><option>200%</option></select></label>
+        <button type="button" data-ui-icon="copy">Copy image</button><button type="button" data-ui-icon="link">Copy link</button><button type="button" data-ui-icon="download">Download</button><button type="button" data-ui-icon="info">Info</button>
+      </div>
+      <div class="ui-tags" id="fixture-tags" aria-label="Fixture quick tags"><form class="ui-field" id="fixture-tag-form"><input id="fixture-tag-input" aria-label="Fixture add tag" placeholder="Type a tag…" autocomplete="off"></form></div>
+      <p class="ui-status" id="fixture-tag-status" role="status"></p>
+    </article>
+    <article class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture task card">
+      <h3 class="ui-section-title">Review the next revision</h3><p class="ui-meta">Example project</p>
+      <div class="ui-actions" aria-label="Fixture task actions">
+        <form class="ui-actions ui-inline" id="fixture-task-form"><button type="submit" data-ui-variant="primary" data-ui-icon="tasks">Open task</button><button type="submit" data-ui-icon="refresh">Try another</button></form>
+        <a class="ui-action" href="#control-fixture" data-ui-icon="vault">Open in Obsidian</a>
+        <details class="ui-disclosure"><summary data-ui-icon="message">Reply</summary><form class="ui-disclosure-body ui-stack" id="fixture-reply-form"><label class="ui-field"><input aria-label="Fixture reply" placeholder="Your reply" required></label><div class="ui-actions"><button type="submit" data-ui-icon="send" data-ui-variant="primary">Send reply</button></div></form></details>
+        <details class="ui-disclosure"><summary data-ui-icon="info">Why this?</summary><p class="ui-disclosure-body">The next revision is ready to review.</p></details>
+      </div>
+      <p class="ui-status" id="fixture-task-status" role="status"></p>
+    </article>
+    <section class="ui-toolbar ui-chrome" data-ui-layout="bar" aria-label="Fixture canvas actions"><button type="button" data-ui-icon="type">Text</button><button type="button" data-ui-icon="image">Images</button><button type="button" data-ui-icon="columns">Columns</button><button type="button" data-ui-icon="copy">Duplicate</button><button type="button" data-ui-icon="layers">Bring to front</button><button type="button" data-ui-icon="trash">Remove</button></section>
+    <section class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture label edge cases"><h3 class="ui-section-title">Long names and pending actions</h3><div class="ui-actions"><button type="button" data-ui-icon="file"><span class="ui-truncate">A very long reference filename for checking compact rows.webp</span></button><button type="button" data-ui-icon="upload" aria-busy="true">Uploading</button><button type="button" data-ui-icon="refresh" disabled>Retry</button></div><div class="ui-tags"><span class="ui-tag"><span>long-tag-name-with-words-and-punctuation</span></span><span class="ui-tag">日本語</span><span class="ui-tag">Café</span><span class="ui-tag">motion / detail</span></div></section>
+  </div>
+</section>

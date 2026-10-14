@@ -30,3 +30,12 @@ test('stable timeline captions reuse their existing text and glyph without attri
  for(let i=0;i<10;i++)module.exports.adoptAction(button,{icon:'save',label:'Save',sprite:'/ui/icons.svg'});
  assert.equal(label.childNodes[0],text);assert.equal(button.querySelector(':scope > svg'),glyph);assert.equal(glyph.querySelector('use'),use);assert.equal(doc.writes,writes);
 });
+
+
+test('authored card colors choose readable ink, reject CSS injection and restore the theme',()=>{
+ const values=new Map(),card={dataset:{},style:{setProperty:(key,value)=>values.set(key,value),removeProperty:key=>values.delete(key)}};
+ module.exports.setCardColor(card,'#ff575c');assert.equal(values.get('--ui-card-fill'),'#ff575c');assert.equal(values.get('--ui-card-ink'),'#111111');
+ module.exports.setCardColor(card,'#27313e');assert.equal(values.get('--ui-card-ink'),'#ffffff');
+ assert.throws(()=>module.exports.setCardColor(card,'url(https://example.com)'),/six-digit/);assert.equal(card.dataset.uiColor,'#27313e');
+ module.exports.setCardColor(card,null);assert.equal(card.dataset.uiColor,undefined);assert.equal(values.size,0);
+});

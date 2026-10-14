@@ -82,7 +82,7 @@ Aura and StaticRef use Postvisual; Portal uses Personal. Their layout and domain
 
 `.ui-actions` aligns controls to the start and wraps them to the available container width. `.ui-toolbar` adds a shared command-bar surface. `.ui-fill` gives actions and native `details.ui-disclosure` wrappers equal flexible space; `data-ui-layout="vertical"` stacks them with visible labels. For an intrinsic group beside other content, use `.ui-inline`; its width follows its content instead of establishing a size query. No per-page button breakpoint is needed. A bounded panel or grid cell can use `.ui-container` as the parent query host for intrinsic groups. Grid tracks that should shrink need `minmax(0,1fr)`; an `auto` track sizes to its content and must use `.ui-inline` for its action group. Size containment cannot derive its own width from descendants.
 
-An action consists of a decorative `svg.ui-icon` and a `span.ui-label`, plus a complete accessible name. Primary action labels stay visible. When the expanded actions no longer fit their available row, secondary captions give way to icons before wrapping; text-only controls stay readable. `data-ui-label="always"` keeps a visible label and `hidden` requests an icon-only control. Nested groups adapt to their own container; a horizontal parent does not hide labels in a nested vertical group. Native selectors retain their selected value. `.ui-search` grows horizontally within action rows; a standalone search field never grows into unused panel height. Coarse pointers retain 44 px targets and 16 px field text. Native date/time fields include the [iOS padding containment workaround](https://bugs.webkit.org/show_bug.cgi?id=301648), preserving native pickers.
+An action consists of a decorative `svg.ui-icon` and a `span.ui-label`, plus a complete accessible name. When expanded controls no longer fit, every eligible caption in the row gives way together, including primary actions and composed-field captions. Native selected values remain visible. `data-ui-label="always"` keeps the whole row readable; `hidden` identifies a deliberate symbol control such as a rating or zoom step. Text-only actions also keep their whole row readable. Intrinsic nested groups share one fit decision; a horizontal parent does not hide labels in a nested vertical group. Native selectors retain their selected value. `.ui-search` grows horizontally within action rows; a standalone search field never grows into unused panel height. Coarse pointers retain 44 px targets and 16 px field text. Native date/time fields include the [iOS padding containment workaround](https://bugs.webkit.org/show_bug.cgi?id=301648), preserving native pickers.
 
 Use `SharedUI.adoptAction(element, {icon, label, ariaLabel, iconOnly, title, sprite})` when creating a native action. It retains the element and its handlers, preserves existing ARIA and titles unless explicitly replaced, and uses the app's same-origin sprite. `SharedUI.setActionLabel(element, label, {ariaLabel})` changes a label without removing its icon. A scoped ResizeObserver watches registered action groups and their immediate row, with one queued fit per size change. It stops in hidden views and releases observers, listeners and queued work on disposal. There is no global DOM observer, polling loop, framework, or automatic DOM rebuilding. Dynamic adoption refreshes a group only when its action changes; call `SharedUI.observeActions(group)` after adding or removing controls and `SharedUI.refreshActions(document)` after other layout changes.
 
@@ -113,7 +113,7 @@ Use `ui-menu data-ui-position="overlay"` for a menu whose app layout already anc
 
 Use `.ui-chrome` for operational panels and data tables, `.ui-section-title` for a compact panel heading, and `.ui-meta` for secondary text and paths. `.ui-value` is the shared numeric summary type. Full H1–H6 and `.ui-prose` remain document typography; do not use them to size a small storage label or table header. Density and palette remain independent, so Personal and Postvisual chrome have the same geometry at the same density.
 
-`.ui-stack` owns vertical rhythm and clears child block margins. `.ui-pad` uses twice the shared gap as surface padding. Apply them to native cards and sections; keep domain grids and structured row placement in the app layer. `.ui-tabs` supplies start-aligned native tabs and the selected underline. `.ui-actions` / `.ui-toolbar` default to start alignment; request `data-ui-align="center"` or `"end"` deliberately. `data-ui-variant="quiet"` keeps native actions and focus with a quiet resting surface, for list rows and filenames. Use `.ui-truncate` on the label for compact filenames and retain the full accessible name/title.
+`.ui-stack` owns vertical rhythm and clears child block margins. `.ui-pad` uses twice the shared gap as surface padding. Apply them to native cards and sections; keep domain grids and structured row placement in the app layer. `.ui-tabs` supplies start-aligned native tabs and the selected underline. `.ui-actions` / ordinary `.ui-toolbar` default to start alignment; `.ui-header` defaults to end alignment and reserves identity space at the start. Request `data-ui-align="center"` or `"end"` deliberately. `data-ui-variant="quiet"` keeps native actions and focus with a quiet resting surface, for list rows and filenames. Use `.ui-truncate` on the label for compact filenames and retain the full accessible name/title.
 
 The catalogue's **Workspace scale and alignment** section demonstrates these roles in a reusable, data-free example.
 
@@ -149,7 +149,7 @@ The reusable selector is a native `label.ui-field` containing a `span.ui-label` 
 
 Use `.ui-toolbar.ui-header.ui-chrome` for a shared operational header: a compact full-width surface with a single bottom separator. Keep identity/status placement in the app layer; use `.ui-actions.ui-inline` for its intrinsic command groups. Ordinary toolbars keep their rounded surface.
 
-A native priority group uses `details.ui-disclosure.ui-overflow`, an icon summary, and `.ui-actions.ui-disclosure-body`. Put less-used controls inside it. At initialization Shared UI flattens those controls into the row when they fit. It first compacts secondary captions, then collapses whole priority groups into a native expanding tile. `data-ui-priority="0"` collapses before `1`; primary actions and `data-ui-label="always"` keep their captions. Without JavaScript it remains a usable native disclosure. Normal wrapping is the final fallback when the essential controls alone cannot fit.
+A native priority group uses `details.ui-disclosure.ui-overflow`, an icon summary, and `.ui-actions.ui-disclosure-body`. Put less-used controls inside it. At initialization Shared UI flattens those controls into the row when they fit. It first compacts the row’s captions together, then collapses whole priority groups into a native expanding tile. `data-ui-priority="0"` collapses before `1`; `data-ui-label="always"` keeps all captions in its row. Intrinsic subgroups share the outer row’s priorities. Without JavaScript it remains a usable native disclosure. Normal wrapping is the final fallback when the essential controls alone cannot fit.
 
 ```html
 <div class="ui-actions">
@@ -172,3 +172,33 @@ For controls created by an app, `SharedUI.createOverflow(actions, {label, priori
 For the quiet label/value selector, apply `data-ui-variant="quiet"` to `label.ui-field` and use `strong.ui-label` for the caption. The native selected value sits at the end of the row, the picker remains native, and the shared focus indicator and invalid/disabled states still apply.
 
 `.ui-value-control` aligns a native `.ui-range` input with a native numeric input: the range uses remaining row space and the exact value reserves twelve character widths. Use native labels or accessible names; values and precision remain application-owned.
+
+
+## Authored card colors and placement
+
+Use `SharedUI.setCardColor(card, hex)` on a native `.ui-card` to fill the whole
+card with a user-authored six-digit color and choose readable foreground text.
+Pass `null` to restore the saved UI theme. These colors are document content,
+not a third application palette. Native color inputs and `.ui-swatch` actions
+can edit that value. The Canvas catalogue demonstrates this in both packs.
+
+While dragging, set `data-ui-dragging="true"`; remove it on release and set
+`data-ui-placing="true"` for the shared placement animation. Clear placing on
+`animationend` (and at the next gesture). Reduced motion disables both effects.
+Publish `--ui-graphic-scale` for physically sized lift and focus. `.ui-guide`
+paints alignment guides; the app owns their positions and lengths.
+
+
+## Component tokens and control fixture
+
+Postvisual and Personal share every component type, subtype, native DOM pattern and interaction. Palettes and semantic tokens provide the visual differences. `--ui-control-size`, `--ui-control-weight`, `--ui-control-inset`, and the density-scoped `--ui-control-font` govern commands, selector captions, values and checkbox rows together. Action rows stretch controls to the same line height. Fit measurements use expanded token geometry without temporarily changing the rendered row, so compact padding cannot create resize oscillation.
+
+Use `label.ui-check.ui-field` for an inline caption and native checkbox in the same control surface as a selector. Operational menus can use `data-ui-icons="none"` with visible captions for a text-only command and field treatment. Put related choices in `fieldset.ui-group`; remove redundant helper prose.
+
+Use `.ui-tags` for wrapping tags and `button.ui-tag` for a removable pill; a readonly tag uses `span.ui-tag`. `--ui-tag-*` tokens own its radius, padding, type, height and colors. Put the entry input inside a native `form.ui-field` or `label.ui-field` beside the pills. The entry sizes to its text using native `field-sizing`, retains a usable fallback width, and keeps the shared focus target.
+
+`SharedUI.createTagInput(input, {options, excluded, onCommit})` adds pill suggestions to that existing input. Supply functions returning known and selected tag strings, and an application-owned commit callback. Enter and comma commit literal text; arrows plus Enter commit an explicitly selected suggestion; comma-separated paste commits once; Escape dismisses suggestions; Shift+Enter remains available to the application. The callback receives the captured text after the input clears. The returned `draw`, `hide`, `flush`, and `dispose` methods retain native input ownership and release listeners and suggestion nodes. Storage, autosave, deduplication and navigation stay with the application.
+
+Use `data-ui-layout="bar"` on a native `.ui-actions` or `.ui-toolbar` for a single adaptive command line that scrolls after compaction if its essential controls still cannot fit. Keep symbol/value groups intrinsic with `.ui-inline`.
+
+The **Control fixture** demonstrates the same markup in both packs: right-aligned headers; text menus; selector and checkbox subtypes; long, disabled and readonly values; stable links; a media dock and keyboard tag suggestions; native task forms and disclosures; Canvas actions; pending actions; and long, Unicode and punctuated tags. Its phone, panel, desktop and fit presets exercise each group without application data.

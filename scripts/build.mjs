@@ -30,7 +30,7 @@ export function buildCSS(tokens,controls){
   }
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+compactCSS(controls)+'\n';
 }
-export function manifest(css){return {protocol:1,version:'1.3.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
+export function manifest(css){return {protocol:1,version:'1.4.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
   for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});
@@ -47,7 +47,7 @@ export function buildSite(directory=root){
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],
     ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
-    ['index.html',read('index.html').replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],
+    ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],
     ['lab.js',read('lab.js').replace('@@ICON_NAMES@@',JSON.stringify(Object.keys(icons)))],['lab.css',read('lab.css')],
     ['v1/manifest.json',JSON.stringify(release)+'\n']
   ]);
