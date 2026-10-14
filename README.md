@@ -10,7 +10,7 @@ npm run check
 
 ## Integration
 
-Serve `public/v1/styles.css` and `runtime.js` with the application's own assets. Mark the human-facing document `<html data-ui="postvisual">` or `<html data-ui="personal">`. Put application styles in `@layer app`. Use `data-ui-density="compact"`, `dense`, or `comfortable` on the document root or a control group. Dense desktop controls use 24 px buttons, 26 px fields and a 4 px group gap; coarse pointers retain larger touch targets. Effects, images, video and output-only renderer documents keep their own rendering.
+Serve `public/v1/styles.css` and `runtime.js` with the application's own assets. Mark the human-facing document `<html data-ui="postvisual">` or `<html data-ui="personal">`. Put application styles in `@layer app`. Use `data-ui-density="compact"`, `dense`, or `comfortable` on the document root or a control group. Compact desktop controls use 30 px buttons and fields with 6 px gaps. Dense controls use 24 px buttons, 26 px fields and 4 px gaps. Coarse pointers retain 44 px targets and 16 px native field text. Effects, images, video and output-only renderer documents keep their own rendering.
 
 Use native `button`, `input`, `select`, `textarea`, `details` and `dialog`. Actions use the standard outlined control. `data-ui-variant="primary"` emphasizes the main action and `danger` identifies destructive actions. Common controls have one paint definition; app CSS supplies layout only. `.ui-toolbar`, `.ui-menu`, `.ui-menu-panel`, `.ui-panel`, `.ui-section-title` and `.ui-prose` express reusable roles. Headings H1–H6 are defined independently of control density.
 
@@ -120,3 +120,12 @@ The catalogue's **Workspace scale and alignment** section demonstrates these rol
 Use native `label.ui-check` for checkbox and radio rows. It aligns the glyph and caption on one line and retains the shared control-height hit target, including coarse pointers.
 
 Native labels retain application row placement. The shared pack does not force every label or its inputs into a vertical stack; use `.ui-field` for one composed field and `.ui-choice` for a native checkbox/radio row. App-layer flex/grid placement survives a compatible CSS refresh.
+
+
+## Restored Postvisual controls
+
+Postvisual uses StaticRef's pre-migration neutral palette and quiet, compact control geometry. The source reference is StaticRef `ec8e9ab` (`staticref/web/app.css` and `gallery-visual.css`); current application behavior remains in its own repository. Menu commands align to the start and use small readable captions rather than centered full-width button labels.
+
+Use native `.ui-toolbar` with `data-ui-layout="joined"` for one continuous command surface. Compose its controls with `.ui-actions.ui-inline`, `.ui-field`, and `.ui-icon-button`; keep app CSS to command placement and domain sizing. The toolbar stays on one row; a constrained application's scrolling region keeps overflow commands reachable. Primary actions still use the normal primary state.
+
+Native `details.ui-disclosure` inside `.ui-actions` takes its caption width when closed and a full row when open. Use `.ui-actions.ui-inline` on a native form that provides an adjacent submit action. Apply `.ui-stack` to cards and form bodies for explicit shared rhythm. Hidden icon actions keep their target width in `.ui-fill`; visible primary captions retain flexible room. `.ui-container` establishes a query host without replacing application-owned widths.

@@ -95,5 +95,27 @@
     ],
     "cssBytes": 31858,
     "gzipBytes": 5633
+  },
+  "postvisualRestorationValidation": {
+    "date": "2026-10-13",
+    "method": "Codex in-app browser against canonical local Style Lab and actual application DOM with synthetic data; coarse-pointer CSS exercised in an isolated fixture",
+    "version": "1.2.1",
+    "revision": "d147524bbb552c6002dce52f1daa9349e82daf8675eb532c29d5e7ee51c169cb",
+    "cssBytes": 31976,
+    "gzipBytes": 5939,
+    "sharedTestsPassed": 24,
+    "verified": [
+      "Postvisual and Personal, light and dark, at 393px and 1440px without document overflow",
+      "Application-owned 320px query container width survives shared styling",
+      "Secondary icon in a filled narrow group measures 30px in compact Postvisual, while the primary caption remains visible",
+      "Restored Postvisual phone command strip is one 46px row with 44px icon targets",
+      "Postvisual menu captions align to the start and retain 13px text",
+      "Portal card padding is 12px; reply/dismiss and reply/later pairs use equal 44px targets with 6px gaps",
+      "Native Enter and Space toggle the same reply DOM and retain entered text"
+    ],
+    "limits": [
+      "Coarse-pointer fixture tests shared CSS geometry, not physical iPhone behavior",
+      "Synthetic previews contain no user vault data or client media"
+    ]
   }
 }

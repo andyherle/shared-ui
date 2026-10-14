@@ -23,13 +23,14 @@ export function buildCSS(tokens,controls){
   const packs=[];
   for(const [name,pack] of Object.entries(tokens)){
     const base=`html[data-ui="${name}"]`,mode=name==='personal'?'light':'dark';
-    packs.push(`${base}{${declarations(pack.defaults)}}`,theme(base,pack[mode],mode));
-    for(const appearance of ['light','dark'])packs.push(theme(`${base}[data-theme="${appearance}"]`,pack[appearance],appearance));
+    // Default and explicit appearances share one palette declaration.
+    packs.push(`${base}{${declarations(pack.defaults)}}`,theme(`${base},${base}[data-theme="${mode}"]`,pack[mode],mode));
+    for(const appearance of ['light','dark'])if(appearance!==mode)packs.push(theme(`${base}[data-theme="${appearance}"]`,pack[appearance],appearance));
     if(name==='personal')packs.push(`@media(prefers-color-scheme:dark){${theme(`${base}:not([data-theme="light"])`,pack.dark,'dark')}}`);
   }
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+compactCSS(controls)+'\n';
 }
-export function manifest(css){return {protocol:1,version:'1.2.0',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
+export function manifest(css){return {protocol:1,version:'1.2.1',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
   for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});
