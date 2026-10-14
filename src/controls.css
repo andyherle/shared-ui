@@ -113,10 +113,15 @@
   :where(html[data-ui]) .ui-disclosure > summary::-webkit-details-marker { display:none; }
   :where(html[data-ui]) .ui-disclosure > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
   :where(html[data-ui]) .ui-disclosure[open] > summary::after { transform:rotate(225deg); }
-  :where(html[data-ui]) .ui-field { display:flex; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-gap); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text); }
-  :where(html[data-ui]) .ui-field > input { flex:1 1 0; inline-size:0; min-block-size:calc(var(--ui-field-height) - 2px); padding-inline:0; border:0; background:transparent; }
+  :where(html[data-ui]) label { display:block; margin-block:var(--ui-gap); }
+  :where(html[data-ui]) label > :where(input,select,textarea) { display:block; margin-block-start:var(--ui-gap); }
+  :where(html[data-ui]) .ui-field { display:flex; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-gap); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text); }
+  :where(html[data-ui]) .ui-field > :where(input,select) { margin:0; flex:1 1 0; inline-size:0; min-block-size:calc(var(--ui-field-height) - 2px); padding-inline:0; border:0; background:transparent; }
+  :where(html[data-ui]) .ui-field > select { flex:1 1 auto; inline-size:auto; }
+  :where(html[data-ui]) .ui-field > .ui-label { flex:none; white-space:nowrap; font-size:var(--ui-control-size); }
+  :where(html[data-ui]) .ui-truncate { min-inline-size:0; max-inline-size:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
   :where(html[data-ui]) .ui-field:focus-within { outline:2px solid var(--ui-accent); outline-offset:var(--ui-focus-offset,2px); }
-  :where(html[data-ui]) .ui-field > input:focus-visible { outline:none; }
+  :where(html[data-ui]) .ui-field > :where(input,select):focus-visible { outline:none; }
   :where(html[data-ui]) progress { inline-size:100%; max-inline-size:100%; block-size:8px; border:0; border-radius:var(--ui-radius); overflow:hidden; appearance:none; background:var(--ui-surface-soft); color:var(--ui-accent); accent-color:var(--ui-accent); }
   :where(html[data-ui]) progress::-webkit-progress-bar { background:var(--ui-surface-soft); }
   :where(html[data-ui]) progress::-webkit-progress-value { background:var(--ui-accent); }
@@ -145,15 +150,15 @@
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] > * { flex:none; }
   :where(html[data-ui]) :where(.ui-actions,.ui-toolbar)[data-ui-layout=vertical] > .ui-search { inline-size:100%; }
   @container ui-actions (max-width:28rem) {
-    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
+    :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]):not(:where(.primary,.ui-primary,[data-ui-variant=primary])) > .ui-label { display:none; }
     :where(html[data-ui]) .ui-toolbar:not([data-ui-layout=vertical]) > .ui-search { flex-basis:100%; order:10; }
   }
   @container ui-actions (max-width:24rem) {
     :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]):has(>summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always])) { flex-basis:var(--ui-control-height); }
-    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]) > summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
+    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]) > summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always]):not(:where(.primary,.ui-primary,[data-ui-variant=primary])) > .ui-label { display:none; }
     :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > details.ui-disclosure:not([open]) > summary.ui-action:has(>svg.ui-icon):not([data-ui-label=always])::after { display:none; }
     :where(html[data-ui]) .ui-fill:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { flex-basis:var(--ui-control-height); }
-    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) > .ui-label { display:none; }
+    :where(html[data-ui]) .ui-actions:not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]):not(:where(.primary,.ui-primary,[data-ui-variant=primary])) > .ui-label { display:none; }
     :where(html[data-ui]) :where(.ui-actions,.ui-toolbar):not([data-ui-layout=vertical]) > .ui-action:has(>svg.ui-icon):not([data-ui-label=always]) { padding-inline:min(8px,calc((var(--ui-control-height) - 20px)/2)); }
   }
   /* Structured/domain controls retain their own geometry, with common states and focus. */

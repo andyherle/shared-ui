@@ -77,5 +77,23 @@
       "Normal unscaled focus remains unchanged",
       "No browser errors"
     ]
+  },
+  "composedFieldValidation": {
+    "date": "2026-10-13",
+    "method": "Codex in-app browser, synthetic local catalogue and independent application fixture; 390px and desktop views",
+    "version": "1.1.2",
+    "revision": "3a84b9cd78dbbff8548cb3f048d8090ac6510a708d907fb8ee0b1ab6d92d966f",
+    "automatedTests": 20,
+    "verified": [
+      "Personal light/dark and Postvisual dark retain native fields without horizontal overflow",
+      "Readonly URL stays on one line with a labeled Copy action",
+      "Tab moves from the URL field to Copy with a 2px focus outline",
+      "ArrowDown and Enter change the native zoom selector to 150%",
+      "Changing pack and theme preserves the selected zoom value",
+      "Composed selectors have one field border and an unbroken inline label",
+      "Primary approval caption remains visible at phone width"
+    ],
+    "cssBytes": 31858,
+    "gzipBytes": 5633
   }
 }
