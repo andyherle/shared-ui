@@ -31,7 +31,7 @@ test('workspace scale has shared chrome, metadata, rhythm, and native tabs',()=>
  assert.match(css,/\.ui-chrome\{font-size:var\(--ui-control-size\);line-height:1\.45/);
  assert.ok(css.includes('justify-content:flex-start'));
  assert.ok(css.includes('[data-ui-align=center]'));
- assert.ok(css.includes(':where([data-ui-variant=quiet]:not(:hover))')); // Selected native states must outrank quiet resting paint.
+ assert.ok(css.includes(':where([data-ui-variant=quiet]:is(.ui-field,:not(:hover)))')); // Selected native states must outrank quiet resting paint.
  const catalogue=fs.readFileSync(new URL('../src/index.html',import.meta.url),'utf8');
  assert.ok(catalogue.includes('id="workspace-density"'));
  assert.ok(catalogue.includes('class="ui-card ui-pad ui-stack"'));

@@ -117,5 +117,28 @@
       "Coarse-pointer fixture tests shared CSS geometry, not physical iPhone behavior",
       "Synthetic previews contain no user vault data or client media"
     ]
+  },
+  "adaptiveGroupsValidation": {
+    "date": "2026-10-13",
+    "method": "Codex in-app browser against canonical Style Lab and isolated coarse-pointer CSS fixture; native Safari checked the owned live Aura Workshop preserving refresh",
+    "version": "1.3.0",
+    "revision": "437e726c8ee4076c5f1226b07349dfb92530d26ca6c72b3c4117d001a295fb25",
+    "cssBytes": 31722,
+    "gzipBytes": 6003,
+    "sharedTestsPassed": 30,
+    "verified": [
+      "Desktop group remains one30px row at420px with secondary captions compacted, and restores all captions in one30px row at900px",
+      "At393px, both packs and both themes retain primary Save text and a44px priority summary",
+      "Enter and Space open the native tile; its secondary captions are readable; Escape closes it and focuses the summary",
+      "A native selected Review value survives closing, reopening and all four pack/theme combinations",
+      "Standalone search stays44px high in a320px tall flex panel; composed range and exact numeric field stay on one44px row",
+      "Quiet native Gallery mode aligns its caption and value within a transparent44px row without document overflow",
+      "All four app generated bundles match the canonical installer with --check",
+      "Live Aura preserving refresh reconnected the same Working item and playback continued"
+    ],
+    "limits": [
+      "Coarse-pointer fixture verifies shared CSS geometry rather than physical iPhone behavior",
+      "Fixture content and published catalogue are synthetic; no client media or personal data included"
+    ]
   }
 }

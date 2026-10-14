@@ -82,9 +82,9 @@ Aura and StaticRef use Postvisual; Portal uses Personal. Their layout and domain
 
 `.ui-actions` aligns controls to the start and wraps them to the available container width. `.ui-toolbar` adds a shared command-bar surface. `.ui-fill` gives actions and native `details.ui-disclosure` wrappers equal flexible space; `data-ui-layout="vertical"` stacks them with visible labels. For an intrinsic group beside other content, use `.ui-inline`; its width follows its content instead of establishing a size query. No per-page button breakpoint is needed. A bounded panel or grid cell can use `.ui-container` as the parent query host for intrinsic groups. Grid tracks that should shrink need `minmax(0,1fr)`; an `auto` track sizes to its content and must use `.ui-inline` for its action group. Size containment cannot derive its own width from descendants.
 
-An action consists of a decorative `svg.ui-icon` and a `span.ui-label`, plus a complete accessible name. Primary action labels stay visible. At small container widths, secondary action labels give way to the icon; text-only controls stay readable. `data-ui-label="always"` keeps a visible label and `hidden` requests an icon-only control. Nested groups adapt to their own container; a horizontal parent does not hide labels in a nested vertical group. Native selectors retain their selected value. `.ui-search` flexes with its group and takes a full row in narrow toolbars. Coarse pointers retain 44 px targets and 16 px field text. Native date/time fields include the [iOS padding containment workaround](https://bugs.webkit.org/show_bug.cgi?id=301648), preserving native pickers.
+An action consists of a decorative `svg.ui-icon` and a `span.ui-label`, plus a complete accessible name. Primary action labels stay visible. When the expanded actions no longer fit their available row, secondary captions give way to icons before wrapping; text-only controls stay readable. `data-ui-label="always"` keeps a visible label and `hidden` requests an icon-only control. Nested groups adapt to their own container; a horizontal parent does not hide labels in a nested vertical group. Native selectors retain their selected value. `.ui-search` grows horizontally within action rows; a standalone search field never grows into unused panel height. Coarse pointers retain 44 px targets and 16 px field text. Native date/time fields include the [iOS padding containment workaround](https://bugs.webkit.org/show_bug.cgi?id=301648), preserving native pickers.
 
-Use `SharedUI.adoptAction(element, {icon, label, ariaLabel, iconOnly, title, sprite})` when creating a native action. It retains the element and its handlers, preserves existing ARIA and titles unless explicitly replaced, and uses the app's same-origin sprite. `SharedUI.setActionLabel(element, label, {ariaLabel})` changes a label without removing its icon. There is no global observer, resize loop, framework, or automatic DOM rebuilding.
+Use `SharedUI.adoptAction(element, {icon, label, ariaLabel, iconOnly, title, sprite})` when creating a native action. It retains the element and its handlers, preserves existing ARIA and titles unless explicitly replaced, and uses the app's same-origin sprite. `SharedUI.setActionLabel(element, label, {ariaLabel})` changes a label without removing its icon. A scoped ResizeObserver watches registered action groups and their immediate row, with one queued fit per size change. It stops in hidden views and releases observers, listeners and queued work on disposal. There is no global DOM observer, polling loop, framework, or automatic DOM rebuilding. Dynamic adoption refreshes a group only when its action changes; call `SharedUI.observeActions(group)` after adding or removing controls and `SharedUI.refreshActions(document)` after other layout changes.
 
 `details.ui-disclosure` and `.ui-disclosure-body` share a native collapsible section. The summary inherits the same action appearance and states; its only extra UI is the native disclosure indicator. Collapsing retains the same DOM, values and handlers. Use `fieldset.ui-group` with a `legend` to name a related set of controls; it adds no behavior or application state. `.ui-mono` or `data-ui-font="mono"` keeps code fields in the shared monospace font.
 
@@ -129,3 +129,46 @@ Postvisual uses StaticRef's pre-migration neutral palette and quiet, compact con
 Use native `.ui-toolbar` with `data-ui-layout="joined"` for one continuous command surface. Compose its controls with `.ui-actions.ui-inline`, `.ui-field`, and `.ui-icon-button`; keep app CSS to command placement and domain sizing. The toolbar stays on one row; a constrained application's scrolling region keeps overflow commands reachable. Primary actions still use the normal primary state.
 
 Native `details.ui-disclosure` inside `.ui-actions` takes its caption width when closed and a full row when open. Use `.ui-actions.ui-inline` on a native form that provides an adjacent submit action. Apply `.ui-stack` to cards and form bodies for explicit shared rhythm. Hidden icon actions keep their target width in `.ui-fill`; visible primary captions retain flexible room. `.ui-container` establishes a query host without replacing application-owned widths.
+
+
+### Labelled native selector
+
+The reusable selector is a native `label.ui-field` containing a `span.ui-label` and a native `select` with an accessible name. The caption and value share one border and focus indicator. Shared UI places the caption at the start and the selected value at the end, reserves the native picker indicator, and allows the field to shrink within its container. Applications supply options and placement; do not add select widths, padding, fonts, or border overrides. The Compact commands catalogue shows Gallery mode, including a long selected value for narrow containers.
+
+```html
+<label class="ui-field">
+  <span class="ui-label">Gallery mode</span>
+  <select aria-label="Gallery mode">
+    <option>Browse</option><option>Rate</option><option>Review</option>
+  </select>
+</label>
+```
+
+
+## Adaptive groups and header bars
+
+Use `.ui-toolbar.ui-header.ui-chrome` for a shared operational header: a compact full-width surface with a single bottom separator. Keep identity/status placement in the app layer; use `.ui-actions.ui-inline` for its intrinsic command groups. Ordinary toolbars keep their rounded surface.
+
+A native priority group uses `details.ui-disclosure.ui-overflow`, an icon summary, and `.ui-actions.ui-disclosure-body`. Put less-used controls inside it. At initialization Shared UI flattens those controls into the row when they fit. It first compacts secondary captions, then collapses whole priority groups into a native expanding tile. `data-ui-priority="0"` collapses before `1`; primary actions and `data-ui-label="always"` keep their captions. Without JavaScript it remains a usable native disclosure. Normal wrapping is the final fallback when the essential controls alone cannot fit.
+
+```html
+<div class="ui-actions">
+  <button class="ui-action" data-ui-variant="primary" aria-label="Save">
+    <svg class="ui-icon" aria-hidden="true"><use href="/shared-ui/icons.svg#ui-save"/></svg>
+    <span class="ui-label">Save</span>
+  </button>
+  <details class="ui-disclosure ui-overflow" data-ui-priority="0">
+    <summary class="ui-action" data-ui-label="hidden" aria-label="More actions" title="More actions">
+      <svg class="ui-icon" aria-hidden="true"><use href="/shared-ui/icons.svg#ui-more"/></svg>
+      <span class="ui-label">More actions</span>
+    </summary>
+    <div class="ui-actions ui-disclosure-body">… native secondary controls …</div>
+  </details>
+</div>
+```
+
+For controls created by an app, `SharedUI.createOverflow(actions, {label, priority, sprite})` wraps the existing nodes once in that same native pattern. It returns the details element. Existing values, IDs, handlers, form ownership and accessible names stay intact; resize never reparents them. Use explicit priorities rather than guessing a control's importance. A user's open tile and focused control remain reachable through resizing. The expanded tile shows full captions for its secondary controls; Escape closes it and returns focus to its native summary. `SharedUI.disposeActions(document)` releases the group's shared lifecycle. The catalogue demonstrates the three stages and a search field inside a tall panel.
+
+For the quiet label/value selector, apply `data-ui-variant="quiet"` to `label.ui-field` and use `strong.ui-label` for the caption. The native selected value sits at the end of the row, the picker remains native, and the shared focus indicator and invalid/disabled states still apply.
+
+`.ui-value-control` aligns a native `.ui-range` input with a native numeric input: the range uses remaining row space and the exact value reserves twelve character widths. Use native labels or accessible names; values and precision remain application-owned.
