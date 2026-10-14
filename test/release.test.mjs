@@ -14,7 +14,7 @@ test('update contract rejects incompatible and external stylesheet releases',()=
  for(const patch of [{protocol:2},{version:'2.0.0'},{revision:'x'},{stylesheet:'https://elsewhere.test/style.css'},{stylesheet:'../style.css'},{integrity:'sha384-invalid'}])assert.throws(()=>release({...value,...patch}));
 });
 test('both packs use the same controls and distinct light/dark palettes',()=>{
- for(const pack of ['postvisual','personal'])assert.ok(css.includes(`html[data-ui="${pack}"]`));
+ for(const pack of ['postvisual','personal'])assert.ok(css.includes(`[data-ui="${pack}"]`));
  for(let level=1;level<=6;level++)assert.ok(css.includes(`--ui-h${level}:`));
  assert.ok(css.includes('@layer app,ui.tokens,ui.controls,ui.prose;'));
  assert.doesNotMatch(css,/@import|url\s*\(/i);

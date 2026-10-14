@@ -1,7 +1,7 @@
 /* One ordered cascade. Application styles belong to the app layer. */
 @layer ui.tokens {
   :where([data-ui],[data-ui-density]) { --ui-control-font:var(--ui-control-weight) var(--ui-control-size)/1.4 var(--ui-font); }
-  html[data-ui] {
+  [data-ui] {
     --ui-font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --ui-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --ui-radius: 8px; --ui-radius-small: 5px; --ui-gap: 6px; --ui-range-thumb:12px;
@@ -27,18 +27,18 @@
     --workshop-surface: var(--ui-surface); --workshop-line: var(--ui-line); --workshop-muted: var(--ui-muted);
     --body-size: var(--ui-body-size); --small-size: var(--ui-control-size); --heading-size: var(--ui-h1);
   }
-  html[data-ui=postvisual] { --ui-radius:4px; --ui-radius-small:4px; }
-  html[data-ui=personal] { --line:var(--ui-line-strong); }
-  html[data-ui][data-ui-density=compact], html[data-ui] :where([data-ui-density=compact]) { --ui-control-height:30px; --ui-field-height:30px; --ui-control-size:12px; --ui-control-inset:8px; --ui-control-padding:4px var(--ui-control-inset); --ui-field-padding:4px var(--ui-control-inset); }
-  html[data-ui][data-ui-density=dense], html[data-ui] :where([data-ui-density=dense]) { --ui-gap:4px; --ui-control-height:24px; --ui-field-height:26px; --ui-control-size:12px; --ui-control-inset:5px; --ui-control-padding:2px var(--ui-control-inset); --ui-field-padding:3px var(--ui-control-inset); }
-  html[data-ui][data-ui-density=comfortable], html[data-ui] :where([data-ui-density=comfortable]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:14px; --ui-control-inset:14px; --ui-control-padding:9px var(--ui-control-inset); --ui-field-padding:12px var(--ui-control-inset); }
+  [data-ui=postvisual] { --ui-radius:4px; --ui-radius-small:4px; }
+  [data-ui=personal] { --line:var(--ui-line-strong); }
+  [data-ui][data-ui-density=compact], [data-ui] :where([data-ui-density=compact]) { --ui-control-height:30px; --ui-field-height:30px; --ui-control-size:12px; --ui-control-inset:8px; --ui-control-padding:4px var(--ui-control-inset); --ui-field-padding:4px var(--ui-control-inset); }
+  [data-ui][data-ui-density=dense], [data-ui] :where([data-ui-density=dense]) { --ui-gap:4px; --ui-control-height:24px; --ui-field-height:26px; --ui-control-size:12px; --ui-control-inset:5px; --ui-control-padding:2px var(--ui-control-inset); --ui-field-padding:3px var(--ui-control-inset); }
+  [data-ui][data-ui-density=comfortable], [data-ui] :where([data-ui-density=comfortable]) { --ui-control-height:44px; --ui-field-height:48px; --ui-control-size:14px; --ui-control-inset:14px; --ui-control-padding:9px var(--ui-control-inset); --ui-field-padding:12px var(--ui-control-inset); }
   @media(pointer:coarse) {
-    html[data-ui], html[data-ui][data-ui-density], html[data-ui] :where([data-ui-density]) { --ui-tag-height:44px; --ui-gap:6px; --ui-control-height:44px; --ui-field-height:44px; --ui-control-size:16px; --ui-control-inset:10px; --ui-control-padding:6px var(--ui-control-inset); --ui-field-padding:6px var(--ui-control-inset); }
+    [data-ui], [data-ui][data-ui-density], [data-ui] :where([data-ui-density]) { --ui-tag-height:44px; --ui-gap:6px; --ui-control-height:44px; --ui-field-height:44px; --ui-control-size:16px; --ui-control-inset:10px; --ui-control-padding:6px var(--ui-control-inset); --ui-field-padding:6px var(--ui-control-inset); }
   }
 }
 @layer ui.controls {
   :where([data-ui]) {
-    & { background:var(--ui-bg); color:var(--ui-text); -webkit-text-size-adjust:100%; }
+    & { background:var(--ui-bg); color:var(--ui-text); font:var(--ui-body-size)/1.55 var(--ui-font); -webkit-text-size-adjust:100%; }
     body { margin:0; font:var(--ui-body-size)/1.55 var(--ui-font); color:var(--ui-text); background:var(--ui-bg); }
     *, *::before, *::after { box-sizing:border-box; }
     [hidden] { display:none!important; }

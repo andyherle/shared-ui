@@ -71,3 +71,13 @@ test('opening a normal disclosure does not make its body width compact the comma
 test('an inline toggle reserves its trailing native switch before the group fits',()=>{
  const f=fixture(),file=f.action('File'),toggle=f.action('Journal'),send=f.action('Send',{primary:true});toggle.tagName='LABEL';toggle.className='ui-action ui-toggle';const input=new f.Node('input','',22);input.type='checkbox';input.css={marginLeft:'0px',marginRight:'0px'};toggle.append(input);f.row.append(file,toggle,send);f.UI.observeActions(f.row);f.flush();f.resize(220);for(const action of [file,toggle,send])assert.equal(action.hasAttribute('data-ui-compact'),true);f.resize(400);for(const action of [file,toggle,send])assert.equal(action.hasAttribute('data-ui-compact'),false);assert.equal(toggle.children.at(-1),input);
 });
+
+test('closing one embedded view releases its observers without stopping another view',()=>{
+ const f=fixture(),view=new f.Node('section'),other=new f.Node('div','ui-actions',100);
+ view.append(f.row);f.row.append(f.action('First'));other.append(f.action('Second'));
+ f.UI.observeActions(f.row);f.UI.observeActions(other);f.flush();
+ assert.equal(f.observer.targets.size,2);f.UI.releaseActions(view);
+ assert.equal(f.observer.targets.has(f.row),false);assert.equal(f.observer.targets.has(other),true);
+ other.clientWidth=40;f.observer.notify(other);f.flush();
+ assert.equal(other.children[0].hasAttribute('data-ui-compact'),true);
+});

@@ -210,3 +210,20 @@ Use `.ui-form` for a responsive field grid. Each direct native label occupies th
 `label.ui-toggle.ui-action` is the inline two-state action subtype. Compose it with a decorative shared SVG, `.ui-label`, and a native `input[type=checkbox][role=switch]` at the end. Give the input an accessible name that remains available when captions compact. Name/value/checked/disabled retain native form behavior without JavaScript. The small trailing switch uses `--ui-switch-width`, `--ui-switch-height`, `--ui-switch-thumb` and `--ui-switch-inset`; it shares action font, padding, height, focus, pressed paint and group fitting. `.ui-switch` is the standalone larger switch subtype. Both packs expose both types with identical DOM and behavior.
 
 Native `meter` and `progress` share the same track and fill. `.ui-skeleton` is the common content-loading surface. A single-input `.ui-field` grows only in a horizontal action row, so stacked forms retain control height. Open action disclosures keep every summary on their command line; native contents expand beneath without moving inputs or losing drafts.
+
+## Embedded native views
+
+The same stylesheet also supports a native element with `data-ui="personal"`
+or `data-ui="postvisual"`. For a plugin inside a host with its own theme, attach
+a native open shadow root to the plugin's content element, append the bundled
+stylesheet and a `section[data-ui][data-theme]`, then build the usual native form
+inside that section. Build synchronously from the plugin bundle; no iframe,
+inline script or document load event is needed. Import the bundled CommonJS
+runtime for `adoptAction` and `setActionLabel`. Do not call the document theme
+mount or change the host's root attributes. The host owns the view's theme.
+
+Keep captions visible with `data-ui-label="always"` where needed. Call
+`SharedUI.releaseActions(section)` before removing an embedded view; this
+releases only that view's action observers and leaves other views intact.
+The catalogue's Embedded native form demonstrates the same controls in a
+shadow root, including native keyboard submission and retained form values.

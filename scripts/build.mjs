@@ -22,7 +22,7 @@ export function buildCSS(tokens,controls){
   const theme=(selector,values,scheme)=>`${selector}{color-scheme:${scheme};${declarations(values)}}`;
   const packs=[];
   for(const [name,pack] of Object.entries(tokens)){
-    const base=`html[data-ui="${name}"]`,mode=name==='personal'?'light':'dark';
+    const base=`[data-ui="${name}"]`,mode=name==='personal'?'light':'dark';
     // Default and explicit appearances share one palette declaration.
     packs.push(`${base}{${declarations(pack.defaults)}}`,theme(`${base},${base}[data-theme="${mode}"]`,pack[mode],mode));
     for(const appearance of ['light','dark'])if(appearance!==mode)packs.push(theme(`${base}[data-theme="${appearance}"]`,pack[appearance],appearance));
