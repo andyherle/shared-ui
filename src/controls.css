@@ -113,8 +113,6 @@
   :where(html[data-ui]) .ui-disclosure > summary::-webkit-details-marker { display:none; }
   :where(html[data-ui]) .ui-disclosure > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
   :where(html[data-ui]) .ui-disclosure[open] > summary::after { transform:rotate(225deg); }
-  :where(html[data-ui]) label { display:block; margin-block:var(--ui-gap); }
-  :where(html[data-ui]) label > :where(input,select,textarea) { display:block; margin-block-start:var(--ui-gap); }
   :where(html[data-ui]) .ui-field { display:flex; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-gap); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text); }
   :where(html[data-ui]) .ui-field > :where(input,select) { margin:0; flex:1 1 0; inline-size:0; min-block-size:calc(var(--ui-field-height) - 2px); padding-inline:0; border:0; background:transparent; }
   :where(html[data-ui]) .ui-field > select { flex:1 1 auto; inline-size:auto; }
