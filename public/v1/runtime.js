@@ -136,7 +136,7 @@
     const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
     card.dataset.uiColor=color.toLowerCase();card.style.setProperty('--ui-card-fill',color);card.style.setProperty('--ui-card-ink',luminance<.2?'#ffffff':'#111111');
   }
-  const api={version:'1.4.0',mount,release,adoptAction,setCardColor,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.4.1',mount,release,adoptAction,setCardColor,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -249,7 +249,8 @@
       if(!label||!icon)return outer(node);
       const hidden=compact||node.dataset.uiLabel==='hidden';
       const glyph=number(style(icon).width)||18;
-      const extra=node.tagName==='SUMMARY'&&!node.parentElement.matches(overflowSelector)?14:0;
+      const toggle=node.matches('.ui-toggle')?node.querySelector(':scope > input'):null;
+      const extra=(node.tagName==='SUMMARY'&&!node.parentElement.matches(overflowSelector)?14:0)+(toggle?outer(toggle)+number(css.columnGap):0);
       const inset=number(css.getPropertyValue?.('--ui-control-inset'))||number(css.paddingLeft);
       const padding=hidden?Math.max(0,(number(css.minWidth)-glyph-2)/2):inset;
       return Math.max(number(css.minWidth),glyph+(hidden?0:caption(label)+number(css.columnGap))+extra+padding*2+2)+margins(css);
@@ -274,14 +275,14 @@
       }
       if(isAction(node))return actionWidth(node,compact&&eligible(node));
       if(node.matches('.ui-field'))return fieldWidth(node,compact&&eligible(node));
-      if(node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')||style(node).display==='contents')return rowWidth(children(node),style(node),compact,collapsed);
-      if(node.tagName==='DETAILS'&&!node.open){const summary=node.querySelector(':scope > summary');if(summary&&isAction(summary))return actionWidth(summary,compact&&eligible(summary));}
+      if(node.tagName==='DETAILS'){const summary=node.querySelector(':scope > summary');if(summary&&isAction(summary))return actionWidth(summary,compact&&eligible(summary));}
+      if(node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')||style(node).display==='contents')return rowWidth(children(node),style(node),compact,collapsed,node.matches('.ui-fill'));
       const css=style(node),basis=number(css.flexBasis);if(number(css.flexGrow)>0&&basis>0)return Math.max(number(css.minWidth),basis)+margins(css);
       // The header identity's auto margin is leftover space, not caption width.
       if(node.parentElement?.matches('.ui-header')&&node===children(node.parentElement)[0]&&!node.matches('.ui-actions,.ui-action,.ui-field,button,details'))return node.getBoundingClientRect().width;
       return outer(node);
     }
-    function rowWidth(nodes,css,compact,collapsed){return nodes.reduce((sum,node)=>sum+width(node,compact,collapsed),0)+number(css.columnGap)*Math.max(0,nodes.length-1);}
+    function rowWidth(nodes,css,compact,collapsed,equal=false){const widths=nodes.map(node=>width(node,compact,collapsed));return (equal?Math.max(0,...widths)*nodes.length:widths.reduce((sum,value)=>sum+value,0))+number(css.columnGap)*Math.max(0,nodes.length-1);}
     function descendants(nodes){return nodes.flatMap(node=>node.matches(overflowSelector)?descendants(contents(node)):node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')?descendants(children(node)):node.tagName==='DETAILS'?[node.querySelector(':scope > summary')].filter(Boolean):[node]);}
     function priorities(nodes){return nodes.flatMap(node=>node.matches(overflowSelector)?[node]:node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')?priorities(children(node)):[]);}
     function setCompact(node,value){if(value){if(!node.hasAttribute('data-ui-compact'))node.setAttribute('data-ui-compact','');}else if(node.hasAttribute('data-ui-compact'))node.removeAttribute('data-ui-compact');}
@@ -308,12 +309,13 @@
       const collapsed=new Set(),limit=Math.max(0,available-2);
       const captioned=descendants(nodes);
       const pinned=captioned.some(node=>node.dataset.uiLabel==='always'||node.getAttribute('data-ui-label')==='always'||isAction(node)&&node.querySelector(':scope > .ui-label')&&!eligible(node)&&node.dataset.uiLabel!=='hidden');
-      const compact=!vertical&&!pinned&&rowWidth(nodes,css,false,collapsed)>limit;
+      const required=mode=>rowWidth(nodes,css,mode,collapsed,group.matches('.ui-fill'));
+      const compact=!vertical&&!pinned&&required(false)>limit;
       for(const node of actions)setCompact(node,compact);
       if(!vertical){
         // Higher numeric priority stays visible longer. Collapse entire authored groups.
         for(const node of [...overflows].sort((a,b)=>number(a.dataset.uiPriority)-number(b.dataset.uiPriority))){
-          if(rowWidth(nodes,css,compact,collapsed)<=limit)break;
+          if(required(compact)<=limit)break;
           collapsed.add(node);
         }
       }

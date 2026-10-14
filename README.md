@@ -128,7 +128,7 @@ Postvisual uses StaticRef's pre-migration neutral palette and quiet, compact con
 
 Use native `.ui-toolbar` with `data-ui-layout="joined"` for one continuous command surface. Compose its controls with `.ui-actions.ui-inline`, `.ui-field`, and `.ui-icon-button`; keep app CSS to command placement and domain sizing. The toolbar stays on one row; a constrained application's scrolling region keeps overflow commands reachable. Primary actions still use the normal primary state.
 
-Native `details.ui-disclosure` inside `.ui-actions` takes its caption width when closed and a full row when open. Use `.ui-actions.ui-inline` on a native form that provides an adjacent submit action. Apply `.ui-stack` to cards and form bodies for explicit shared rhythm. Hidden icon actions keep their target width in `.ui-fill`; visible primary captions retain flexible room. `.ui-container` establishes a query host without replacing application-owned widths.
+Native `details.ui-disclosure` inside `.ui-actions` keeps its summary on the command line in both states; its `.ui-disclosure-body` opens on a full row below the commands. Use `.ui-actions.ui-inline` on a native form that provides an adjacent submit action. Apply `.ui-stack` to cards and form bodies for explicit shared rhythm. Hidden icon actions keep their target width in `.ui-fill`; visible primary captions retain flexible room. `.ui-container` establishes a query host without replacing application-owned widths.
 
 
 ### Labelled native selector
@@ -193,7 +193,7 @@ paints alignment guides; the app owns their positions and lengths.
 
 Postvisual and Personal share every component type, subtype, native DOM pattern and interaction. Palettes and semantic tokens provide the visual differences. `--ui-control-size`, `--ui-control-weight`, `--ui-control-inset`, and the density-scoped `--ui-control-font` govern commands, selector captions, values and checkbox rows together. Action rows stretch controls to the same line height. Fit measurements use expanded token geometry without temporarily changing the rendered row, so compact padding cannot create resize oscillation.
 
-Use `label.ui-check.ui-field` for an inline caption and native checkbox in the same control surface as a selector. Operational menus can use `data-ui-icons="none"` with visible captions for a text-only command and field treatment. Put related choices in `fieldset.ui-group`; remove redundant helper prose.
+Use `label.ui-check.ui-field` for an inline caption and native checkbox in the same control surface as a selector. Operational menu commands and field rows use a shared SVG `.ui-icon` before `.ui-label`; include the icon on every row in that group. Put related choices in `fieldset.ui-group`; remove redundant helper prose.
 
 Use `.ui-tags` for wrapping tags and `button.ui-tag` for a removable pill; a readonly tag uses `span.ui-tag`. `--ui-tag-*` tokens own its radius, padding, type, height and colors. Put the entry input inside a native `form.ui-field` or `label.ui-field` beside the pills. The entry sizes to its text using native `field-sizing`, retains a usable fallback width, and keeps the shared focus target.
 
@@ -201,4 +201,12 @@ Use `.ui-tags` for wrapping tags and `button.ui-tag` for a removable pill; a rea
 
 Use `data-ui-layout="bar"` on a native `.ui-actions` or `.ui-toolbar` for a single adaptive command line that scrolls after compaction if its essential controls still cannot fit. Keep symbol/value groups intrinsic with `.ui-inline`.
 
-The **Control fixture** demonstrates the same markup in both packs: right-aligned headers; text menus; selector and checkbox subtypes; long, disabled and readonly values; stable links; a media dock and keyboard tag suggestions; native task forms and disclosures; Canvas actions; pending actions; and long, Unicode and punctuated tags. Its phone, panel, desktop and fit presets exercise each group without application data.
+The **Control fixture** demonstrates the same markup in both packs: right-aligned headers; icon menus; selector and checkbox subtypes; long, disabled and readonly values; stable links; a media dock and keyboard tag suggestions; native task forms and disclosures; inline toggles and native capture submission; Canvas actions; pending actions; and long, Unicode and punctuated tags. Its phone, panel, desktop and fit presets exercise each group without application data.
+
+## Aligned native forms and inline toggles
+
+Use `.ui-form` for a responsive field grid. Each direct native label occupies three shared subgrid tracks: caption, control, and optional description. Controls align at the top even beside multiline descriptions or taller native multi-selects. `--ui-form-column` sets the minimum preferred column width (24rem by default); `--ui-gap` controls the rhythm. Put full-width placement in app CSS.
+
+`label.ui-toggle.ui-action` is the inline two-state action subtype. Compose it with a decorative shared SVG, `.ui-label`, and a native `input[type=checkbox][role=switch]` at the end. Give the input an accessible name that remains available when captions compact. Name/value/checked/disabled retain native form behavior without JavaScript. The small trailing switch uses `--ui-switch-width`, `--ui-switch-height`, `--ui-switch-thumb` and `--ui-switch-inset`; it shares action font, padding, height, focus, pressed paint and group fitting. `.ui-switch` is the standalone larger switch subtype. Both packs expose both types with identical DOM and behavior.
+
+Native `meter` and `progress` share the same track and fill. `.ui-skeleton` is the common content-loading surface. A single-input `.ui-field` grows only in a horizontal action row, so stacked forms retain control height. Open action disclosures keep every summary on their command line; native contents expand beneath without moving inputs or losing drafts.

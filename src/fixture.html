@@ -13,15 +13,15 @@
       </div>
     </header>
     <div class="lab-fixture-pair">
-      <section class="ui-menu-panel ui-chrome ui-stack" data-ui-icons="none" aria-label="Fixture gallery menu">
+      <section class="ui-menu-panel ui-chrome ui-stack" aria-label="Fixture gallery menu">
         <nav class="ui-actions" data-ui-layout="vertical" aria-label="Fixture gallery actions">
           <button type="button" data-ui-icon="grid" data-toast="Canvas opened">Open Canvas</button><a class="ui-action" href="#control-fixture" data-ui-icon="layers">Collections</a><button type="button" data-ui-icon="folder" data-toast="Libraries opened">Libraries</button><button type="button" data-ui-icon="refresh" data-toast="Scan started">Scan for changes</button>
         </nav>
         <fieldset class="ui-group ui-stack">
-          <label class="ui-field"><span class="ui-label">Gallery mode</span><select aria-label="Fixture gallery mode"><option>Browse</option><option>Rate</option><option>Review</option><option>Export</option></select></label>
-          <label class="ui-check ui-field"><span class="ui-label">Audio on hover</span><input type="checkbox"></label>
-          <label class="ui-check ui-field"><span class="ui-label">Autoplay videos</span><input type="checkbox"></label>
-          <label class="ui-field"><span class="ui-label">Drag</span><select aria-label="Fixture drag"><option>Copy media</option><option>Download</option></select></label>
+          <label class="ui-field"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-grid"/></svg><span class="ui-label">Gallery mode</span><select aria-label="Fixture gallery mode"><option>Browse</option><option>Rate</option><option>Review</option><option>Export</option></select></label>
+          <label class="ui-check ui-field"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-music"/></svg><span class="ui-label">Audio on hover</span><input type="checkbox"></label>
+          <label class="ui-check ui-field"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-play"/></svg><span class="ui-label">Autoplay videos</span><input type="checkbox"></label>
+          <label class="ui-field"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-move"/></svg><span class="ui-label">Drag</span><select aria-label="Fixture drag"><option>Copy media</option><option>Download</option></select></label>
         </fieldset>
       </section>
       <section class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture choice variants">
@@ -53,6 +53,19 @@
       </div>
       <p class="ui-status" id="fixture-task-status" role="status"></p>
     </article>
+    <form class="ui-card ui-pad ui-stack" id="fixture-capture-form" aria-label="Fixture capture">
+      <label class="ui-field"><input name="text" aria-label="Fixture capture text" placeholder="What’s on your mind?" required></label>
+      <div class="ui-actions" aria-label="Fixture capture actions">
+        <a class="ui-action" href="#control-fixture" data-ui-icon="file">File</a>
+        <label class="ui-toggle ui-action"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-notes"/></svg><span class="ui-label">Journal</span><input type="checkbox" role="switch" name="destination" value="daily" aria-label="Fixture Journal"></label>
+        <button type="submit" data-ui-icon="send" data-ui-variant="primary">Send</button>
+      </div>
+      <p id="fixture-capture-status" class="ui-status" role="status"></p>
+    </form>
+    <section class="ui-card ui-pad ui-stack" aria-label="Fixture toggle states"><h3 class="ui-section-title">Inline toggles</h3><div class="ui-actions">
+      <label class="ui-toggle ui-action"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-eye"/></svg><span class="ui-label">Preview</span><input type="checkbox" role="switch" aria-label="Fixture preview" checked></label>
+      <label class="ui-toggle ui-action"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-bell"/></svg><span class="ui-label">Notifications</span><input type="checkbox" role="switch" aria-label="Fixture notifications" disabled></label>
+    </div></section>
     <section class="ui-toolbar ui-chrome" data-ui-layout="bar" aria-label="Fixture canvas actions"><button type="button" data-ui-icon="type">Text</button><button type="button" data-ui-icon="image">Images</button><button type="button" data-ui-icon="columns">Columns</button><button type="button" data-ui-icon="copy">Duplicate</button><button type="button" data-ui-icon="layers">Bring to front</button><button type="button" data-ui-icon="trash">Remove</button></section>
     <section class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture label edge cases"><h3 class="ui-section-title">Long names and pending actions</h3><div class="ui-actions"><button type="button" data-ui-icon="file"><span class="ui-truncate">A very long reference filename for checking compact rows.webp</span></button><button type="button" data-ui-icon="upload" aria-busy="true">Uploading</button><button type="button" data-ui-icon="refresh" disabled>Retry</button></div><div class="ui-tags"><span class="ui-tag"><span>long-tag-name-with-words-and-punctuation</span></span><span class="ui-tag">日本語</span><span class="ui-tag">Café</span><span class="ui-tag">motion / detail</span></div></section>
   </div>

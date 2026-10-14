@@ -61,3 +61,13 @@ test('selector captions follow the row and remain measurable while hidden',()=>{
 test('priority tiles inside an intrinsic subgroup collapse under the owning row',()=>{
  const f=fixture(),group=new f.Node('div','ui-actions ui-inline'),tile=f.overflow([f.action('Import'),f.action('Export')]),save=f.action('Save');group.css={paddingLeft:'0px',paddingRight:'0px',borderLeftWidth:'0px',borderRightWidth:'0px'};group.append(save,tile);f.row.append(group);f.UI.observeActions(group);f.flush();f.resize(85);assert.equal(tile.dataset.uiOverflow,'collapsed');f.resize(400);assert.equal(tile.dataset.uiOverflow,'expanded');
 });
+test('equal-width actions compact together before a longer caption outgrows its slot',()=>{
+ const f=fixture();f.row.className='ui-actions ui-fill';const long=f.action('Export selection'),short=f.action('Integration');f.row.append(long,short);f.UI.observeActions(f.row);f.flush();f.resize(260);assert.equal(long.hasAttribute('data-ui-compact'),true);assert.equal(short.hasAttribute('data-ui-compact'),true);f.resize(400);assert.equal(long.hasAttribute('data-ui-compact'),false);
+});
+test('opening a normal disclosure does not make its body width compact the command row',()=>{
+ const f=fixture(),details=new f.Node('details','ui-disclosure',300),summary=f.action('Reply');summary.tagName='SUMMARY';details.append(summary);f.row.append(f.action('Open task'),details);f.UI.observeActions(f.row);f.flush();details.open=true;f.UI.refreshActions(f.doc);f.flush();assert.equal(summary.hasAttribute('data-ui-compact'),false);
+});
+
+test('an inline toggle reserves its trailing native switch before the group fits',()=>{
+ const f=fixture(),file=f.action('File'),toggle=f.action('Journal'),send=f.action('Send',{primary:true});toggle.tagName='LABEL';toggle.className='ui-action ui-toggle';const input=new f.Node('input','',22);input.type='checkbox';input.css={marginLeft:'0px',marginRight:'0px'};toggle.append(input);f.row.append(file,toggle,send);f.UI.observeActions(f.row);f.flush();f.resize(220);for(const action of [file,toggle,send])assert.equal(action.hasAttribute('data-ui-compact'),true);f.resize(400);for(const action of [file,toggle,send])assert.equal(action.hasAttribute('data-ui-compact'),false);assert.equal(toggle.children.at(-1),input);
+});

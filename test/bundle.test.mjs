@@ -14,7 +14,7 @@ test('app packaging copies only validated UI assets and detects authored drift',
 });
 test('a corrupt canonical build cannot replace an app’s working bundle',t=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'shared-ui-corrupt-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
- const source=path.join(directory,'source'),target=path.join(directory,'target');fs.cpSync(new URL('../public/v1',import.meta.url),source,{recursive:true});installBundle(target,{source});
+ const source=path.join(directory,'source'),target=path.join(directory,'target');fs.mkdirSync(source);for(const name of ['styles.css','runtime.js','icons.svg','manifest.json'])fs.copyFileSync(new URL('../public/v1/'+name,import.meta.url),path.join(source,name));installBundle(target,{source});
  const before=fs.readFileSync(path.join(target,'bundle.json'));fs.appendFileSync(path.join(source,'styles.css'),'button{color:red}');assert.throws(()=>installBundle(target,{source}),/integrity failed/);assert.deepEqual(fs.readFileSync(path.join(target,'bundle.json')),before);
 });
 
