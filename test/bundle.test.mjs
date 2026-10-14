@@ -17,3 +17,10 @@ test('a corrupt canonical build cannot replace an app’s working bundle',t=>{
  const source=path.join(directory,'source'),target=path.join(directory,'target');fs.cpSync(new URL('../public/v1',import.meta.url),source,{recursive:true});installBundle(target,{source});
  const before=fs.readFileSync(path.join(target,'bundle.json'));fs.appendFileSync(path.join(source,'styles.css'),'button{color:red}');assert.throws(()=>installBundle(target,{source}),/integrity failed/);assert.deepEqual(fs.readFileSync(path.join(target,'bundle.json')),before);
 });
+
+test('catalogue advertises its bundled style contract to reject older CSS',()=>{
+ const page=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+ const release=JSON.parse(fs.readFileSync(new URL('../public/v1/manifest.json',import.meta.url),'utf8'));
+ assert.ok(page.includes(`data-ui-version="${release.version}"`));
+ assert.ok(page.includes(`data-ui-revision="${release.revision}"`));
+});
