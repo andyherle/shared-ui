@@ -30,7 +30,12 @@ export function buildCSS(tokens,controls){
   }
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+compactCSS(controls)+'\n';
 }
-export function manifest(css){return {protocol:1,version:'1.4.1',revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};}
+export function manifest(css){
+  // A running lab can rebuild after its source is refreshed. Read release metadata
+  // at build time so a cached module cannot advertise an older control contract.
+  const {version}=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+  return {protocol:1,version,revision:createHash('sha256').update(css).digest('hex'),integrity:'sha384-'+createHash('sha384').update(css).digest('base64'),stylesheet:'styles.'+createHash('sha256').update(css).digest('hex')+'.css'};
+}
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
   for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});

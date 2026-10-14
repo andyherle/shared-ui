@@ -17,6 +17,7 @@ test('local host serves only public assets with validators, ranges, and a safe r
  const page=await get('/');assert.equal(page.status,200);assert.match(page.headers.get('content-security-policy'),/script-src 'self';/);assert.match(await page.text(),/Style Lab/);
  for(const url of ['/src/tokens.json','/README.md','/.git/config','/%2e%2e/README.md','/assets/../../package.json'])assert.equal((await get(url)).status,404);
  const manifest=await (await get('/v1/manifest.json')).json();const css=await get('/v1/'+manifest.stylesheet);const bytes=Buffer.from(await css.arrayBuffer());
+ assert.equal(manifest.version,JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version);
  assert.equal('sha384-'+createHash('sha384').update(bytes).digest('base64'),manifest.integrity);assert.match(css.headers.get('cache-control'),/immutable/);assert.equal(css.headers.get('access-control-allow-origin'),'*');
  assert.equal((await get('/v1/'+manifest.stylesheet,{headers:{'if-none-match':css.headers.get('etag')}})).status,304);
  assert.equal((await get('/v1/styles.css',{method:'HEAD'})).headers.get('content-type'),'text/css; charset=utf-8');
