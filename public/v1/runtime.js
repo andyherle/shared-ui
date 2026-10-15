@@ -136,7 +136,38 @@
     const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
     card.dataset.uiColor=color.toLowerCase();card.style.setProperty('--ui-card-fill',color);card.style.setProperty('--ui-card-ink',luminance<.2?'#ffffff':'#111111');
   }
-  const api={version:'1.4.2',mount,release,adoptAction,setCardColor,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  function setSelection(element,selected) {
+    element.classList.add('ui-selectable');
+    element.dataset.uiSelected=selected==='mixed'?'mixed':String(Boolean(selected));
+  }
+  function setSortDirection(element,direction,options={}) {
+    if(!['asc','desc'].includes(direction))throw new TypeError('Sort direction must be asc or desc');
+    const label=direction==='asc'?'Ascending':'Descending';
+    element.dataset.uiDirection=direction;
+    return adoptAction(element,{...options,icon:direction==='asc'?'arrow-up':'arrow-down',label,ariaLabel:`${label}; reverse sort direction`,title:`${label}; reverse sort direction`,iconOnly:true});
+  }
+  function setAppColor(element,color) {
+    if(color==null||color===''){element.style.removeProperty('--ui-app-color');return;}
+    if(!/^#[0-9a-f]{6}$/i.test(color))throw new TypeError('A six-digit icon color is required');
+    element.style.setProperty('--ui-app-color',color);
+  }
+  function createBackToTop(button,{scrollTarget,focusTarget,threshold=240,sprite='./shared-ui/icons.svg'}={}) {
+    const doc=button.ownerDocument,view=doc.defaultView,target=scrollTarget||view;
+    let disposed=false,listening=false;
+    adoptAction(button,{icon:'arrow-up',label:'Back to top',sprite});button.classList.add('ui-back-to-top');
+    function update(){button.hidden=doc.visibilityState==='hidden'||(target===view?view.scrollY:target.scrollTop)<threshold;}
+    function listen(){if(disposed||listening||doc.visibilityState==='hidden')return;target.addEventListener('scroll',update,{passive:true});listening=true;update();}
+    function pause(){target.removeEventListener('scroll',update);listening=false;}
+    function visibility(){if(doc.visibilityState==='hidden')pause();else listen();update();}
+    function scrollToStart(){
+      const focus=typeof focusTarget==='function'?focusTarget():focusTarget;
+      if(focus){if(!focus.matches('a,button,input,select,textarea,[tabindex]'))focus.tabIndex=-1;focus.focus({preventScroll:true});}
+      target.scrollTo({top:0,behavior:view.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+    }
+    button.addEventListener('click',scrollToStart);doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',pause);view.addEventListener('pageshow',listen);listen();
+    return {update,dispose(){if(disposed)return;disposed=true;pause();button.removeEventListener('click',scrollToStart);doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',pause);view.removeEventListener('pageshow',listen);}};
+  }
+  const api={version:'1.5.0',mount,release,adoptAction,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

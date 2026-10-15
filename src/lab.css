@@ -16,3 +16,12 @@
 .lab-fixture{inline-size:min(100%,960px);margin-block-start:calc(var(--ui-gap)*2)}
 .lab-fixture-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--ui-gap)}
 }
+
+@layer app {
+  .lab-app-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--ui-gap); }
+  .lab-selection-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--ui-gap); }
+  .lab-selection-grid article { position:relative; }
+  .lab-selection-grid img { display:block; width:100%; height:100px; object-fit:cover; }
+  #sample-scroll { height:150px; overflow:auto; }
+  .lab-scroll-content { height:450px; }
+}

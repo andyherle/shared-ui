@@ -1,6 +1,15 @@
 (() => {
 'use strict';
 const $=id=>document.getElementById(id),root=document.documentElement,UI=window.SharedUI;
+for(const tile of document.querySelectorAll('[data-app-color]'))UI.setAppColor(tile,tile.dataset.appColor);
+let sampleDirection='desc';
+UI.setSortDirection($('sample-sort'),sampleDirection,{sprite:'./v1/icons.svg'});
+$('sample-sort').addEventListener('click',()=>{sampleDirection=sampleDirection==='asc'?'desc':'asc';UI.setSortDirection($('sample-sort'),sampleDirection,{sprite:'./v1/icons.svg'});});
+function sampleSelection(){let count=0;for(const card of $('sample-selection').children){const selected=card.querySelector('input').checked;UI.setSelection(card,selected);if(selected)count++;}$('sample-context').hidden=!count;$('sample-context').querySelector('[role=status]').textContent=`${count} selected`;UI.refreshActions(document);}
+$('sample-selection').addEventListener('change',sampleSelection);
+$('sample-selection').addEventListener('click',event=>{const open=event.target.closest('button');if(!open)return;if(event.shiftKey){const input=open.closest('article').querySelector('input');input.checked=!input.checked;sampleSelection();}else toast('Sample opened');});
+$('sample-clear').addEventListener('click',()=>{for(const input of $('sample-selection').querySelectorAll('input'))input.checked=false;sampleSelection();});
+UI.createBackToTop($('sample-top'),{scrollTarget:$('sample-scroll'),focusTarget:$('sample-scroll'),sprite:'./v1/icons.svg'});
 const pack=$('pack'),mode=$('mode'),density=$('density');
 const embedded=$('embedded-host').attachShadow({mode:'open'}),embeddedCSS=document.createElement('link');
 embeddedCSS.rel='stylesheet';embeddedCSS.href='./v1/styles.css';embedded.append(embeddedCSS,$('embedded-form').content.cloneNode(true));

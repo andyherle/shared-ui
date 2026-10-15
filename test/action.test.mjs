@@ -39,3 +39,49 @@ test('authored card colors choose readable ink, reject CSS injection and restore
  assert.throws(()=>module.exports.setCardColor(card,'url(https://example.com)'),/six-digit/);assert.equal(card.dataset.uiColor,'#27313e');
  module.exports.setCardColor(card,null);assert.equal(card.dataset.uiColor,undefined);assert.equal(values.size,0);
 });
+
+
+test('sort direction changes the glyph and name while keeping the native button and handler',()=>{
+ const {button}=control(),handler=button.onclick;
+ module.exports.setSortDirection(button,'asc',{sprite:'/ui/icons.svg'});
+ assert.equal(button.dataset.uiDirection,'asc');
+ assert.match(button.querySelector(':scope > svg').querySelector('use').getAttribute('href'),/#ui-arrow-up$/);
+ assert.match(button.getAttribute('aria-label'),/^Ascending; reverse/);
+ module.exports.setSortDirection(button,'desc',{sprite:'/ui/icons.svg'});
+ assert.match(button.querySelector(':scope > svg').querySelector('use').getAttribute('href'),/#ui-arrow-down$/);
+ assert.match(button.getAttribute('aria-label'),/^Descending; reverse/);
+ assert.equal(button.onclick,handler);
+ assert.throws(()=>module.exports.setSortDirection(button,'random'),/asc or desc/);
+});
+
+test('selection exposes full, partial and cleared state without changing article semantics',()=>{
+ const {doc}=control(),card=doc.createElement('article');
+ module.exports.setSelection(card,true);assert.equal(card.dataset.uiSelected,'true');
+ module.exports.setSelection(card,'mixed');assert.equal(card.dataset.uiSelected,'mixed');
+ module.exports.setSelection(card,false);assert.equal(card.dataset.uiSelected,'false');
+ assert.equal(card.getAttribute('role'),null);assert.equal(card.getAttribute('aria-selected'),null);
+});
+
+test('launcher colors accept only authored hex values and can return to the theme',()=>{
+ const values=new Map(),tile={style:{setProperty:(key,value)=>values.set(key,value),removeProperty:key=>values.delete(key)}};
+ module.exports.setAppColor(tile,'#42abef');assert.equal(values.get('--ui-app-color'),'#42abef');
+ assert.throws(()=>module.exports.setAppColor(tile,'red;position:fixed'),/six-digit/);
+ module.exports.setAppColor(tile,null);assert.equal(values.size,0);
+});
+
+test('panel back-to-top returns focus, pauses while hidden and releases its listeners',()=>{
+ const events=object=>Object.assign(object,{listeners:new Map(),addEventListener(type,fn){this.listeners.set(type,fn);},removeEventListener(type,fn){if(this.listeners.get(type)===fn)this.listeners.delete(type);},emit(type){this.listeners.get(type)?.();}});
+ const {button,doc}=control();events(button);events(doc);doc.visibilityState='visible';
+ const view=events({matchMedia:()=>({matches:true})});doc.defaultView=view;
+ const panel=events({scrollTop:0,scrollTo(options){this.lastScroll=options;this.scrollTop=options.top;}});
+ const focus={matches:()=>true,focus(options){this.lastFocus=options;}};
+ const helper=module.exports.createBackToTop(button,{scrollTarget:panel,focusTarget:()=>focus,sprite:'/ui/icons.svg'});
+ assert.equal(button.hidden,true);
+ panel.scrollTop=500;panel.emit('scroll');assert.equal(button.hidden,false);
+ button.emit('click');assert.equal(panel.lastScroll.top,0);assert.equal(panel.lastScroll.behavior,'instant');assert.equal(focus.lastFocus.preventScroll,true);
+ doc.visibilityState='hidden';doc.emit('visibilitychange');assert.equal(button.hidden,true);assert.equal(panel.listeners.size,0);
+ doc.visibilityState='visible';doc.emit('visibilitychange');assert.equal(panel.listeners.size,1);
+ view.emit('pagehide');assert.equal(panel.listeners.size,0);view.emit('pageshow');assert.equal(panel.listeners.size,1);
+ helper.dispose();helper.dispose();
+ assert.equal(panel.listeners.size,0);assert.equal(button.listeners.size,0);assert.equal(doc.listeners.size,0);assert.equal(view.listeners.size,0);
+});

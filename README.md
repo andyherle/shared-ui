@@ -227,3 +227,38 @@ Keep captions visible with `data-ui-label="always"` where needed. Call
 releases only that view's action observers and leaves other views intact.
 The catalogue's Embedded native form demonstrates the same controls in a
 shadow root, including native keyboard submission and retained form values.
+
+
+## Media selection, context bars and launchers
+
+Use `SharedUI.setSelection(card, selected)` on a positioned native media article.
+It exposes `data-ui-selected` (`true`, `false`, or `mixed`) and paints a foreground
+selection ring above media. Keep each media opener a native button; a separate
+native checkbox or selection action provides touch and keyboard selection.
+The application owns selected IDs, Shift-click ranges and single-click opening.
+
+Use `aside.ui-toolbar.ui-context-bar` with a `role=status` count and native actions.
+`data-ui-position="floating"` anchors it above the safe area. Put secondary actions
+in `details.ui-disclosure.ui-overflow`; the shared adaptive behavior keeps its
+menu reachable above the bar. Preserve labels on primary actions with
+`data-ui-label="always"`. Hidden context bars have no focusable controls.
+
+`SharedUI.setSortDirection(button, 'asc'|'desc', {sprite})` updates the arrow,
+current direction and accessible reverse action together, preserving the button.
+`SharedUI.createBackToTop(button, {scrollTarget, focusTarget, sprite})` enhances
+an existing native button for a window or scrolling element. Place it beside a
+scrolling panel or use `data-ui-position="viewport"` for a page. It appears after
+240px, respects reduced motion, returns keyboard focus to the target, pauses in
+hidden views and provides `update()` / `dispose()` for application lifecycles.
+
+An app shortcut is a native `a.ui-action.ui-app-tile[data-ui-variant=quiet]` with `span.ui-card.ui-app-symbol` containing a
+shared SVG and `span.ui-label`. Both packs use the same quiet tile and typography.
+Use `SharedUI.setAppColor(tile, '#rrggbb')` for authored icon colors, or a validated
+`--ui-app-color` value on server-rendered tiles. App CSS owns grid columns (Portal
+uses four on phones) and placement. `data-ui-editing`, `data-ui-dragging` and
+`aria-busy` expose edit, drag and save states. Keep native URLs and focus intact.
+
+Shared headers stick to the top of their scrolling ancestor. Place them outside
+padded page content for edge-to-edge coverage. Mark a back navigation action
+`.ui-back`; it (or its immediate intrinsic group) stays at the start of a header.
+The catalogue's Selection and navigation section demonstrates these contracts.

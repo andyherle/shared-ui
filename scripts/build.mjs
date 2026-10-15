@@ -18,16 +18,17 @@ export function compactCSS(source){
   return out.trim();
 }
 export function buildCSS(tokens,controls){
-  const declarations=values=>Object.entries(values).map(([key,value])=>`--ui-${key}:${value};`).join('');
-  const theme=(selector,values,scheme)=>`${selector}{color-scheme:${scheme};${declarations(values)}}`;
+  const color=value=>value.replace(/#[0-9a-f]{6}(?:[0-9a-f]{2})?\b/gi,hex=>{const pairs=hex.slice(1).match(/../g);return pairs.every(pair=>pair[0]===pair[1])?'#'+pairs.map(pair=>pair[0]).join(''):hex;});
+  const declarations=values=>Object.entries(values).map(([key,value])=>`--ui-${key}:${color(value)};`).join('');
   const packs=[];
+  // Native color-scheme resolves both palettes without duplicating the dark
+  // declarations for a saved choice and the system media query.
   for(const [name,pack] of Object.entries(tokens)){
-    const base=`[data-ui="${name}"]`,mode=name==='personal'?'light':'dark';
-    // Default and explicit appearances share one palette declaration.
-    packs.push(`${base}{${declarations(pack.defaults)}}`,theme(`${base},${base}[data-theme="${mode}"]`,pack[mode],mode));
-    for(const appearance of ['light','dark'])if(appearance!==mode)packs.push(theme(`${base}[data-theme="${appearance}"]`,pack[appearance],appearance));
-    if(name==='personal')packs.push(`@media(prefers-color-scheme:dark){${theme(`${base}:not([data-theme="light"])`,pack.dark,'dark')}}`);
+    const base=`[data-ui="${name}"]`;
+    const colors=Object.fromEntries(Object.keys(pack.light).map(key=>[key,pack.light[key]===pack.dark[key]?pack.light[key]:`light-dark(${pack.light[key]},${pack.dark[key]})`]));
+    packs.push(`${base}{color-scheme:${name==='personal'?'light dark':'dark'};${declarations(pack.defaults)}${declarations(colors)}}`);
   }
+  packs.push('[data-ui][data-theme=light]{color-scheme:light}[data-ui][data-theme=dark]{color-scheme:dark}');
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+compactCSS(controls)+'\n';
 }
 export function manifest(css){
