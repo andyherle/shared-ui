@@ -51,7 +51,7 @@
     :where(.danger,.ui-danger,[data-ui-variant=danger]) { color:var(--ui-bad); }
     :where(button:disabled,[aria-disabled=true]) { opacity:.45; cursor:default; }
     :where(button,input,select,textarea,a,summary):focus-visible { outline:calc(2px / var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(var(--ui-focus-offset,2px) / var(--ui-graphic-scale,1)); }
-    :where(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=hidden]):not([type=file]),select,textarea) {
+    :where(input:not([type=range],[type=checkbox],[type=radio],[type=color],[type=hidden],[type=file]),select,textarea) {
       min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding:var(--ui-field-padding);
       border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text);
       font:var(--ui-control-font);
@@ -61,7 +61,7 @@
     input::file-selector-button { min-block-size:var(--ui-control-height); margin-inline-end:var(--ui-gap); padding:var(--ui-control-padding); border:1px solid var(--ui-control); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); font:var(--ui-control-font); cursor:pointer; }
     :where(.ui-item,.ui-action):is([aria-current=true],[aria-current=page],[aria-selected=true]) { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
     textarea { resize:vertical; }
-    :where(button.media-button,button.poster,button.home-card,button.card,button.ui-media-button,button[data-ui-surface=media]) { display:block; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:var(--ui-media); font:inherit; }
+    :where(button:is(.media-button,.poster,.home-card,.card,.ui-media-button,[data-ui-surface=media])) { display:block; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:var(--ui-media); font:inherit; }
     .ui-selectable:is([aria-selected=true],[aria-pressed=true],[aria-checked=true],[data-ui-selected=true],[aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed]) { outline:calc(2px / var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(-2px / var(--ui-graphic-scale,1)); }
     .ui-selectable:is([aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed]) { outline-style:dashed; }
     .ui-selectable:is([data-ui-selected=true],[data-ui-selected=mixed])::after { content:""; position:absolute; inset:0; z-index:9; pointer-events:none; border:3px solid var(--ui-accent); box-shadow:inset 0 0 0 1px var(--ui-bg); }
@@ -144,7 +144,8 @@
     :where(.ui-field) { display:flex; flex:none; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-control-inset); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface); color:var(--ui-text); font:var(--ui-control-font); }
 .ui-field {
   & > :where(input,select) { margin:0; flex:1 1 0; inline-size:0; min-block-size:calc(var(--ui-field-height) - 2px); padding-inline:0; border:0; background:transparent; }
-  & > select { flex:1 1 auto; inline-size:auto; text-align-last:end; }
+  & > :is(select,input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])) { flex:1 1 auto; inline-size:auto; }
+  & > select { text-align-last:end; }
   & > :where(input[type=checkbox],input[type=radio]) { flex:none; inline-size:18px; min-block-size:0; margin-inline-start:auto; }
   &:has(>input:only-child) { min-inline-size:min(100%,12ch); }
   & > .ui-label { flex:none; white-space:nowrap; font:inherit; }
@@ -269,14 +270,14 @@
     .ui-icon-choice input { position:absolute; inline-size:1px; block-size:1px; opacity:0; }
     :where(input,select,textarea):disabled { opacity:.5; cursor:default; }
     :where(input,textarea)[readonly] { background:var(--ui-surface-soft); }
-    :where(input[type=date],input[type=time],input[type=datetime-local],input[type=month],input[type=week],input[type=file]) { inline-size:100%; min-inline-size:0; max-inline-size:100%; }
+    :where(input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week],[type=file])) { inline-size:100%; min-inline-size:0; max-inline-size:100%; }
     /* WebKit 301648: iOS date/time width includes input padding. Keep the native picker,
        move that padding to its displayed value instead. */
     @supports (-webkit-touch-callout:none) {
-      :where(input[type=date],input[type=time],input[type=datetime-local],input[type=month],input[type=week]) { padding:0; }
+      :where(input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])) { padding:0; }
       input::-webkit-date-and-time-value { display:block; box-sizing:border-box; min-block-size:1.4em; inline-size:100%; padding:var(--ui-field-padding); text-align:start; }
     }
-    :where(input,select,textarea)::-webkit-datetime-edit { min-inline-size:0; }
+    input::-webkit-datetime-edit { min-inline-size:0; }
     .ui-graphic-action { min-inline-size:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); min-block-size:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); padding:calc(min(5px,(var(--ui-control-height) - 20px) / 2) / var(--ui-graphic-scale,1)); border-width:calc(1px / var(--ui-graphic-scale,1)); border-radius:calc(var(--ui-radius) / var(--ui-graphic-scale,1)); }
     .ui-graphic-action > svg.ui-icon { inline-size:calc(18px / var(--ui-graphic-scale,1)); block-size:calc(18px / var(--ui-graphic-scale,1)); }
     :where(input,textarea).ui-inline-field { min-block-size:0; padding:revert-layer; resize:revert-layer; border-color:transparent; border-radius:0; background:transparent; font:inherit; text-align:inherit; }

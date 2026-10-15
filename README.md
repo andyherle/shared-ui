@@ -277,3 +277,10 @@ scroll horizontally rather than turning each record into a tall card.
 `.ui-success`, `.ui-error`, `.ui-warning` and `.ui-muted` give cells semantic color.
 Always include signs or explicit state text, so color is never the only cue.
 Use native `.ui-disclosure` for optional totals, explanations and row details.
+
+
+Native date, time, datetime, month and week inputs inside `.ui-field` retain
+their intrinsic picker width, including when empty, in compact action rows.
+Use the same caption + native input pattern as a labelled selector. Let the
+shared action group wrap; do not add application-specific input widths. The
+Control fixture includes an empty From date, a populated To date and a time.
