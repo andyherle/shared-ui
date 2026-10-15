@@ -21,11 +21,19 @@ export function buildCSS(tokens,controls){
   const color=value=>value.replace(/#[0-9a-f]{6}(?:[0-9a-f]{2})?\b/gi,hex=>{const pairs=hex.slice(1).match(/../g);return pairs.every(pair=>pair[0]===pair[1])?'#'+pairs.map(pair=>pair[0]).join(''):hex;});
   const declarations=values=>Object.entries(values).map(([key,value])=>`--ui-${key}:${color(value)};`).join('');
   const packs=[];
+  // Hoist identical pack tokens once; each pack still owns its own palette.
+  const names=Object.keys(tokens), shared={};
+  for(const key of Object.keys(tokens[names[0]].light)){
+    const first=tokens[names[0]];
+    if(names.every(name=>tokens[name].light[key]===first.light[key]&&tokens[name].dark[key]===first.dark[key]))
+      shared[key]=first.light[key]===first.dark[key]?first.light[key]:`light-dark(${first.light[key]},${first.dark[key]})`;
+  }
+  packs.push(`[data-ui]{${declarations(shared)}}`);
   // Native color-scheme resolves both palettes without duplicating the dark
   // declarations for a saved choice and the system media query.
   for(const [name,pack] of Object.entries(tokens)){
     const base=`[data-ui="${name}"]`;
-    const colors=Object.fromEntries(Object.keys(pack.light).map(key=>[key,pack.light[key]===pack.dark[key]?pack.light[key]:`light-dark(${pack.light[key]},${pack.dark[key]})`]));
+    const colors=Object.fromEntries(Object.keys(pack.light).filter(key=>!(key in shared)).map(key=>[key,pack.light[key]===pack.dark[key]?pack.light[key]:`light-dark(${pack.light[key]},${pack.dark[key]})`]));
     packs.push(`${base}{color-scheme:${name==='personal'?'light dark':'dark'};${declarations(pack.defaults)}${declarations(colors)}}`);
   }
   packs.push('[data-ui][data-theme=light]{color-scheme:light}[data-ui][data-theme=dark]{color-scheme:dark}');
