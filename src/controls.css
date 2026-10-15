@@ -176,7 +176,7 @@
 
     /* Container-owned responsiveness; the same row works in a panel, pop-out or page. */
     :where(.ui-actions,.ui-toolbar,.ui-tabs) { display:flex; flex-wrap:wrap; align-items:stretch; justify-content:flex-start; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; inline-size:100%; container:ui-actions / inline-size; }
-    :where(.ui-actions,.ui-toolbar) > * { margin-block:0; min-inline-size:0; max-inline-size:100%; }
+    :where(.ui-actions,.ui-toolbar) > * { margin-block:0; max-inline-size:100%; }
     :where(.ui-actions,.ui-toolbar) > select { flex:1 1 8rem; inline-size:auto; }
     :where(form,fieldset,.ui-panel,.ui-card) { min-inline-size:0; }
     .ui-toolbar { padding:var(--ui-gap); border:1px solid var(--ui-line); border-radius:var(--ui-radius); background:var(--ui-surface); }

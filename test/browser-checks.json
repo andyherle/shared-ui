@@ -193,6 +193,17 @@
       "No JavaScript errors in checked interactions"
     ],
     "cssBytes": 31961,
-    "gzipBytes": 7185
+    "gzipBytes": 7221
+  },
+  "touchActionValidation": {
+    "date": "2026-10-15",
+    "revision": "af0d73b1bb06581ce494b64f21e8139d968a049860770ed1a8fbb81381178d3d",
+    "method": "Actual Portal desktop/mobile browser QA coordinated with its release chat",
+    "verified": [
+      "Quiet icon-only dismiss actions retain at least 44 by 44 targets on coarse pointers",
+      "Reply, dismissal and native no-JavaScript controls work without browser errors"
+    ],
+    "cssBytes": 31943,
+    "gzipBytes": 7219
   }
 }
