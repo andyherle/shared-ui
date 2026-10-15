@@ -55,6 +55,7 @@
       border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface);
       font:var(--ui-control-font);
     }
+    option { background:var(--ui-surface); color:var(--ui-text); }
     :where(button,:is(a,summary):is(.ui-button,.ui-action,.button))[aria-pressed=true], :where(.ui-toggle,.ui-icon-choice):has(input:checked) { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
     :where(button,:is(a,summary):is(.ui-button,.ui-action,.button))[aria-pressed=mixed] { background:color-mix(in srgb,var(--ui-accent-soft) 50%,var(--ui-surface)); border-color:var(--ui-accent); border-style:dashed; }
     input::file-selector-button { min-block-size:var(--ui-control-height); margin-inline-end:var(--ui-gap); padding:var(--ui-control-padding); border:1px solid var(--ui-control); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); font:var(--ui-control-font); cursor:pointer; }
@@ -137,7 +138,7 @@
     fieldset.ui-group { border:0; margin:0; padding:0; }
     :where(.ui-check,.ui-choice) { display:inline-flex; align-items:center; gap:var(--ui-gap); min-block-size:var(--ui-control-height); min-inline-size:var(--ui-control-height); font:var(--ui-control-font); cursor:pointer; }
     .ui-group > legend { padding:0; margin-block-end:var(--ui-gap); font-size:var(--ui-control-size); color:var(--ui-muted); }
-    .ui-disclosure > summary { display:inline-flex; inline-size:fit-content; max-inline-size:100%; justify-content:flex-start; list-style:none; }
+    .ui-disclosure > summary { inline-size:fit-content; justify-content:flex-start; list-style:none; }
     .ui-disclosure > summary::-webkit-details-marker { display:none; }
     .ui-disclosure > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
     .ui-disclosure[open] > summary::after { transform:rotate(225deg); }
