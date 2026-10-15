@@ -184,8 +184,14 @@ can edit that value. The Canvas catalogue demonstrates this in both packs.
 
 While dragging, set `data-ui-dragging="true"`; remove it on release and set
 `data-ui-placing="true"` for the shared placement animation. Clear placing on
-`animationend` (and at the next gesture). Reduced motion disables both effects.
-Publish `--ui-graphic-scale` for physically sized lift and focus. `.ui-guide`
+`animationend` (and at the next gesture). Reduced motion disables the placement animation.
+Dragging preserves exact card bounds with a subtle fade, and placement restores opacity.
+Use a native `button.ui-drag-handle[data-ui-variant=quiet]` above editable card
+text, with the shared move icon, `.ui-label`, and a complete accessible name.
+Applications own its placement and pointer/keyboard movement. Use
+`data-ui-layout="column"` for square column surfaces and
+`data-ui-variant="flat"` on their member cards for flush, square media.
+Publish `--ui-graphic-scale` for physically sized controls and focus. `.ui-guide`
 paints alignment guides; the app owns their positions and lengths.
 
 
