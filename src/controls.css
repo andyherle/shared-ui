@@ -137,7 +137,7 @@
     fieldset.ui-group { border:0; margin:0; padding:0; }
     :where(.ui-check,.ui-choice) { display:inline-flex; align-items:center; gap:var(--ui-gap); min-block-size:var(--ui-control-height); min-inline-size:var(--ui-control-height); font:var(--ui-control-font); cursor:pointer; }
     .ui-group > legend { padding:0; margin-block-end:var(--ui-gap); font-size:var(--ui-control-size); color:var(--ui-muted); }
-    .ui-disclosure > summary { display:flex; justify-content:flex-start; list-style:none; }
+    .ui-disclosure > summary { display:inline-flex; inline-size:fit-content; max-inline-size:100%; justify-content:flex-start; list-style:none; }
     .ui-disclosure > summary::-webkit-details-marker { display:none; }
     .ui-disclosure > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
     .ui-disclosure[open] > summary::after { transform:rotate(225deg); }
@@ -221,7 +221,7 @@
     .ui-dynamic { display:inline-grid; > span { grid-area:1/1; white-space:pre; } > [aria-hidden] { visibility:hidden; &::before { content:attr(data-ui-text); } } }
     .ui-actions:not([data-ui-layout=vertical]) > .ui-search { flex:1 1 0; }
     .ui-search :where(input,select) { inline-size:100%; }
-    .ui-fill > :where(button,.ui-button,.ui-action,summary,details.ui-disclosure) { flex:1 1 8rem; }
+    .ui-fill > :where(button,.ui-button,.ui-action):not(summary) { flex:1 1 8rem; }
     .ui-fill > :where(.ui-icon-button,[data-ui-label=hidden]) { flex:none; }
     /* Native priority groups flatten while there is room, and disclose as a tile otherwise. */
     .ui-overflow.ui-disclosure[data-ui-overflow=expanded] { display:flex; flex:0 0 auto; inline-size:auto; }
