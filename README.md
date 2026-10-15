@@ -363,7 +363,10 @@ alternating rows, sticky headings and shared hover/focus/selection states. Use
 on the selected row. Keep a native `.ui-item.ui-action` link with a shared icon
 and `.ui-label.ui-truncate` for opening row context. Retain full text in its title
 and accessible name. Coarse pointers keep 44 px action targets; narrow containers
-scroll horizontally rather than turning each record into a tall card.
+scroll horizontally rather than turning each record into a tall card. The resize
+helper retains the configured total width as the scrollable floor. Use
+`data-ui-sticky-first` when the leading cell identifies each row, so that context
+remains visible while scrolling.
 
 `.ui-success`, `.ui-error`, `.ui-warning` and `.ui-muted` give cells semantic color.
 Always include signs or explicit state text, so color is never the only cue.

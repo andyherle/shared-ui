@@ -76,11 +76,17 @@ function fire(node,type,values={}){const event={type,preventDefault(){this.defau
 test('column boundaries redistribute adjacent widths, cancel safely and dispose without changing table semantics',()=>{
  const e=geometryEnvironment(),changes=[];const resize=module.exports.createColumnResize(e.table,{onChange:value=>changes.push(value)}),handle=e.heads[0].children[0];
  assert.equal(e.table.style.width,'100%');assert.equal(e.heads[2].children.length,0);assert.equal(handle.attrs.role,'separator');
+ assert.equal(e.table.style.minWidth,'600px');
  fire(handle,'pointerdown',{button:0,clientX:200,pointerId:1});fire(e.doc,'pointermove',{clientX:250,pointerId:1});assert.deepEqual(Array.from(resize.widths,Math.round),[250,150,200]);
  const cancel=fire(handle,'keydown',{key:'Escape'});assert.equal(cancel.stopped,true);assert.deepEqual(Array.from(resize.widths,Math.round),[200,200,200]);assert.equal(changes.length,0);
  fire(handle,'keydown',{key:'ArrowRight'});assert.deepEqual(Array.from(resize.widths,Math.round),[210,190,200]);assert.equal(changes.length,1);
  fire(handle,'pointerdown',{button:0,clientX:200,pointerId:2});fire(e.doc,'pointermove',{clientX:500,pointerId:2});assert.ok(resize.widths[1]>=72);e.doc.visibilityState='hidden';fire(e.doc,'visibilitychange');assert.deepEqual(Array.from(resize.widths,Math.round),[210,190,200]);
  resize.dispose();resize.dispose();assert.equal(e.table.children.length,0);assert.equal(e.heads[0].children.length,0);assert.ok([...e.doc.listeners.values(),...e.view.listeners.values(),...handle.listeners.values()].every(set=>set.size===0));
+});
+test('saved column widths remain the scrollable table floor on a phone',()=>{
+ const e=geometryEnvironment();const resize=module.exports.createColumnResize(e.table,{widths:[220,150,180]});
+ assert.equal(e.table.style.width,'100%');assert.equal(e.table.style.minWidth,'550px');
+ resize.dispose();assert.equal(e.table.style.minWidth,undefined);
 });
 test('shared lightbox uses native close, skips editable keyboard navigation and restores opener focus',()=>{
  const e=geometryEnvironment(),dialog=e.element('dialog'),opener=e.element('button');opener.isConnected=true;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;fire(dialog,'close');};let navigated=0,closed=0;
