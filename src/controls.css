@@ -296,7 +296,7 @@
     .ui-status[data-state=success]::before { content:"✓"; }
     .ui-status[data-state=pending]::before, .ui-action[aria-busy=true]::before { content:""; inline-size:14px; block-size:14px; flex:none; border:2px solid currentColor; border-inline-end-color:transparent; border-radius:50%; animation:ui-spin .8s linear infinite; }
     .ui-action[aria-busy=true] > .ui-icon { display:none; }
-    @media(prefers-reduced-motion:reduce) { :where(button,.ui-button,.ui-card) { transition:none; transform:none; animation:none; } :where(.ui-status,.ui-action)::before { animation:none; } }
+    @media(prefers-reduced-motion:reduce) { :where(button,.ui-button,.ui-card) { transition:none; animation:none!important; } :where(.ui-status,.ui-action)::before { animation:none; } }
     @media(forced-colors:active) { :where(button,input,select,textarea,.ui-button) { border-color:ButtonText; } }
   }
   @keyframes ui-place { from { opacity:.78; } }
