@@ -262,3 +262,18 @@ Shared headers stick to the top of their scrolling ancestor. Place them outside
 padded page content for edge-to-edge coverage. Mark a back navigation action
 `.ui-back`; it (or its immediate intrinsic group) stays at the start of a header.
 The catalogue's Selection and navigation section demonstrates these contracts.
+
+## Spreadsheet tables
+
+Use a native `table.ui-table[data-ui-variant="sheet"]` inside `.ui-table-scroll`
+for line-by-line scanning. It supplies 11 px type, tabular numerals, cell dividers,
+alternating rows, sticky headings and shared hover/focus/selection states. Use
+`th scope="col"`, `.ui-number` on numeric columns and `data-ui-selected="true"`
+on the selected row. Keep a native `.ui-item.ui-action` link with a shared icon
+and `.ui-label.ui-truncate` for opening row context. Retain full text in its title
+and accessible name. Coarse pointers keep 44 px action targets; narrow containers
+scroll horizontally rather than turning each record into a tall card.
+
+`.ui-success`, `.ui-error`, `.ui-warning` and `.ui-muted` give cells semantic color.
+Always include signs or explicit state text, so color is never the only cue.
+Use native `.ui-disclosure` for optional totals, explanations and row details.
