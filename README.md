@@ -111,6 +111,24 @@ Use `ui-menu data-ui-position="overlay"` for a menu whose app layout already anc
 
 ## Compact workspace typography
 
+### File preview cards
+
+Compose a file card as a native `article.ui-card.ui-stack`, a
+`button.ui-media-button` with a complete accessible preview name, and a
+`div.ui-pad.ui-stack` caption. The preview contains an `aria-hidden` visual
+(image, canvas, or a text excerpt); the caption uses a quiet native
+`a.ui-action.ui-item` with the shared file icon and `.ui-label.ui-truncate`.
+Keep Copy, Info and Download in a separate `.ui-actions.ui-inline` group so
+there are no nested interactive elements. Use `SharedUI.adoptAction` for
+these actions and preserve a direct file URL on the filename link.
+
+The app owns card columns, preview aspect ratio, media fitting and row geometry.
+Existing media, card, action and typography roles own all paint and states.
+A list can use the same native actions beside a small preview. Tables inside
+file viewers use a focusable `.ui-table-scroll` with an accessible name around
+`table.ui-table[data-ui-variant=sheet]`, a caption and scoped column headers.
+The Media catalogue demonstrates this composition with synthetic content.
+
 Use `.ui-chrome` for operational panels and data tables, `.ui-section-title` for a compact panel heading, and `.ui-meta` for secondary text and paths. `.ui-value` is the shared numeric summary type. Full H1–H6 and `.ui-prose` remain document typography; do not use them to size a small storage label or table header. Density and palette remain independent, so Personal and Postvisual chrome have the same geometry at the same density.
 
 `.ui-stack` owns vertical rhythm and clears child block margins. `.ui-pad` uses twice the shared gap as surface padding. Apply them to native cards and sections; keep domain grids and structured row placement in the app layer. `.ui-tabs` supplies start-aligned native tabs and the selected underline. `.ui-actions` / ordinary `.ui-toolbar` default to start alignment; `.ui-header` defaults to end alignment and reserves identity space at the start. Request `data-ui-align="center"` or `"end"` deliberately. `data-ui-variant="quiet"` keeps native actions and focus with a quiet resting surface, for list rows and filenames. Use `.ui-truncate` on the label for compact filenames and retain the full accessible name/title.
@@ -357,3 +375,34 @@ their intrinsic picker width, including when empty, in compact action rows.
 Use the same caption + native input pattern as a labelled selector. Let the
 shared action group wrap; do not add application-specific input widths. The
 Control fixture includes an empty From date, a populated To date and a time.
+
+
+### Adjustable columns and stable lightboxes
+
+`SharedUI.createColumnResize(table, {min:72, max:1200, widths, onChange})`
+enhances a native sheet with one header per column and no existing colgroup.
+The table fills its container. A quiet line at each internal column boundary has
+a larger pointer target: drag it to redistribute the adjacent columns without
+moving the table edge. Use Left/Right (Shift for one pixel), Home/End or
+double-click to reset a boundary. Escape or pointer cancellation restores the
+starting widths. Narrow containers scroll when minimum column widths require it.
+Applications own saved proportions through `onChange(widths)`; validate them per
+view. `reset()` restores initial proportions; `dispose()` restores the native table.
+
+`SharedUI.createLightbox(dialog, {onNavigate, onClose})` enhances a native dialog
+with a stable centered 900 × 760 frame, bounded by the viewport. Use three direct
+children: `.ui-actions` header, `[data-ui-lightbox-body]` scroll area, and
+`.ui-actions` footer. `open(trigger)` remembers focus, `close()` uses native dialog
+closure, and `dispose()` releases listeners. Escape and backdrop clicks dismiss;
+Left/Right call `onNavigate(-1|1)` outside editable controls and text selections.
+Native buttons remain available for navigation. The catalogue's media lightbox
+uses this helper. All content, request cancellation and navigation state belong
+to the app; keep the same dialog and replace only its content.
+
+Stable geometry is a shared design goal: reserve the expected area for changing
+content, keep toolbars and navigation in place, and scroll variable content
+inside it. Use `reserveText` for status labels and native disclosures for optional
+detail. Load a visible stable shell immediately; async results fill that shell.
+Never move the surrounding table when selection changes or a lightbox opens.
+
+Icon-only information uses native `details.ui-disclosure` with a `summary.ui-action[data-ui-label="hidden"]`, a shared `info` icon and an accessible name. The hidden-label summary omits the chevron and keeps the full shared control target. Use `data-ui-variant="quiet"` for a soft information or dismiss symbol; the catalogue’s compact reply row demonstrates both.

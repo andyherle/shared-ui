@@ -65,3 +65,26 @@ test('a validated replacement retires the marked bundled UI sheet only after loa
  const accepted=e.instance.applyRelease(release);assert.equal(baseline.removed,false);e.load();assert.equal(await accepted,true);assert.equal(baseline.removed,true);
  const unavailable=e.instance.applyRelease(other);e.fail();assert.equal(await unavailable,false);assert.equal(e.links[1].removed,undefined);e.instance.dispose();
 });
+
+function geometryEnvironment(){
+ const doc=new Events(),view=new Events();doc.defaultView=view;doc.visibilityState='visible';view.getComputedStyle=node=>({direction:'ltr',position:node.style.position||'static'});view.getSelection=()=>'';
+ const element=tag=>Object.assign(new Events(),{tagName:tag.toUpperCase(),ownerDocument:doc,style:{},dataset:{},children:[],attrs:{},classList:{add(){}},textContent:'',append(child){this.children.push(child);child.parent=this;},prepend(child){this.children.unshift(child);child.parent=this;},remove(){this.parent.children=this.parent.children.filter(child=>child!==this);},setAttribute(key,value){this.attrs[key]=value;},getAttribute(key){return this.attrs[key];},querySelector(){return null;},focus(){doc.activeElement=this;},setPointerCapture(){},releasePointerCapture(){}});
+ doc.createElement=element;const table=element('table');const heads=[0,1,2].map(i=>{const head=element('th');head.colSpan=1;head.textContent='Column '+i;head.getBoundingClientRect=()=>{const group=table.children.find(n=>n.tagName==='COLGROUP');return {width:group?parseFloat(group.children[i].style.width)/100*600:200};};return head;});table.tHead={rows:[{cells:heads}]};
+ return {doc,view,element,table,heads};
+}
+function fire(node,type,values={}){const event={type,preventDefault(){this.defaultPrevented=true;},stopPropagation(){this.stopped=true;},...values};node.dispatchEvent(event);return event;}
+test('column boundaries redistribute adjacent widths, cancel safely and dispose without changing table semantics',()=>{
+ const e=geometryEnvironment(),changes=[];const resize=module.exports.createColumnResize(e.table,{onChange:value=>changes.push(value)}),handle=e.heads[0].children[0];
+ assert.equal(e.table.style.width,'100%');assert.equal(e.heads[2].children.length,0);assert.equal(handle.attrs.role,'separator');
+ fire(handle,'pointerdown',{button:0,clientX:200,pointerId:1});fire(e.doc,'pointermove',{clientX:250,pointerId:1});assert.deepEqual(Array.from(resize.widths,Math.round),[250,150,200]);
+ const cancel=fire(handle,'keydown',{key:'Escape'});assert.equal(cancel.stopped,true);assert.deepEqual(Array.from(resize.widths,Math.round),[200,200,200]);assert.equal(changes.length,0);
+ fire(handle,'keydown',{key:'ArrowRight'});assert.deepEqual(Array.from(resize.widths,Math.round),[210,190,200]);assert.equal(changes.length,1);
+ fire(handle,'pointerdown',{button:0,clientX:200,pointerId:2});fire(e.doc,'pointermove',{clientX:500,pointerId:2});assert.ok(resize.widths[1]>=72);e.doc.visibilityState='hidden';fire(e.doc,'visibilitychange');assert.deepEqual(Array.from(resize.widths,Math.round),[210,190,200]);
+ resize.dispose();resize.dispose();assert.equal(e.table.children.length,0);assert.equal(e.heads[0].children.length,0);assert.ok([...e.doc.listeners.values(),...e.view.listeners.values(),...handle.listeners.values()].every(set=>set.size===0));
+});
+test('shared lightbox uses native close, skips editable keyboard navigation and restores opener focus',()=>{
+ const e=geometryEnvironment(),dialog=e.element('dialog'),opener=e.element('button');opener.isConnected=true;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;fire(dialog,'close');};let navigated=0,closed=0;
+ const box=module.exports.createLightbox(dialog,{onNavigate:direction=>navigated+=direction,onClose:()=>closed++});box.open(opener);assert.equal(dialog.open,true);
+ fire(dialog,'keydown',{key:'ArrowRight',target:{closest:()=>null}});assert.equal(navigated,1);fire(dialog,'keydown',{key:'ArrowRight',target:{closest:()=>({})}});assert.equal(navigated,1);
+ box.close();assert.equal(dialog.open,false);assert.equal(closed,1);assert.equal(e.doc.activeElement,opener);assert.equal(dialog.style.display,'');box.dispose();assert.ok([...dialog.listeners.values(),...e.view.listeners.values()].every(set=>set.size===0));
+});

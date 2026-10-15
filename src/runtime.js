@@ -212,7 +212,59 @@
     setValue(value);out.addEventListener('click',decrease);into.addEventListener('click',increase);view?.addEventListener('pagehide',pagehide);
     return {get value(){return current;},setValue,dispose};
   }
-  const api={version:'1.7.0',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  function createColumnResize(table,{min=72,max=1200,widths=[],onChange=()=>{}}={}){
+    if(!Number.isFinite(min)||!Number.isFinite(max)||min<24||max<min)throw new TypeError('Column resizing requires finite positive bounds');
+    const doc=table.ownerDocument,view=doc.defaultView,heads=[...table.tHead.rows[0].cells];
+    if(!heads.length||heads.some(cell=>cell.colSpan>1)||table.querySelector('colgroup'))throw new TypeError('Use a simple table with one header per column and no colgroup');
+    const previous={width:table.style.width,minWidth:table.style.minWidth,layout:table.style.tableLayout},group=doc.createElement('colgroup'),handles=[],removers=[];
+    const initial=heads.map(cell=>Math.round(cell.getBoundingClientRect().width)),padding=heads.map(cell=>cell.style.paddingInlineEnd),position=heads.map(cell=>cell.style.position);
+    let values=initial.map((value,i)=>clamp(Number(widths[i])||value)),drag=null,disposed=false;
+    function clamp(value){return Math.min(max,Math.max(min,value));}
+    function on(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
+    function measured(){return heads.map(cell=>cell.getBoundingClientRect().width);}
+    function adjust(index,next,before=values){const pair=before[index]+before[index+1],lo=Math.max(min,pair-max),hi=Math.min(max,pair-min);values=[...before];values[index]=Math.max(lo,Math.min(hi,next));values[index+1]=pair-values[index];draw();}
+    for(const [index,head] of heads.entries()){
+      group.append(doc.createElement('col'));if(index===heads.length-1)continue;
+      const handle=doc.createElement('button');handle.type='button';handle.className='ui-resize-handle ui-column-resize';
+      Object.assign(handle.style,{position:'absolute',insetInlineEnd:'0',insetBlock:'0',height:'100%',cursor:'col-resize'});
+      if(view.getComputedStyle(head).position==='static')head.style.position='relative';head.style.paddingInlineEnd='var(--ui-control-height)';handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');
+      handle.setAttribute('aria-label',`Resize ${head.textContent.trim()} column`);handle.title='Drag divider · Arrow keys to adjust · Double-click to reset';
+      handle.setAttribute('aria-valuemin',String(min));head.append(handle);handles.push(handle);
+      on(handle,'pointerdown',event=>{if(event.button!==0)return;event.preventDefault();finish(false);handle.focus({preventScroll:true});values=measured();drag={index,x:event.clientX,id:event.pointerId,handle,before:[...values]};handle.setPointerCapture?.(event.pointerId);table.dataset.uiResizing='true';});
+      on(handle,'keydown',event=>{
+        if(event.key==='Escape'&&drag){event.preventDefault();event.stopPropagation();finish(true);return;}
+        if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+        event.preventDefault();event.stopPropagation();values=measured();const step=event.shiftKey?1:10,direction=view.getComputedStyle(table).direction==='rtl'?-1:1;
+        adjust(index,event.key==='Home'?min:event.key==='End'?max:values[index]+(event.key==='ArrowLeft'?-step:step)*direction);onChange([...values]);
+      });
+      on(handle,'dblclick',()=>{values=measured();adjust(index,initial[index]);onChange([...values]);});
+    }
+    table.prepend(group);table.dataset.uiResizable='true';table.style.tableLayout='fixed';table.style.width='100%';table.style.minWidth=(min*heads.length)+'px';
+    function draw(){const total=values.reduce((sum,value)=>sum+value,0);for(const [i,col] of [...group.children].entries()){col.style.width=values[i]/total*100+'%';if(handles[i]){handles[i].setAttribute('aria-valuemax',String(Math.min(max,values[i]+values[i+1]-min)));handles[i].setAttribute('aria-valuenow',String(Math.round(values[i])));handles[i].setAttribute('aria-valuetext',Math.round(values[i])+' pixels');}}}
+    function finish(cancel){if(!drag)return;const active=drag;drag=null;if(cancel)values=active.before;try{active.handle.releasePointerCapture?.(active.id);}catch(_){}delete table.dataset.uiResizing;draw();if(!cancel)onChange([...values]);}
+    on(doc,'pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;const direction=view.getComputedStyle(table).direction==='rtl'?-1:1;adjust(drag.index,drag.before[drag.index]+(event.clientX-drag.x)*direction,drag.before);});
+    on(doc,'pointerup',event=>{if(drag?.id===event.pointerId)finish(false);});on(doc,'pointercancel',event=>{if(drag?.id===event.pointerId)finish(true);});
+    on(doc,'visibilitychange',()=>{if(doc.visibilityState==='hidden')finish(true);});
+    on(view,'pagehide',event=>{finish(true);if(!event.persisted)dispose();});
+    function dispose(){if(disposed)return;finish(true);disposed=true;for(const remove of removers)remove();for(const [i,handle] of handles.entries()){handle.remove();heads[i].style.paddingInlineEnd=padding[i];heads[i].style.position=position[i];}group.remove();delete table.dataset.uiResizable;table.style.width=previous.width;table.style.minWidth=previous.minWidth;table.style.tableLayout=previous.layout;}
+    draw();return {get widths(){return [...values];},reset(){if(disposed)return;values=initial.map(clamp);draw();onChange([...values]);},dispose};
+  }
+  function createLightbox(dialog,{onNavigate=()=>{},onClose=()=>{}}={}){
+    if(dialog.tagName!=='DIALOG')throw new TypeError('Use a native dialog');
+    const doc=dialog.ownerDocument,view=doc.defaultView;let disposed=false,opener=null;
+    dialog.classList.add('ui-lightbox');
+    Object.assign(dialog.style,{width:'900px',height:'760px',overflow:'hidden'});
+    const body=dialog.querySelector('[data-ui-lightbox-body]');if(body)Object.assign(body.style,{overflow:'auto',minHeight:'0',overscrollBehavior:'contain',scrollbarGutter:'stable'});
+    function key(event){if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||event.target.closest('input,textarea,select,[contenteditable=true],[role=slider],[role=separator]')||view.getSelection()?.toString())return;if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();onNavigate(event.key==='ArrowLeft'?-1:1);}}
+    function click(event){if(event.target.closest('[data-ui-lightbox-close]'))close();else if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close();}}
+    function closed(){dialog.style.display='';onClose();if(opener?.isConnected)opener.focus({preventScroll:true});}
+    function close(){if(dialog.open)dialog.close();}
+    function pagehide(event){if(!event.persisted)dispose();}
+    function dispose(){if(disposed)return;disposed=true;dialog.removeEventListener('keydown',key);dialog.removeEventListener('click',click);dialog.removeEventListener('close',closed);view.removeEventListener('pagehide',pagehide);}
+    dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
+    return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();Object.assign(dialog.style,{display:'grid',gridTemplateRows:'auto minmax(0,1fr) auto',gap:'var(--ui-gap)'});}},close,dispose};
+  }
+  const api={version:'1.8.0',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

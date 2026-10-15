@@ -177,5 +177,22 @@
       "The browser viewport override did not change the provider viewport; no physical mobile acceptance claimed",
       "Consumer bundle audits report asset integrity/freshness; application interactions still need their own browser checks"
     ]
+  },
+  "ledgerInteractionValidation": {
+    "date": "2026-10-15",
+    "version": "1.8.0",
+    "revision": "a3249219d77a70b788df5d86c1d59c19679e520373df807c26e26923d941b8f1",
+    "method": "Isolated local browser, synthetic catalogue and app fixtures",
+    "checks": [
+      "Full-width table retains its outer edge while adjacent columns resize",
+      "Quiet 1px column divider with keyboard controls and larger hit area",
+      "Native lightbox supports arrow navigation and restores opener focus",
+      "Postvisual dark and Personal light at desktop and touch-mobile sizes",
+      "Ledger table position unchanged by opening or navigating details",
+      "Continuous date cursor and fixed-height activity region",
+      "No JavaScript errors in checked interactions"
+    ],
+    "cssBytes": 31961,
+    "gzipBytes": 7185
   }
 }
