@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {installBundle} from '../scripts/install.mjs';
 import {buildSite} from '../scripts/build.mjs';
+import {auditBundle,discoverBundles} from '../scripts/audit-consumers.mjs';
 buildSite();
 test('app packaging copies only validated UI assets and detects authored drift',t=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'shared-ui-install-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
@@ -23,4 +24,13 @@ test('catalogue advertises its bundled style contract to reject older CSS',()=>{
  const release=JSON.parse(fs.readFileSync(new URL('../public/v1/manifest.json',import.meta.url),'utf8'));
  assert.ok(page.includes(`data-ui-version="${release.version}"`));
  assert.ok(page.includes(`data-ui-revision="${release.revision}"`));
+ const runtime=fs.readFileSync(new URL('../public/v1/runtime.js',import.meta.url),'utf8');assert.ok(runtime.includes('UI.captureLayout='));assert.ok(runtime.includes('UI.auditControls='));
+});
+
+test('consumer audit discovers bundles and separates valid older releases from authored drift',t=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'shared-ui-audit-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+ const target=path.join(directory,'app/ui'),source=path.join(directory,'release');installBundle(target);installBundle(source);
+ assert.deepEqual(discoverBundles(directory),[target,source].sort());assert.deepEqual(auditBundle(target).errors,[]);assert.deepEqual(auditBundle(target).stale,[]);
+ fs.appendFileSync(path.join(source,'runtime.js'),'\n/* new release */');const stale=auditBundle(target,{source});assert.deepEqual(stale.errors,[]);assert.deepEqual(stale.stale,['runtime.js']);
+ fs.appendFileSync(path.join(target,'styles.css'),'button{color:red}');assert.match(auditBundle(target).errors.join(' '),/Generated file drift: styles.css.*integrity/);
 });

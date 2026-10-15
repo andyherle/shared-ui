@@ -14,6 +14,7 @@ function fixture(){
     getBoundingClientRect(){return {width:this.clientWidth,height:30};}
     matches(selector){return selector.split(',').some(part=>{const tag=part.match(/^[a-z]+/)?.[0];if(tag&&this.tagName!==tag.toUpperCase())return false;const classes=[...part.matchAll(/\.([\w-]+)/g)].map(m=>m[1]);if(classes.some(name=>!this.className.split(' ').includes(name)))return false;const attrs=[...part.matchAll(/\[([\w-]+)(?:=([^\]]+))?\]/g)];return attrs.every(([,key,value])=>key==='open'?this.open:this.getAttribute(key)!==null&&(value===undefined||this.getAttribute(key)===value));});}
     querySelector(selector){const part=selector.replace(':scope > ','');return this.children.find(node=>node.matches(part))||null;}
+    querySelectorAll(selector){const part=selector.replace(':scope > ','');return this.children.filter(node=>node.matches(part));}
     closest(selector){for(let node=this;node;node=node.parentElement)if(node.matches(selector))return node;return null;}
     hasAttribute(name){return this.attrs.has(name);}getAttribute(name){return this.attrs.get(name)??null;}setAttribute(name,value){this.attrs.set(name,String(value));}removeAttribute(name){this.attrs.delete(name);}
     contains(node){return this===node||this.children.some(child=>child.contains(node));}
@@ -80,4 +81,12 @@ test('closing one embedded view releases its observers without stopping another 
  assert.equal(f.observer.targets.has(f.row),false);assert.equal(f.observer.targets.has(other),true);
  other.clientWidth=40;f.observer.notify(other);f.flush();
  assert.equal(other.children[0].hasAttribute('data-ui-compact'),true);
+});
+
+test('caption fitting reserves the widest state before Save changes, including while compact',()=>{
+ const f=fixture(),save=f.action('Save'),other=f.action('Present'),label=save.querySelector(':scope > .ui-label'),group=new f.Node('span','ui-dynamic'),reserve=new f.Node('span');
+ reserve.setAttribute('data-ui-text','Saving…');group.append(reserve);label.append(group);f.row.append(save,other);f.UI.observeActions(f.row);f.flush();
+ f.resize(160);assert.equal(save.hasAttribute('data-ui-compact'),true);
+ for(const value of ['Saving…','Saved','Save']){label.textContent=value;f.UI.refreshActions(f.doc);f.flush();assert.equal(save.hasAttribute('data-ui-compact'),true);assert.equal(other.hasAttribute('data-ui-compact'),true);}
+ f.resize(220);assert.equal(save.hasAttribute('data-ui-compact'),false);assert.equal(other.hasAttribute('data-ui-compact'),false);
 });

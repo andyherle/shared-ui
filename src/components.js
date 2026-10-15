@@ -96,7 +96,7 @@
     function sides(css){return number(css.paddingLeft)+number(css.paddingRight)+number(css.borderLeftWidth)+number(css.borderRightWidth);}
     function margins(css){return number(css.marginLeft)+number(css.marginRight);}
     function outer(node){const css=style(node);return (node.getBoundingClientRect().width||number(css.width))+margins(css);}
-    function caption(node){const css=style(node);if(!context)return node.scrollWidth;context.font=css.font;const text=node.textContent.trim();return context.measureText(text).width+Math.max(0,text.length-1)*number(css.letterSpacing);}
+    function caption(node){const css=style(node);if(!context)return node.scrollWidth;context.font=css.font;const group=node.querySelector(':scope > .ui-dynamic'),texts=[node.textContent.trim(),...[...group?.querySelectorAll(':scope > [data-ui-text]')||[]].map(item=>item.getAttribute('data-ui-text'))];return Math.max(...texts.map(text=>context.measureText(text).width+Math.max(0,text.length-1)*number(css.letterSpacing)));}
     function actionWidth(node,compact=false){
       const css=style(node),label=node.querySelector(':scope > .ui-label'),icon=node.querySelector(':scope > svg.ui-icon');
       if(!label||!icon)return outer(node);

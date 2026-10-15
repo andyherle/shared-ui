@@ -103,7 +103,27 @@
     schedule(100);
     return {dispose,refresh,setMode,applyRelease:apply,acceptRelease};
   }
-  function adoptAction(element,{icon,label,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
+  function reserveText(element,states){
+    if(!element?.ownerDocument||element.matches?.('button,a,summary,input,select,textarea'))throw new TypeError('Reserve text on a label or text container');
+    if(!Array.isArray(states)||!states.length||states.length>64||states.some(text=>typeof text!=='string'))throw new TypeError('Text states must be a nonempty list of strings (at most 64)');
+    const values=[...new Set(states)],doc=element.ownerDocument;
+    let group=element.querySelector(':scope > .ui-dynamic'),changed=!group;
+    if(!group){group=doc.createElement('span');group.className='ui-dynamic';const current=doc.createElement('span');current.setAttribute('data-ui-current','');current.append(...element.childNodes);group.append(current);element.append(group);}
+    const old=[...group.querySelectorAll(':scope > [data-ui-text]')];
+    if(old.length!==values.length||old.some((node,index)=>node.getAttribute('data-ui-text')!==values[index])){
+      changed=true;
+      for(const node of old)node.remove();
+      for(const value of values){const reserve=doc.createElement('span');reserve.setAttribute('aria-hidden','true');reserve.setAttribute('data-ui-text',value);group.append(reserve);}
+    }
+    if(changed){const row=element.closest?.('.ui-actions,.ui-toolbar');if(row)api.observeActions?.(row);}
+    return element;
+  }
+  function setText(element,value){
+    const current=element.querySelector(':scope > .ui-dynamic')?.querySelector(':scope > [data-ui-current]')||element;
+    if(current.textContent!==String(value))current.textContent=String(value);
+    return element;
+  }
+  function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
     const doc=element.ownerDocument,base=new URL(doc.baseURI),asset=new URL(sprite,base);
     let changed=false;
@@ -121,7 +141,8 @@
       attr(glyph,'viewBox','0 0 24 24');attr(glyph,'fill','none');attr(glyph,'stroke','currentColor');add(glyph,'ui-icon');attr(glyph,'aria-hidden','true');attr(glyph,'focusable','false');
     }
     if(!text){changed=true;text=doc.createElement('span');text.className='ui-label';for(const child of [...element.childNodes])if(child!==glyph)text.append(child);element.append(text);}
-    if(label!==undefined&&text.textContent!==String(label)){text.textContent=String(label);changed=true;}
+    if(labelStates)reserveText(text,labelStates);
+    if(label!==undefined&&text.textContent!==String(label)){setText(text,label);changed=true;}
     add(element,'ui-action');
     if(ariaLabel!==undefined)attr(element,'aria-label',ariaLabel);else if(!element.hasAttribute('aria-label'))attr(element,'aria-label',name);
     if(title!==undefined)attr(element,'title',title);else if(!element.hasAttribute('title'))attr(element,'title',name);
@@ -167,7 +188,31 @@
     button.addEventListener('click',scrollToStart);doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',pause);view.addEventListener('pageshow',listen);listen();
     return {update,dispose(){if(disposed)return;disposed=true;pause();button.removeEventListener('click',scrollToStart);doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',pause);view.removeEventListener('pageshow',listen);}};
   }
-  const api={version:'1.5.0',mount,release,adoptAction,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
+    if(![min,max,step,value].every(Number.isFinite)||max<min||step<=0)throw new TypeError('Zoom requires finite bounds, a positive step and a finite value');
+    const out=group.querySelector('[data-ui-zoom=out]'),into=group.querySelector('[data-ui-zoom=in]'),output=group.querySelector('[data-ui-zoom=value]');
+    if(!out?.matches('button')||!into?.matches('button'))throw new TypeError('Zoom requires native minus and plus buttons');
+    const view=group.ownerDocument.defaultView;
+    let current,disposed=false;
+    group.classList.add('ui-actions');group.classList.add('ui-inline');group.setAttribute('role','group');
+    for(const [button,icon,label] of [[out,'minus',outLabel],[into,'plus',inLabel]]){
+      button.type='button';button.classList.add('ui-icon-button');adoptAction(button,{icon,label,ariaLabel:label,iconOnly:true,sprite});
+    }
+    function setValue(next){
+      if(!Number.isFinite(next))throw new TypeError('Zoom requires a finite value');
+      if(disposed)return current;
+      current=Math.min(max,Math.max(min,next));out.disabled=current<=min;into.disabled=current>=max;
+      if(output)output.textContent=format(current);
+      return current;
+    }
+    function change(direction){if(disposed||direction<0&&out.disabled||direction>0&&into.disabled)return;const before=current;setValue(Number((current+direction*step).toPrecision(12)));if(current!==before)onChange(current);}
+    const decrease=()=>change(-1),increase=()=>change(1);
+    function pagehide(event){if(!event.persisted)dispose();}
+    function dispose(){if(disposed)return;disposed=true;out.removeEventListener('click',decrease);into.removeEventListener('click',increase);view?.removeEventListener('pagehide',pagehide);}
+    setValue(value);out.addEventListener('click',decrease);into.addEventListener('click',increase);view?.addEventListener('pagehide',pagehide);
+    return {get value(){return current;},setValue,dispose};
+  }
+  const api={version:'1.7.0',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

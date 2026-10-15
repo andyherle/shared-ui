@@ -11,10 +11,24 @@
         <span class="ui-meta">526 media</span>
       </nav>
       <div class="ui-actions ui-inline" aria-label="Fixture header commands">
+        <div id="fixture-zoom" class="ui-actions ui-inline" role="group" aria-label="Gallery tile size">
+          <button type="button" data-ui-zoom="out" aria-label="Smaller tiles">−</button><button type="button" data-ui-zoom="in" aria-label="Larger tiles">+</button>
+          <output data-ui-zoom="value" class="ui-sr-only" aria-live="polite">220 px</output>
+        </div>
         <label class="ui-field"><span class="ui-label">Sort</span><select aria-label="Fixture sort"><option>Date</option><option>Name</option><option>Rating</option></select></label>
         <button type="button" data-ui-icon="filter" data-toast="Filters opened">Filters</button><button type="button" data-ui-icon="upload" data-toast="Ingest opened">Ingest</button><button type="button" data-ui-icon="menu" data-toast="Menu opened">Menu</button>
       </div>
     </header>
+    <header id="fixture-workspace-header" class="ui-toolbar ui-header ui-chrome" aria-label="Fixture workspace header">
+      <a class="ui-action ui-back" href="#control-fixture" data-ui-icon="arrow-left" aria-label="Return to library">Library</a>
+      <div class="lab-workspace-identity ui-stack ui-chrome"><strong>Motion study</strong><span id="fixture-workspace-status" class="ui-status ui-meta" role="status">Live</span></div>
+      <nav class="ui-actions ui-inline" data-ui-label="always" aria-label="Fixture workspace commands">
+        <button type="button" data-ui-icon="sliders" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-toast="Presentation opened">Present</button>
+        <button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button>
+        <details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details>
+      </nav>
+    </header>
+    <div class="ui-actions"><label class="ui-field"><span class="ui-label">Workspace state</span><select id="fixture-state" aria-label="Fixture workspace state"><option value="live">Live</option><option value="dirty">Unsaved changes</option><option value="saving">Saving</option><option value="saved">Saved</option><option value="error">Save failed</option></select></label><output id="fixture-layout-check" class="ui-status" role="status"></output></div>
     <div class="ui-actions" data-ui-label="always" aria-label="Fixture date range">
       <label class="ui-field"><span class="ui-label">From</span><input type="date" aria-label="Fixture from date"></label>
       <label class="ui-field"><span class="ui-label">To</span><input type="date" value="2026-10-15" aria-label="Fixture to date"></label>

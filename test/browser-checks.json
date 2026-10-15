@@ -140,5 +140,42 @@
       "Coarse-pointer fixture verifies shared CSS geometry rather than physical iPhone behavior",
       "Fixture content and published catalogue are synthetic; no client media or personal data included"
     ]
+  },
+  "headerStateValidation": {
+    "date": "2026-10-15",
+    "method": "Codex in-app browser against the canonical local Style Lab; simultaneous app and catalogue views",
+    "version": "1.7.0",
+    "revision": "31107fcab03b4ae1780bea268efc5baae5c178aa24efd0b610efb656207da621",
+    "cssBytes": 31960,
+    "gzipBytes": 7191,
+    "sharedTestsPassed": 52,
+    "stateChecksPassed": 60,
+    "containerWidths": [
+      320,
+      480,
+      960
+    ],
+    "packs": [
+      "postvisual",
+      "personal"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "verified": [
+      "Live, Unsaved changes, Saving, Saved and Save failed retain command positions, widths and caption mode",
+      "Neutral, pending and success status glyphs keep header height stable",
+      "Two-line workspace identity does not stretch native controls",
+      "Compact command controls measure 30px; comfortable targets measure 44px",
+      "Native Enter opens the workspace menu; Escape closes it and returns focus to its summary",
+      "Zoom reaches 420px and 72px, disables the native endpoint button, and Enter advances 72px to92px",
+      "Consumer audit discovers installed bundles and distinguishes generated drift from valid older releases"
+    ],
+    "limits": [
+      "Narrow checks use real 320px and480px containers, rather than a physical touch device",
+      "The browser viewport override did not change the provider viewport; no physical mobile acceptance claimed",
+      "Consumer bundle audits report asset integrity/freshness; application interactions still need their own browser checks"
+    ]
   }
 }

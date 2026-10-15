@@ -50,6 +50,20 @@ function drawFixtureTags(){for(const pill of $('fixture-tags').querySelectorAll(
 const fixtureTagInput=UI.createTagInput($('fixture-tag-input'),{options:()=>['Editorial','motion','Mood','Portrait','Texture','Wide'],excluded:()=>[...fixtureTags],onCommit:value=>{for(const tag of value.split(',').map(x=>x.trim()).filter(Boolean))if(![...fixtureTags].some(existing=>existing.toLocaleLowerCase()===tag.toLocaleLowerCase()))fixtureTags.add(tag);drawFixtureTags();$('fixture-tag-status').textContent='Tags saved';$('fixture-tag-status').dataset.state='success';}});drawFixtureTags();
 $('fixture-tag-form').addEventListener('submit',event=>{event.preventDefault();fixtureTagInput.flush();});
 $('fixture-tag-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.shiftKey){event.preventDefault();fixtureTagInput.flush();$('fixture-tag-status').textContent='Saved · next media';}});
+const fixtureZoom=UI.createZoom($('fixture-zoom'),{min:72,max:420,step:20,value:220,outLabel:'Smaller tiles',inLabel:'Larger tiles',format:value=>value+' px',sprite:'./v1/icons.svg'});
+UI.adoptAction($('fixture-save'),{labelStates:['Save','Saving…','Saved'],sprite:'./v1/icons.svg'});
+UI.reserveText($('fixture-workspace-status'),['Live','Unsaved changes','Saving…','Saved','Save failed']);
+function fixtureState(){
+ const header=$('fixture-workspace-header'),before=UI.captureLayout(header),state=$('fixture-state').value,button=$('fixture-save');
+ $('fixture-layout-check').textContent='Checking…';delete $('fixture-layout-check').dataset.checkedState;
+ UI.setActionLabel(button,state==='saving'?'Saving…':state==='saved'?'Saved':'Save',{ariaLabel:state==='saving'?'Saving…':state==='saved'?'Saved':'Save'});
+ button.setAttribute('aria-busy',String(state==='saving'));button.disabled=state==='saving';
+ UI.setText($('fixture-workspace-status'),{live:'Live',dirty:'Unsaved changes',saving:'Saving…',saved:'Saved',error:'Save failed'}[state]);
+ $('fixture-workspace-status').dataset.state=state==='error'?'error':state==='saving'?'pending':state==='saved'?'success':'live';
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{const issues=[...UI.compareLayout(before),...UI.auditControls(header).issues.filter(issue=>issue.severity==='error')],output=$('fixture-layout-check');output.textContent=issues.length?issues.map(issue=>issue.code+': '+issue.name).join('; '):'Stable · no command movement';output.dataset.state=issues.length?'error':'live';output.dataset.checkedState=state;}));
+}
+$('fixture-state').addEventListener('change',fixtureState);
+$('fixture-save').addEventListener('click',()=>{$('fixture-state').value='saved';fixtureState();});
 function fixtureWidth(value){$('fixture-container').style.inlineSize=value==='fit'?'100%':`min(100%,${value}px)`;$('fixture-width-value').textContent=value==='fit'?'Fit':value+' px';if(value!=='fit')$('fixture-width').value=value;}
 $('fixture-width').addEventListener('input',event=>fixtureWidth(event.target.value));for(const button of document.querySelectorAll('[data-fixture-width]'))button.addEventListener('click',()=>fixtureWidth(button.dataset.fixtureWidth));
 for(const id of ['fixture-task-form','fixture-reply-form'])$(id).addEventListener('submit',event=>{event.preventDefault();$('fixture-task-status').textContent=id==='fixture-reply-form'?'Reply saved':'Action selected';$('fixture-task-status').dataset.state='success';});

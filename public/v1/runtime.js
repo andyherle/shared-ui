@@ -103,7 +103,27 @@
     schedule(100);
     return {dispose,refresh,setMode,applyRelease:apply,acceptRelease};
   }
-  function adoptAction(element,{icon,label,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
+  function reserveText(element,states){
+    if(!element?.ownerDocument||element.matches?.('button,a,summary,input,select,textarea'))throw new TypeError('Reserve text on a label or text container');
+    if(!Array.isArray(states)||!states.length||states.length>64||states.some(text=>typeof text!=='string'))throw new TypeError('Text states must be a nonempty list of strings (at most 64)');
+    const values=[...new Set(states)],doc=element.ownerDocument;
+    let group=element.querySelector(':scope > .ui-dynamic'),changed=!group;
+    if(!group){group=doc.createElement('span');group.className='ui-dynamic';const current=doc.createElement('span');current.setAttribute('data-ui-current','');current.append(...element.childNodes);group.append(current);element.append(group);}
+    const old=[...group.querySelectorAll(':scope > [data-ui-text]')];
+    if(old.length!==values.length||old.some((node,index)=>node.getAttribute('data-ui-text')!==values[index])){
+      changed=true;
+      for(const node of old)node.remove();
+      for(const value of values){const reserve=doc.createElement('span');reserve.setAttribute('aria-hidden','true');reserve.setAttribute('data-ui-text',value);group.append(reserve);}
+    }
+    if(changed){const row=element.closest?.('.ui-actions,.ui-toolbar');if(row)api.observeActions?.(row);}
+    return element;
+  }
+  function setText(element,value){
+    const current=element.querySelector(':scope > .ui-dynamic')?.querySelector(':scope > [data-ui-current]')||element;
+    if(current.textContent!==String(value))current.textContent=String(value);
+    return element;
+  }
+  function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
     const doc=element.ownerDocument,base=new URL(doc.baseURI),asset=new URL(sprite,base);
     let changed=false;
@@ -121,7 +141,8 @@
       attr(glyph,'viewBox','0 0 24 24');attr(glyph,'fill','none');attr(glyph,'stroke','currentColor');add(glyph,'ui-icon');attr(glyph,'aria-hidden','true');attr(glyph,'focusable','false');
     }
     if(!text){changed=true;text=doc.createElement('span');text.className='ui-label';for(const child of [...element.childNodes])if(child!==glyph)text.append(child);element.append(text);}
-    if(label!==undefined&&text.textContent!==String(label)){text.textContent=String(label);changed=true;}
+    if(labelStates)reserveText(text,labelStates);
+    if(label!==undefined&&text.textContent!==String(label)){setText(text,label);changed=true;}
     add(element,'ui-action');
     if(ariaLabel!==undefined)attr(element,'aria-label',ariaLabel);else if(!element.hasAttribute('aria-label'))attr(element,'aria-label',name);
     if(title!==undefined)attr(element,'title',title);else if(!element.hasAttribute('title'))attr(element,'title',name);
@@ -167,7 +188,31 @@
     button.addEventListener('click',scrollToStart);doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',pause);view.addEventListener('pageshow',listen);listen();
     return {update,dispose(){if(disposed)return;disposed=true;pause();button.removeEventListener('click',scrollToStart);doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',pause);view.removeEventListener('pageshow',listen);}};
   }
-  const api={version:'1.5.0',mount,release,adoptAction,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
+    if(![min,max,step,value].every(Number.isFinite)||max<min||step<=0)throw new TypeError('Zoom requires finite bounds, a positive step and a finite value');
+    const out=group.querySelector('[data-ui-zoom=out]'),into=group.querySelector('[data-ui-zoom=in]'),output=group.querySelector('[data-ui-zoom=value]');
+    if(!out?.matches('button')||!into?.matches('button'))throw new TypeError('Zoom requires native minus and plus buttons');
+    const view=group.ownerDocument.defaultView;
+    let current,disposed=false;
+    group.classList.add('ui-actions');group.classList.add('ui-inline');group.setAttribute('role','group');
+    for(const [button,icon,label] of [[out,'minus',outLabel],[into,'plus',inLabel]]){
+      button.type='button';button.classList.add('ui-icon-button');adoptAction(button,{icon,label,ariaLabel:label,iconOnly:true,sprite});
+    }
+    function setValue(next){
+      if(!Number.isFinite(next))throw new TypeError('Zoom requires a finite value');
+      if(disposed)return current;
+      current=Math.min(max,Math.max(min,next));out.disabled=current<=min;into.disabled=current>=max;
+      if(output)output.textContent=format(current);
+      return current;
+    }
+    function change(direction){if(disposed||direction<0&&out.disabled||direction>0&&into.disabled)return;const before=current;setValue(Number((current+direction*step).toPrecision(12)));if(current!==before)onChange(current);}
+    const decrease=()=>change(-1),increase=()=>change(1);
+    function pagehide(event){if(!event.persisted)dispose();}
+    function dispose(){if(disposed)return;disposed=true;out.removeEventListener('click',decrease);into.removeEventListener('click',increase);view?.removeEventListener('pagehide',pagehide);}
+    setValue(value);out.addEventListener('click',decrease);into.addEventListener('click',increase);view?.addEventListener('pagehide',pagehide);
+    return {get value(){return current;},setValue,dispose};
+  }
+  const api={version:'1.7.0',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -274,7 +319,7 @@
     function sides(css){return number(css.paddingLeft)+number(css.paddingRight)+number(css.borderLeftWidth)+number(css.borderRightWidth);}
     function margins(css){return number(css.marginLeft)+number(css.marginRight);}
     function outer(node){const css=style(node);return (node.getBoundingClientRect().width||number(css.width))+margins(css);}
-    function caption(node){const css=style(node);if(!context)return node.scrollWidth;context.font=css.font;const text=node.textContent.trim();return context.measureText(text).width+Math.max(0,text.length-1)*number(css.letterSpacing);}
+    function caption(node){const css=style(node);if(!context)return node.scrollWidth;context.font=css.font;const group=node.querySelector(':scope > .ui-dynamic'),texts=[node.textContent.trim(),...[...group?.querySelectorAll(':scope > [data-ui-text]')||[]].map(item=>item.getAttribute('data-ui-text'))];return Math.max(...texts.map(text=>context.measureText(text).width+Math.max(0,text.length-1)*number(css.letterSpacing)));}
     function actionWidth(node,compact=false){
       const css=style(node),label=node.querySelector(':scope > .ui-label'),icon=node.querySelector(':scope > svg.ui-icon');
       if(!label||!icon)return outer(node);
@@ -404,4 +449,45 @@
     const group=details.parentElement?.closest('.ui-actions,.ui-toolbar');if(group)UI.observeActions(group);return details;
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>UI.mountActions(document),{once:true});else UI.mountActions(document);
+})();
+
+/* Explicit read-only checks for consumer browser tests. No observers or app state. */
+(() => {
+  'use strict';
+  if(typeof window==='undefined'||!window.SharedUI)return;
+  const UI=window.SharedUI;
+  const controls='button,a.ui-action,summary.ui-action,.ui-field';
+  const name=node=>(node.getAttribute('aria-label')||node.querySelector(':scope > .ui-label')?.textContent||node.textContent||node.getAttribute('title')||node.id||node.tagName).trim();
+  const box=node=>{const {x,y,width,height}=node.getBoundingClientRect();return {x,y,width,height};};
+  function visible(node){return Boolean(node.getClientRects().length)&&!node.closest('[hidden],dialog:not([open]),details:not([open]) > :not(summary)');}
+  function nodes(scope){return [...scope.querySelectorAll(controls)].filter(node=>visible(node)&&!node.parentElement?.closest('.ui-field')&&!node.matches('.ui-item,[data-ui-surface],.ui-graphic-action,.ui-resize-handle'));}
+  UI.captureLayout=scope=>nodes(scope).map(element=>({element,name:name(element),box:box(element),compact:element.hasAttribute('data-ui-compact')}));
+  UI.compareLayout=(before,{tolerance=.75}={})=>before.flatMap(item=>{
+    const node=item.element;if(!node.isConnected||!visible(node))return [{code:'control-disappeared',name:item.name}];
+    const after=box(node),delta=Object.fromEntries(Object.keys(after).map(key=>[key,after[key]-item.box[key]]));
+    return Object.values(delta).some(value=>Math.abs(value)>tolerance)||item.compact!==node.hasAttribute('data-ui-compact')?[{code:'state-layout-shift',name:item.name,delta}]:[];
+  });
+  UI.auditControls=scope=>{
+    const doc=scope.ownerDocument||scope,view=doc.defaultView,items=nodes(scope),issues=[];
+    const issue=(node,code,detail,severity='error')=>issues.push({code,name:name(node),detail,severity});
+    for(const node of items){
+      if(!name(node)||!node.getAttribute('aria-label')&&!node.textContent.trim()&&!node.querySelector('input[aria-label],select[aria-label]'))issue(node,'missing-name','Give the native action a complete accessible name.');
+      if(node.matches('.ui-action')){
+        if(!node.matches('button,a,summary,label'))issue(node,'non-native-action','Use a native button, link, summary or labeled form control.');
+        if(!node.querySelector(':scope > .ui-label'))issue(node,'missing-label','Adopt the action with the shared label helper.');
+        const icon=node.querySelector(':scope > svg');if(icon&&!icon.matches('.ui-icon'))issue(node,'unshared-icon','Use the shared SVG icon role.');
+        if(node.getAttribute('aria-busy')==='true'&&!node.querySelector('.ui-dynamic'))issue(node,'unreserved-busy-label','Declare labelStates for changing action text.','warning');
+      }
+      const rect=box(node),css=view.getComputedStyle(node),token=parseFloat(css.getPropertyValue(node.matches('.ui-field')?'--ui-field-height':'--ui-control-height'));
+      if(token&&Math.abs(rect.height-token)>1)issue(node,'control-height-drift',`Expected ${token}px, rendered ${rect.height}px.`);
+      const header=node.closest('.ui-header');if(header&&!node.closest('.ui-menu-panel,[data-ui-layout=bar]')){
+        const bounds=header.getBoundingClientRect();if(rect.x<bounds.left-.75||rect.x+rect.width>bounds.right+.75)issue(node,'header-overflow','The command extends beyond its header.');
+      }
+    }
+    for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+      const first=items[i],second=items[j];if(first.contains(second)||second.contains(first))continue;
+      const a=box(first),b=box(second);if(Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x)>.75&&Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y)>.75)issue(second,'control-overlap',`Overlaps ${name(first)}.`);
+    }
+    return {version:UI.version,controls:items.length,issues};
+  };
 })();

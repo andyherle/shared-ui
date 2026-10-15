@@ -1,6 +1,6 @@
 {
   "name": "@andyherle/shared-ui",
-  "version": "1.6.4",
+  "version": "1.7.0",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Shared native UI controls with Postvisual and Personal style packs.",
@@ -8,6 +8,7 @@
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
     "check": "npm test && npm run build",
+    "audit": "node scripts/audit-consumers.mjs",
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs"
   },

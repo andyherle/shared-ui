@@ -186,8 +186,10 @@ While dragging, set `data-ui-dragging="true"`; remove it on release and set
 `data-ui-placing="true"` for the shared placement animation. Clear placing on
 `animationend` (and at the next gesture). Reduced motion disables the placement animation.
 Dragging preserves exact card bounds with a subtle fade, and placement restores opacity.
-Use a native `button.ui-drag-handle[data-ui-variant=quiet]` above editable card
-text, with the shared move icon, `.ui-label`, and a complete accessible name.
+Use a quiet native `button.ui-drag-handle[data-ui-variant=quiet]` above editable card
+text, with a complete accessible name and `.ui-label.ui-sr-only`. Leave the grip
+visually empty; do not add move arrows or decorative handle glyphs. Keep its
+44 px physical hit area reachable, and preserve native keyboard focus and movement.
 Applications own its placement and pointer/keyboard movement. Use
 `data-ui-layout="column"` for square column surfaces and
 `data-ui-variant="flat"` on their member cards for flush, square media.
@@ -268,6 +270,71 @@ Shared headers stick to the top of their scrolling ancestor. Place them outside
 padded page content for edge-to-edge coverage. Mark a back navigation action
 `.ui-back`; it (or its immediate intrinsic group) stays at the start of a header.
 The catalogue's Selection and navigation section demonstrates these contracts.
+
+### Stable changing text
+
+Pass `labelStates: ['Save', 'Saving…', 'Saved']` to `SharedUI.adoptAction` once,
+then use `SharedUI.setActionLabel` as the action changes. The label reserves the
+widest state in the current font; busy feedback occupies the same 18 px icon slot.
+Reserved `.ui-status` text also retains an 18 px feedback slot across neutral,
+pending, success and error states.
+The same reservation participates in caption fitting, so a state change cannot
+make neighboring commands compact and expand. Include translated states when
+the application's language changes.
+
+For a status or other text container, call `SharedUI.reserveText(element, states)`
+once and `SharedUI.setText(element, currentText)` for updates. Hidden reservations
+contain no text nodes and are excluded from accessibility; `textContent` still
+returns only the current value. Existing native actions, focus and handlers stay
+intact. Use these helpers rather than replacing the reserved container's children.
+Text outside the declared states can still grow; register the complete finite
+state list. The Control fixture cycles Live, Unsaved changes, Saving, Saved and
+Save failed and reports any movement of neighboring commands.
+
+### Consumer checks
+
+Run `npm run audit -- --root /path/to/apps` to discover installed bundles,
+verify every recorded file hash and release identity, and report stale CSS,
+runtime and icon bundles. Multiple `--root` arguments are supported; `--target`
+checks one exact asset directory. The command is read-only and exits nonzero
+for drift or an outdated bundle, making it usable as a consumer release gate.
+`--allow-stale` separates a valid older release from authored bundle corruption.
+Reports stay local; application source and data never enter the catalogue.
+
+In an application's browser checks, call `SharedUI.auditControls(header)` after
+each meaningful state. It reports missing native action semantics, labels, shared
+icons, overflowing or overlapping controls and height drift. For changing text,
+take `before = SharedUI.captureLayout(header)`, trigger the real operation, wait
+for layout, and assert `SharedUI.compareLayout(before)` is empty. The checks are
+explicit, scoped and read-only: no background observer, polling or application
+state access. Run the same flows for both packs, desktop/narrow containers,
+keyboard and multiple views. Bundle checks detect release drift; browser checks
+catch rendered regressions. Domain interactions still require application tests.
+
+Headers center their controls vertically, so a multiline identity cannot stretch
+buttons or leave a menu summary shorter than its neighbors. Intrinsic
+`.ui-actions.ui-inline` groups compact and wrap within the available width. Use a small set of primary
+commands and a native `details.ui-menu` for secondary workspace actions; use
+adaptive priority groups only when expansion is useful. The Control fixture
+demonstrates both gallery and workspace headers.
+
+### Bounded zoom steps
+
+Use an intrinsic native group with two `button[type=button]` children marked
+`data-ui-zoom="out"` and `data-ui-zoom="in"`. Give the group an accessible name.
+`SharedUI.createZoom(group, {min, max, step, value, onChange, sprite})` adopts
+the shared minus/plus icons, clamps each step and disables the native button at
+its limit. `outLabel` and `inLabel` can name domain actions such as Smaller tiles
+and Larger tiles. There is no slider or disclosure. An optional
+`output[data-ui-zoom=value]` displays `format(value)`; `.ui-sr-only` keeps that
+value available to assistive technology when only the buttons should be visible.
+
+Applications own persistence and viewport changes in `onChange(value)`.
+`setValue(value)` synchronizes external changes without calling `onChange` or
+rounding a saved preference to a different step. `dispose()` releases listeners;
+normal page unload also disposes the helper. Native Tab, Enter and Space work
+without custom key handling. The Control fixture demonstrates 72–420 px tile
+sizes in 20 px steps, with the final step clamped to the bound.
 
 ## Spreadsheet tables
 

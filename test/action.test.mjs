@@ -5,17 +5,41 @@ import vm from 'node:vm';
 const module={exports:{}};vm.runInNewContext(fs.readFileSync(new URL('../src/runtime.js',import.meta.url),'utf8'),{module,URL});
 class Node {
  constructor(name,doc){this.name=name;this.ownerDocument=doc;this.childNodes=[];this.attrs=new Map();this.dataset={};}
+ listeners=new Map();
+ addEventListener(type,handler){if(!this.listeners.has(type))this.listeners.set(type,new Set());this.listeners.get(type).add(handler);}
+ removeEventListener(type,handler){this.listeners.get(type)?.delete(handler);}
+ fire(type){for(const handler of this.listeners.get(type)||[])handler({});}
  classList={contains:(name)=>(this.className||'').split(/\s+/).includes(name),add:(name)=>{this.className=[...new Set((this.className||'').split(/\s+/).filter(Boolean).concat(name))].join(' ');}};
  matches(selector){return selector.split(',').includes(this.name);}
  append(...nodes){for(const node of nodes){if(node.parent)node.parent.childNodes=node.parent.childNodes.filter(n=>n!==node);node.parent=this;this.childNodes.push(node);}}
  prepend(node){this.append(node);this.childNodes=[node,...this.childNodes.filter(n=>n!==node)];}
  replaceChildren(...nodes){for(const n of this.childNodes)n.parent=null;this.childNodes=[];this.append(...nodes);}
- querySelector(selector){if(selector===':scope > .ui-label')return this.childNodes.find(n=>(n.className||'').split(' ').includes('ui-label'));if(selector===':scope > svg')return this.childNodes.find(n=>n.name==='svg');return this.childNodes.find(n=>n.name===selector);}
+ querySelectorAll(selector){if(selector===':scope > [data-ui-text]')return this.childNodes.filter(n=>n.hasAttribute('data-ui-text'));return [];}
+ querySelector(selector){if(selector.startsWith('[data-ui-zoom='))return this.childNodes.find(n=>n.getAttribute('data-ui-zoom')===selector.slice(14,-1));if(selector===':scope > [data-ui-current]')return this.childNodes.find(n=>n.hasAttribute('data-ui-current'));if(selector===':scope > .ui-label'||selector===':scope > .ui-dynamic')return this.childNodes.find(n=>(n.className||'').split(' ').includes(selector.slice(10)));if(selector===':scope > svg')return this.childNodes.find(n=>n.name==='svg');return this.childNodes.find(n=>n.name===selector);}
+ remove(){if(this.parent)this.parent.childNodes=this.parent.childNodes.filter(n=>n!==this);this.parent=null;}
  setAttribute(k,v){this.ownerDocument.writes=(this.ownerDocument.writes||0)+1;this.attrs.set(k,String(v));}getAttribute(k){return this.attrs.get(k)??null;}hasAttribute(k){return this.attrs.has(k);}
  get textContent(){return this.name==='#text'?this.value||'':this.childNodes.map(n=>n.textContent).join('');}
  set textContent(v){if(this.name==='#text')this.value=String(v);else{const t=new Node('#text',this.ownerDocument);t.value=String(v);this.replaceChildren(t);}}
 }
 function control(){const doc={baseURI:'https://app.example/panel',createElement:n=>new Node(n,doc),createElementNS:(_ns,n)=>new Node(n,doc)};const button=doc.createElement('button'),label=doc.createElement('strong');label.textContent='Save';button.append(label);button.className='primary';button.setAttribute('aria-label','Save the selected project');button.setAttribute('title','Save project');button.onclick=()=>{};return {button,label,doc};}
+function zoomControl(options={}){
+ const {doc}=control(),group=doc.createElement('div'),out=doc.createElement('button'),into=doc.createElement('button'),output=doc.createElement('output'),changes=[];
+ out.setAttribute('data-ui-zoom','out');into.setAttribute('data-ui-zoom','in');output.setAttribute('data-ui-zoom','value');group.append(out,into,output);
+ const zoom=module.exports.createZoom(group,{min:72,max:420,step:20,value:220,onChange:value=>changes.push(value),...options});
+ return {group,out,into,output,changes,zoom};
+}
+test('zoom preserves a saved value, steps in both directions and disables native buttons at bounds',()=>{
+ const f=zoomControl();assert.equal(f.zoom.value,220);assert.equal(f.output.textContent,'220');
+ f.into.fire('click');assert.equal(f.zoom.value,240);f.out.fire('click');assert.equal(f.zoom.value,220);
+ f.zoom.setValue(418);assert.equal(f.changes.length,2);f.into.fire('click');assert.equal(f.zoom.value,420);assert.equal(f.into.disabled,true);assert.equal(f.out.disabled,false);
+ f.into.fire('click');assert.deepEqual(f.changes,[240,220,420]);f.zoom.setValue(74);f.out.fire('click');assert.equal(f.zoom.value,72);assert.equal(f.out.disabled,true);assert.equal(f.into.disabled,false);
+ f.zoom.setValue(999);assert.equal(f.zoom.value,420);f.zoom.setValue(-1);assert.equal(f.zoom.value,72);
+});
+test('fractional zoom stays precise and disposing releases click handlers',()=>{
+ const f=zoomControl({min:.5,max:1.5,step:.1,value:1});for(let i=0;i<5;i++)f.into.fire('click');assert.equal(f.zoom.value,1.5);assert.equal(f.into.disabled,true);
+ f.zoom.dispose();f.out.fire('click');assert.equal(f.zoom.value,1.5);assert.equal(f.out.listeners.get('click').size,0);assert.equal(f.into.listeners.get('click').size,0);
+ assert.throws(()=>zoomControl({step:0}),/positive step/);assert.throws(()=>zoomControl({min:500}),/finite bounds/);assert.throws(()=>f.zoom.setValue(NaN),/finite value/);
+});
 test('adoption preserves the native action, nested label, handler and complete accessible name',()=>{
  const {button,label}=control(),handler=button.onclick;assert.equal(module.exports.adoptAction(button,{icon:'save',sprite:'/ui/icons.svg'}),button);assert.equal(button.onclick,handler);assert.equal(button.getAttribute('aria-label'),'Save the selected project');assert.equal(button.getAttribute('title'),'Save project');assert.equal(button.querySelector(':scope > .ui-label').childNodes[0],label);assert.match(button.className,/primary/);
  module.exports.adoptAction(button,{icon:'save',sprite:'/ui/icons.svg',iconOnly:true});assert.equal(button.childNodes.length,2);assert.equal(button.dataset.uiLabel,'hidden');module.exports.setActionLabel(button,'Saved',{ariaLabel:'Selected project saved'});assert.equal(button.querySelector(':scope > .ui-label').textContent,'Saved');assert.equal(button.getAttribute('aria-label'),'Selected project saved');
@@ -29,6 +53,23 @@ test('stable timeline captions reuse their existing text and glyph without attri
  const label=button.querySelector(':scope > .ui-label'),text=label.childNodes[0],glyph=button.querySelector(':scope > svg'),use=glyph.querySelector('use'),writes=doc.writes;
  for(let i=0;i<10;i++)module.exports.adoptAction(button,{icon:'save',label:'Save',sprite:'/ui/icons.svg'});
  assert.equal(label.childNodes[0],text);assert.equal(button.querySelector(':scope > svg'),glyph);assert.equal(glyph.querySelector('use'),use);assert.equal(doc.writes,writes);
+});
+
+test('reserved action text keeps variants out of textContent and preserves its slot on state changes',()=>{
+ const {button,doc}=control(),handler=button.onclick;
+ module.exports.adoptAction(button,{icon:'save',label:'Save',labelStates:['Save','Saving…','Saved'],sprite:'/ui/icons.svg'});
+ const label=button.querySelector(':scope > .ui-label'),group=label.querySelector(':scope > .ui-dynamic'),glyph=button.querySelector(':scope > svg'),current=group.querySelector(':scope > [data-ui-current]');
+ assert.equal(label.textContent,'Save');assert.equal(group.querySelectorAll(':scope > [data-ui-text]').length,3);
+ for(const text of ['Saving…','Saved','Save']){module.exports.setActionLabel(button,text,{ariaLabel:text});assert.equal(label.textContent,text);assert.equal(label.querySelector(':scope > .ui-dynamic'),group);assert.equal(group.querySelector(':scope > [data-ui-current]'),current);assert.equal(button.querySelector(':scope > svg'),glyph);assert.equal(button.getAttribute('aria-label'),text);}
+ const writes=doc.writes;module.exports.adoptAction(button,{label:'Save',labelStates:['Save','Saving…','Saved']});assert.equal(doc.writes,writes);assert.equal(button.onclick,handler);
+ module.exports.reserveText(label,['Save','Save failed']);assert.equal(label.textContent,'Save');assert.equal(group.querySelectorAll(':scope > [data-ui-text]').length,2);
+});
+
+test('reserved standalone text supports empty values and literal strings without injecting markup',()=>{
+ const {doc,button}=control(),status=doc.createElement('span');status.textContent='Live';
+ module.exports.reserveText(status,['Live','Unsaved changes','<script>']);module.exports.setText(status,'');assert.equal(status.textContent,'');
+ module.exports.setText(status,'<script>');assert.equal(status.textContent,'<script>');assert.equal(status.querySelector('script'),undefined);
+ assert.throws(()=>module.exports.reserveText(button,['Save']),/label or text container/);assert.throws(()=>module.exports.reserveText(status,[]),/nonempty/);
 });
 
 

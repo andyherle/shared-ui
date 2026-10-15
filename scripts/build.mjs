@@ -47,7 +47,7 @@ export function manifest(css){
 }
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
-  for(const file of ['runtime.js','components.js','lab.js'])new vm.Script(read(file),{filename:file});
+  for(const file of ['runtime.js','components.js','diagnostics.js','lab.js'])new vm.Script(read(file),{filename:file});
   const css=buildCSS(JSON.parse(read('tokens.json')),read('controls.css'));
   if(Buffer.byteLength(css)>32000||/@import|url\s*\(/i.test(css))throw new Error('Styles must remain below 32 KB with no external imports');
   const release=manifest(css),out=path.join(directory,'public/v1');
@@ -59,7 +59,7 @@ export function buildSite(directory=root){
   // Validate every input before replacing any last-working asset. Publish the manifest last.
   const assets=new Map([
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],
-    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')],
+    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('diagnostics.js')],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],
     ['lab.js',read('lab.js').replace('@@ICON_NAMES@@',JSON.stringify(Object.keys(icons)))],['lab.css',read('lab.css')],
