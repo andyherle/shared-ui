@@ -225,7 +225,7 @@ Postvisual and Personal share every component type, subtype, native DOM pattern 
 
 Use `label.ui-check.ui-field` for an inline caption and native checkbox in the same control surface as a selector. Operational menu commands and field rows use a shared SVG `.ui-icon` before `.ui-label`; include the icon on every row in that group. Put related choices in `fieldset.ui-group`; remove redundant helper prose.
 
-Use `.ui-tags` for wrapping tags and `button.ui-tag` for a removable pill; a readonly tag uses `span.ui-tag`. `--ui-tag-*` tokens own its radius, padding, type, height and colors. Put the entry input inside a native `form.ui-field` or `label.ui-field` beside the pills. The entry sizes to its text using native `field-sizing`, retains a usable fallback width, and keeps the shared focus target.
+Use `.ui-tags` for wrapping tags and `button.ui-tag` for a removable pill; a readonly tag uses `span.ui-tag`. `--ui-tag-height` and the semantic palette own its size and colors. Put the entry input inside a native `form.ui-field` or `label.ui-field` beside the pills. The entry sizes to its text using native `field-sizing`, retains a usable fallback width, and keeps the shared focus target.
 
 `SharedUI.createTagInput(input, {options, excluded, onCommit})` adds pill suggestions to that existing input. Supply functions returning known and selected tag strings, and an application-owned commit callback. Enter and comma commit literal text; arrows plus Enter commit an explicitly selected suggestion; comma-separated paste commits once; Escape dismisses suggestions; Shift+Enter remains available to the application. The callback receives the captured text after the input clears. The returned `draw`, `hide`, `flush`, and `dispose` methods retain native input ownership and release listeners and suggestion nodes. Storage, autosave, deduplication and navigation stay with the application.
 
@@ -411,10 +411,38 @@ Applications own saved proportions through `onChange(widths)`; validate them per
 view. Hidden columns are excluded from the width budget. `reset()` restores
 initial proportions; `dispose()` restores the native table.
 
+For dense record or review information, use native `details.ui-section` with
+`summary` containing an `h3` or `h4` `.ui-section-title` and a short `.ui-meta`
+context line. The heading itself opens the section; it is not painted as a
+button. Put the exact data, media and actions inside. Leave critical facts
+visible before the sections, and open an urgent section by default. Group
+technical receipts, paths and raw entries under one meaningful section instead
+of showing a wall of code or a row of disclosure buttons. The catalogue's
+Record detail example demonstrates this in both packs.
+
+Use `.ui-popout` on a native `dialog` for an overlay, on a direct child
+`form` when the entire dialog submits, or on `article` for an in-page record
+or review. Give it three direct children: `header`, a
+`[data-ui-popout-body]` scrolling area, and `footer`. The shell keeps the header
+and footer in view while only the body scrolls. Put the title and close action
+on separate header rows; put decisions and previous/next navigation in the
+footer. Keep the few facts needed for a decision visible, then use heading-led
+sections for deeper information in the body. This
+same shell works in both packs and at phone width; apps provide domain content
+and may set `--ui-popout-space` for surrounding page chrome or
+`--ui-popout-width` and `--ui-popout-height` for a wider or taller record.
+The shell fits short content and caps long content at the available viewport.
+Keep important text on its own line: headings and status in the header,
+decisions in a `.ui-actions.ui-fill` row, then position text and navigation in
+separate footer rows. Use the same shared action element for each button or
+link; `.ui-fill` shares the available width among labeled controls while an
+icon-only action keeps its natural width. The catalogue's Popout shell example
+uses a native dialog.
+
 `SharedUI.createLightbox(dialog, {onNavigate, onClose})` enhances a native dialog
-with a stable centered 900 × 760 frame, bounded by the viewport. Use three direct
-children: `.ui-actions` header, `[data-ui-lightbox-body]` scroll area, and
-`.ui-actions` footer. `open(trigger)` remembers focus, `close()` uses native dialog
+with this content-sized popout frame, capped at 900 × 760 and by the viewport. Use three direct
+children: `header`, `[data-ui-lightbox-body]` scroll area, and `footer`.
+The helper marks the body as `[data-ui-popout-body]`. `open(trigger)` remembers focus, `close()` uses native dialog
 closure, and `dispose()` releases listeners. Escape and backdrop clicks dismiss;
 Left/Right call `onNavigate(-1|1)` outside editable controls and text selections.
 Native buttons remain available for navigation. The catalogue's media lightbox

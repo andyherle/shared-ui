@@ -314,19 +314,18 @@
   function createLightbox(dialog,{onNavigate=()=>{},onClose=()=>{}}={}){
     if(dialog.tagName!=='DIALOG')throw new TypeError('Use a native dialog');
     const doc=dialog.ownerDocument,view=doc.defaultView;let disposed=false,opener=null;
-    dialog.classList.add('ui-lightbox');
-    Object.assign(dialog.style,{width:'900px',height:'760px',overflow:'hidden'});
-    const body=dialog.querySelector('[data-ui-lightbox-body]');if(body)Object.assign(body.style,{overflow:'auto',minHeight:'0',overscrollBehavior:'contain',scrollbarGutter:'stable'});
+    dialog.classList.add('ui-popout');
+    const body=dialog.querySelector('[data-ui-lightbox-body]');if(body)body.dataset.uiPopoutBody='';
     function key(event){if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||event.target.closest('input,textarea,select,[contenteditable=true],[role=slider],[role=separator]')||view.getSelection()?.toString())return;if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();onNavigate(event.key==='ArrowLeft'?-1:1);}}
     function click(event){if(event.target.closest('[data-ui-lightbox-close]'))close();else if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close();}}
-    function closed(){dialog.style.display='';onClose();if(opener?.isConnected)opener.focus({preventScroll:true});}
+    function closed(){onClose();if(opener?.isConnected)opener.focus({preventScroll:true});}
     function close(){if(dialog.open)dialog.close();}
     function pagehide(event){if(!event.persisted)dispose();}
     function dispose(){if(disposed)return;disposed=true;dialog.removeEventListener('keydown',key);dialog.removeEventListener('click',click);dialog.removeEventListener('close',closed);view.removeEventListener('pagehide',pagehide);}
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
-    return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();Object.assign(dialog.style,{display:'grid',gridTemplateRows:'auto minmax(0,1fr) auto',gap:'var(--ui-gap)'});}},close,dispose};
+    return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.9.0',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.9.1',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

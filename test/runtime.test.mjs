@@ -97,8 +97,9 @@ test('hidden sheet columns do not reserve width or get resize handles',()=>{
  resize.dispose();
 });
 test('shared lightbox uses native close, skips editable keyboard navigation and restores opener focus',()=>{
- const e=geometryEnvironment(),dialog=e.element('dialog'),opener=e.element('button');opener.isConnected=true;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;fire(dialog,'close');};let navigated=0,closed=0;
+ const e=geometryEnvironment(),dialog=e.element('dialog'),opener=e.element('button');dialog.classList.add=value=>{dialog.addedClass=value;};opener.isConnected=true;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;fire(dialog,'close');};let navigated=0,closed=0;
  const box=module.exports.createLightbox(dialog,{onNavigate:direction=>navigated+=direction,onClose:()=>closed++});box.open(opener);assert.equal(dialog.open,true);
+ assert.equal(dialog.addedClass,'ui-popout');
  fire(dialog,'keydown',{key:'ArrowRight',target:{closest:()=>null}});assert.equal(navigated,1);fire(dialog,'keydown',{key:'ArrowRight',target:{closest:()=>({})}});assert.equal(navigated,1);
- box.close();assert.equal(dialog.open,false);assert.equal(closed,1);assert.equal(e.doc.activeElement,opener);assert.equal(dialog.style.display,'');box.dispose();assert.ok([...dialog.listeners.values(),...e.view.listeners.values()].every(set=>set.size===0));
+ box.close();assert.equal(dialog.open,false);assert.equal(closed,1);assert.equal(e.doc.activeElement,opener);assert.equal(dialog.style.display,undefined);box.dispose();assert.ok([...dialog.listeners.values(),...e.view.listeners.values()].every(set=>set.size===0));
 });
