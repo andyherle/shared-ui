@@ -78,6 +78,7 @@ test('factory composes original native nodes once and preserves values through l
   assert.equal(panel.element.dataset.uiComposition,'review-workspace');
   assert.equal(panel.element.dataset.uiCompositionRevision,'1');
   assert.equal(panel.element.dataset.uiCompositionInstance,'review-record');
+  assert.equal(panel.element.dataset.uiCompositionOrigin,'canonical');
   assert.equal(panel.slots.header.children[0],heading);
   assert.equal(panel.slots.body.children[0],body);
   assert.equal(panel.slots.aside.children[0],inspector);
@@ -85,6 +86,7 @@ test('factory composes original native nodes once and preserves values through l
   let conf=panel.setLayout({variant:'split',crowding:'scroll',overrides:{aside:'22rem',gap:'8px',reason:'Wider synthetic inspector'}});
   assert.equal(conf.variant,'split');assert.equal(conf.crowding,'scroll');
   assert.equal(panel.element.dataset.uiCompositionOverrides,'gap,aside');
+  assert.equal(panel.element.dataset.uiCompositionOrigin,'instance');
   assert.equal(panel.element.properties.get('--ui-composition-aside'),'22rem');
   assert.equal(panel.element.properties.get('--ui-composition-gap'),'8px');
   assert.equal(field.value,'Unsaved — 東京 / مرحبا');
@@ -94,6 +96,7 @@ test('factory composes original native nodes once and preserves values through l
   conf=panel.setLayout({variant:'stack',crowding:'wrap',overrides:{}});
   assert.equal(conf.variant,'stack');
   assert.equal(panel.element.dataset.uiCompositionOverrides,undefined);
+  assert.equal(panel.element.dataset.uiCompositionOrigin,'canonical');
   assert.equal(panel.element.properties.has('--ui-composition-aside'),false);
   assert.equal(field.value,'Unsaved — 東京 / مرحبا');
   panel.dispose();panel.dispose();
@@ -120,6 +123,8 @@ test('native composer rejects unknown slots, connected nodes, duplicate descenda
   const missing=make();delete missing.body;
   assert.throws(()=>UI.createComposition('review-workspace',missing),/Missing required/);
   assert.throws(()=>UI.createComposition('review-workspace',make(),{instanceId:'bad id'}),/instance/);
+  const dotted=UI.createComposition('review-workspace',make(),{instanceId:'aura.studio.library'});
+  assert.equal(dotted.element.dataset.uiCompositionInstance,'aura.studio.library');
 });
 
 function docModel(){
@@ -154,7 +159,7 @@ test('development audit detects wrong/missing composition slots and variants wit
     'composition-toolbar':1,'composition-filters':0,'composition-footer':1,'composition-aside':1};
   const data={schemaVersion:1,appId:'synthetic',viewId:'review',elements:[{
     id:'article:1',tag:'article',roles:['review-workspace'],
-    attributes:{'data-ui-composition-revision':'1','data-ui-variant':'split','data-ui-crowding':'wrap'},
+    attributes:{'data-ui-composition-instance':'review-example','data-ui-composition-origin':'canonical','data-ui-composition-revision':'1','data-ui-variant':'split','data-ui-crowding':'wrap'},
     counts:{...expected}
   }],coverage:{matched:1,captured:1,truncated:false}};
   assert.deepEqual(auditSchemaSnapshot(data).findings,[]);
