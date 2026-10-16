@@ -110,7 +110,7 @@ test('native composer rejects unknown slots, connected nodes, duplicate descenda
     {overrides:{gap:'calc(1px + 2px)',reason:'not typed'}},
     {overrides:{aside:'22rem'}}, {overrides:{aside:'22rem',reason:'x'}},
     {overrides:{aside:'22rem',reason:'okay',unknown:'value'}}
-  ])assert.throws(()=>UI.createComposition('review-workspace',make(),options),Error);
+  ])assert.throws(()=>UI.createComposition('review-workspace',make(),options));
   assert.throws(()=>UI.createComposition('unknown',make()),/Unknown canonical/);
   assert.throws(()=>UI.createComposition('review-workspace',{...make(),extra:doc.createElement('p')}),/Unknown composition slot/);
   const one=doc.createElement('button');
