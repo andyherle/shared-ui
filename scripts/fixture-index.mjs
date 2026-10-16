@@ -49,7 +49,7 @@ export function validateManifest(document, source = 'manifest') {
     item.href = loopback(item.baseUrl,item.route,where);
     item.sourceKind = record.sourceKind;
     item.status = record.status;
-    item.evidence = record.evidence ?? {result:'unrun'};
+    item.evidence = record.evidence;
     if (!isObject(item.evidence) ||
         Object.keys(item.evidence).some(key => !['result','runner','command','commit','observedAt','detail'].includes(key))) fail(where, 'invalid evidence');
     if (item.status === 'verified') {
@@ -66,11 +66,15 @@ export function validateManifest(document, source = 'manifest') {
 export function collectManifests(manifests) {
   if (!Array.isArray(manifests) || !manifests.length) throw new Error('At least one fixture manifest is required');
   const fixtures = manifests.flatMap(({document,source}) => validateManifest(document,source));
-  const ids = new Set();
+  const ids = new Set(), routes = new Set(), launchers = new Map();
   for (const item of fixtures) {
-    const identity = item.app + '/' + item.id;
+    const identity = item.app + '/' + item.id, routeKey=item.app + '/' + item.href;
     if (ids.has(identity)) fail('combined manifest','duplicate ' + identity);
-    ids.add(identity);
+    if (routes.has(routeKey)) fail('combined manifest','two fixture states share the same direct route ' + routeKey);
+    ids.add(identity); routes.add(routeKey);
+    const fingerprint=JSON.stringify([item.repository,item.ref,item.command,item.baseUrl,item.backendAdapter,item.reset,item.sourceKind]);
+    if(launchers.has(item.app) && launchers.get(item.app)!==fingerprint) fail('combined manifest','app ' + item.app + ' must advertise one launch/reset/adapter contract');
+    launchers.set(item.app,fingerprint);
   }
   return fixtures.sort((a,b) => a.app.localeCompare(b.app) || a.id.localeCompare(b.id));
 }
