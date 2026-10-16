@@ -100,44 +100,54 @@ For a review card, put the decision form first. Keep a file link with a `.ui-tru
 
 ## One outer content width
 
-Participating applications can use one shared `--ui-page-width` token (default
-`70%` in both packs) for their **desktop content page**, not the browser chrome
-or app sidebar. Put the host on the app-owned, full-width main content region,
-and exactly one direct root within it:
+`--ui-page-width` is a **single shared semantic setting**, set to `70%` in
+both source packs and exposed through Studio's typed token inventory.
+Applications control *where* this inherited setting applies. Per the cascade
+ownership rule, the **application** owns page layout in `@layer app`, while
+shared-ui owns tokens, control paint, states and interaction helpers.
+
+Adopting applications should have one full-width content host (inside their
+sidebar, chrome and navigation) and **exactly one direct page root**:
 
 ```html
 <div data-ui-page-host>
   <main data-ui-page-root>
-    <article class="ui-card ui-stack">Real application content and handlers</article>
+    <article class="ui-card ui-stack">Actual app components and handlers</article>
   </main>
 </div>
 ```
 
-The host must have an independently determined width (e.g. a grid track using
-`minmax(0,1fr)`); its `container-type:inline-size` lets an embedded 360px pane
-reflow like a phone even in a wide desktop window. The content root receives
-`inline-size:min(var(--ui-page-width), calc(100% - 32px), 96rem)` and automatic
-inline margins. At host widths up to `48rem`, it uses the host width minus 16px
-gutters on both sides; a viewport fallback covers narrow phones. The desktop
-96rem cap is independent of the 70% ratio. Changing **only**
-`--ui-page-width` on the top-level `[data-ui]` pack source changes all adopting
-pages at their next compatible CSS release; it is a typed semantic Studio token.
+Implement the same small *layout recipe* in the consuming app's `@layer app`:
 
-**Apply this root exactly once per page.** Nested cards, field groups, tables,
-inspectors and panels must not reapply the 70% rule; give their containing flex/grid
-tracks `min-width:0` and `minmax(0,1fr)` as appropriate. Do not apply the
-constraint inside transformed canvases or timeline worlds. A full-workspace page
-that must preserve its available canvas/table width can use
-`data-ui-page-mode="full"` on the outer root; the full mode retains gutters.
-An app with a layout it cannot wrap yet may keep its existing layout until a
-verified consumer migration. Domain-specific modal, canvas and renderer geometry
-remains app-owned and uses existing UI roles.
+```css
+@layer app {
+  [data-ui-page-host] { container-type:inline-size; inline-size:100%; min-inline-size:0; }
+  [data-ui-page-host] > [data-ui-page-root] { inline-size:min(var(--ui-page-width),calc(100% - 32px),96rem); min-inline-size:0; margin-inline:auto; }
+  @container (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
+  @media (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
+  [data-ui-page-root][data-ui-page-mode=full] { inline-size:calc(100% - 32px); }
+}
+```
 
-The Style Lab's **One-time content width** section shows desktop, narrow
-embedded, nested content and the explicit full-width exception. Test actual
-desktop, 70%-desktop, 768px tablet, 390px phone, narrow host, coarse pointer,
-zoom and multi-view state preservation before adopting or releasing the contract.
-The shared source/Studio contract does not itself prove any app has adopted it.
+This deliberately shares the **value**, not application structure. One-time
+application layout placement prevents reapplying 70% to every child. Desktop
+content is at most 70% of the host, with a 96rem bound and 16px minimum side
+gutters. The container query makes a narrow app pane responsive even inside
+a wide browser. The viewport fallback covers narrow screens where a named
+host cannot be established. Nested cards, row grids, tables and inspectors
+should use the space available within the root (`min-width:0`,
+`minmax(0,1fr)` as needed) and should **not** mount another `data-ui-page-root`.
+For a full workspace/canvas view, set `data-ui-page-mode="full"` on the
+*outer* root rather than constraining the transformed world. The page-host
+is a full-width block, not an action container; don't nest it into a panel
+that already consumes a parent width.
+
+`src/lab.css` contains the complete generic fixture using this app-layer
+recipe; no application-specific page layout is pushed through shared
+`src/controls.css`. As a result, the shared 32 KiB stylesheet cap stays
+intact and existing consumers do not change until their own isolated PR
+adopts the layout. Test 390px, 768px, full desktop, a 360px embedded pane,
+coarse pointer, keyboard, zoom and state preservation before adopting.
 
 ## Packaging the baseline
 
