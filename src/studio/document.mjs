@@ -53,6 +53,13 @@ export function validateDocument(input, {views, catalogue, icons}) {
       requireThat(Object.hasOwn(view.bindings, ref) && view.bindings[ref] === component.bindings[slot], `Incompatible binding: ${slot} → ${ref}`, 'INCOMPATIBLE_BINDING');
     }
     for (const token of Object.keys(node.tokens)) requireThat(component.tokens.includes(token), `Token is not declared by ${component.id}: ${token}`);
+    if (component.id === 'review-workspace') {
+      const overridden = Object.keys(node.tokens).length > 0;
+      requireThat(!overridden || typeof node.props.overrideReason === 'string' && node.props.overrideReason.trim().length >= 4,
+        'Review workspace custom tokens need a visible overrideReason');
+      requireThat(overridden || node.props.overrideReason === undefined,
+        'Review workspace overrideReason needs an actual token override');
+    }
     resolveScopedTokens(catalogue, document.tokens, node.tokens, id);
     if (node.layout !== undefined) {
       object(node.layout, 'layout', ['kind']);
