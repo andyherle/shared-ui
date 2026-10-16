@@ -1,8 +1,9 @@
 # Studio authoring foundation
 
-This increment provides a local document engine for the future visual editor and
-MCP adapter. It edits private, versioned JSON drafts. It does not render those
-drafts, rewrite application source, merge changes, or publish styles.
+This layer provides the local document engine used by the visual editor and MCP
+adapter. It edits private, versioned JSON drafts. Rendering and transport stay in
+separate adapters; the engine cannot rewrite application source, merge changes,
+or publish styles. See [editor/MCP setup](STUDIO_EDITOR_MCP.md) for the runnable UI.
 
 ## Available contracts
 
@@ -13,7 +14,8 @@ lifecycle metadata. `listComponents()` searches the whole library independently
 of application usage. The existing Style Lab remains the catalogue.
 
 A renderer status of `document-only` means the JSON model supports authoring that
-component. It does **not** mean a live renderer or app adapter is installed.
+component. All 20 now have native draft previews; this does **not** mean a live
+application adapter is installed.
 `catalogue-only` components remain discoverable and previewable in their existing
 Style Lab fixture; attempts to author them fail explicitly. Descriptors for these
 components are inventory contracts, not complete editor schemas. There are no
@@ -65,8 +67,8 @@ source. No source or pack defaults change when a draft changes.
 `createAuthoringService({directory, views, writable})` returns a synchronous
 `dispatch({method, args})` API. `METHODS` generates discovery schemas and enforces
 method arguments. `COMMANDS` generates the command union; the registry and complete
-document validator enforce the context-dependent constraints. A future editor
-and official MCP SDK adapter should call this interface, retaining its operation
+document validator enforce the context-dependent constraints. The editor
+and official MCP SDK adapter call this interface, retaining its operation
 IDs, errors and revision checks rather than implementing another mutation engine.
 
 Read methods provide component/token discovery, explicit view registrations,
@@ -105,7 +107,8 @@ Stale revisions produce `REVISION_CONFLICT` with expected/actual revisions.
 another process. No-op commands also advance the revision so every accepted
 operation has one durable receipt. Rejected commands leave file bytes unchanged.
 
-Commands support creation, naming, typed props/tokens, token reset, insertion,
+Commands support creation, naming, pack/theme/density, typed props/tokens, explicit
+registered bindings, token reset, insertion, subtree removal,
 compatible swaps, slot moves, declared responsive layouts, named snapshots,
 version renaming/archive/unarchive/restore, and latest-change undo/redo. A
 `duplicate` command creates a **new** document from a saved snapshot and requires
@@ -133,7 +136,7 @@ create or mutate documents. Live app behavior remains in the owning application.
 
 ## Private local storage
 
-Supply an absolute directory outside this public repository. The service stores
+Supply an absolute directory outside all Git working trees. The service stores
 `studio.json` there and never accepts a file path in a command. Keep registrations,
 working content, comparisons and audit reports private. Only synthetic fixtures
 belong in this repository.
@@ -211,9 +214,9 @@ boundaries. The browser fixture checks registry locations, live roles and audit
 non-interference in two simultaneous catalogue views at 390px and 1280px, across
 both packs and modes, then runs the structural privacy regression fixture.
 
-The visual editor, live document renderer, official MCP transports, authenticated
-remote gateway, live consumer adapters, computed-style/source auditing, repository
-migrations and desktop packaging are subsequent increments. Full editor keyboard,
-Safari/WKWebView, touch, offline interaction and three-consumer acceptance remain
-required before calling Studio shipped. No runtime, palette, stylesheet, generated
-public asset or consumer bundle changes are part of this increment.
+The visual editor, native draft renderer and official MCP transports are now
+implemented in separate modules; see [their setup and checks](STUDIO_EDITOR_MCP.md).
+An authenticated remote gateway, live consumer adapters, computed-style/source
+auditing, repository migrations, desktop packaging, broader touch/offline testing,
+and three-consumer acceptance remain future work. No runtime, palette, stylesheet,
+generated public asset or consumer bundle changes are part of these increments.

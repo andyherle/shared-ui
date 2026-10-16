@@ -1,10 +1,12 @@
 # Shared UI Studio
 
-Status: product direction, registry, token inventory and local authoring foundation; not a shipped editor.
+Status: local visual editor, 20 native document renderers, and official-SDK MCP transports implemented. Live application adapters and hosted remote access remain future integrations.
 
-The next foundation increment is implemented in `src/studio/`. See
+The foundation is implemented in `src/studio/`. See
 [STUDIO_FOUNDATION.md](STUDIO_FOUNDATION.md) for its exact capabilities, command
-contract, private storage, validation and remaining renderer/MCP integration.
+contract and private storage. [Editor and MCP setup](STUDIO_EDITOR_MCP.md) describes
+the current implementation; [release workflow](STUDIO_RELEASES.md) defines the
+public code/private data boundary and downstream updates.
 The initial audit implementation described below is now registry-backed.
 
 ## Outcome

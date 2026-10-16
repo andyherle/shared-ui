@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Studio renderer checks</title>
+<body><output id="result">Running native renderer checks…</output>
+<script type="module">
+import {COMPONENTS} from '/src/studio/registry.mjs';
+import {createRenderer, RENDERED_COMPONENTS} from '/renderer.mjs';
+const assert = (condition, message) => {if (!condition) throw new Error(message);};
+const node = (id, componentId, props = {}, slots = {}) => ({id, componentId, props, slots, tokens: {}, bindings: {}});
+try {
+  const frames = await Promise.all([390, 1280].map(width => new Promise(resolve => {
+    const frame = document.createElement('iframe'); frame.width = width; frame.height = 700; frame.title = `${width}px native renderer`; frame.src = '/test/studio-render-frame.html'; frame.onload = () => resolve(frame); document.body.append(frame);
+  })));
+  const results = [];
+  for (const frame of frames) {
+    const doc = frame.contentDocument; frame.contentWindow.SharedUI.instance?.dispose();
+    let activated = 0; const renderer = createRenderer(doc.querySelector('main'), {onSelect: () => activated++});
+    const documentModel = {pack: 'postvisual', mode: 'dark', density: 'compact', root: 'root', tokens: {}, nodes: {root: node('root', 'stack', {}, {children: []})}};
+    for (const id of RENDERED_COMPONENTS) {
+      const component = COMPONENTS.find(item => item.id === id), props = {};
+      for (const [name, schema] of Object.entries(component.props)) props[name] = name === 'icon' ? 'save' : schema.type === 'enum' ? schema.values[0] : schema.type === 'boolean' ? false : schema.type === 'number' ? schema.min ?? 1 : 'Synthetic ' + id;
+      if (id === 'action') props.variant = 'primary';
+      const value = node('fixture-' + id, id, props, Object.fromEntries(Object.keys(component.slots).map(slot => [slot, []])));
+      for (const [slot, spec] of Object.entries(component.slots)) if (spec.min) {
+        const child = node(value.id + '-child', 'text', {label: 'Required slot content'}); documentModel.nodes[child.id] = child; value.slots[slot].push(child.id);
+      }
+      documentModel.nodes[value.id] = value; documentModel.nodes.root.slots.children.push(value.id);
+    }
+    renderer.render(documentModel);
+    const original = doc.querySelector('[data-node-id="fixture-text-input"] input'); original.value = 'Unsubmitted native text'; original.focus(); original.setSelectionRange(3, 11);
+    for (const pack of ['postvisual', 'personal']) for (const mode of ['light', 'dark']) {
+      documentModel.pack = pack; documentModel.mode = mode;
+      documentModel.tokens['--ui-primary'] = '#315cbd'; documentModel.nodes['fixture-action'].tokens['--ui-primary'] = '#227744';
+      documentModel.nodes['fixture-status'].props.label = '<img src=x onerror=alert(1)>';
+      renderer.render(documentModel, {selection: 'fixture-action'});
+      assert(doc.querySelectorAll('[data-node-id]').length === Object.keys(documentModel.nodes).length, 'Every registered node renders once');
+      assert(doc.querySelector('[data-node-id="fixture-text-input"] input') === original, 'Input DOM identity retained');
+      assert(original.value === 'Unsubmitted native text' && original.selectionStart === 3 && original.selectionEnd === 11, 'Value and selection retained');
+      assert(doc.activeElement === original, 'Native focus retained across appearance edits');
+      assert(doc.querySelector('[data-node-id="fixture-status"]').textContent.startsWith('<img') && !doc.querySelector('img'), 'Untrusted labels stay inert');
+      assert(frame.contentWindow.getComputedStyle(doc.querySelector('[data-node-id="fixture-action"]')).backgroundColor === 'rgb(34, 119, 68)', 'Node override paints only its scope');
+      assert(doc.documentElement.scrollWidth <= doc.documentElement.clientWidth + 1, 'No horizontal overflow');
+      results.push({width: Number(frame.width), pack, mode, rendered: RENDERED_COMPONENTS.length});
+    }
+    const link = doc.querySelector('[data-node-id="fixture-link"]'); const event = new MouseEvent('click', {bubbles: true, cancelable: true});
+    assert(!link.dispatchEvent(event) && activated === 1, 'Preview selects without following navigation');
+    renderer.render(documentModel, {documentId: 'another-draft'});
+    assert(doc.querySelector('[data-node-id="fixture-text-input"] input') !== original, 'A different document gets independent native state');
+    assert(doc.querySelector('[data-node-id="fixture-text-input"] input').value === '', 'Unsubmitted preview text never crosses document boundaries');
+    const tokenDraft = {root: null, nodes: {}, tokens: {'--ui-primary': '#315cbd'}, pack: 'personal', mode: 'light', density: 'compact'};
+    renderer.render(tokenDraft, {documentId: 'token-draft'});
+    assert(Object.keys(tokenDraft.nodes).length === 0, 'Token specimen never alters the document model');
+    assert(frame.contentWindow.getComputedStyle(doc.querySelector('[data-node-id="token-primary"]')).backgroundColor === 'rgb(49, 92, 189)', 'Token-only drafts have a painted native specimen');
+    renderer.dispose(); assert(doc.querySelector('main').children.length === 0, 'Renderer disposal removes preview and listeners');
+  }
+  document.querySelector('#result').textContent = `PASS: ${RENDERED_COMPONENTS.length} native renderers, eight pack/theme/width contexts, two views, focus/value/selection preservation, document isolation, token specimens, scoped colors, inert text and navigation, disposal.`;
+  document.documentElement.dataset.testResult = 'pass'; window.rendererChecks = results;
+} catch (error) {document.querySelector('#result').textContent = error.stack; document.documentElement.dataset.testResult = 'fail';}
+</script></body></html>

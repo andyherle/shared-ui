@@ -92,7 +92,10 @@ export const COMMANDS = {
   create: command('Create a working document for a registered document view.', {document: recordSchema}),
   duplicate: command('Duplicate an exact saved version into an independent document.', {sourceDocumentId: idSchema, sourceRevision: {type: 'integer', minimum: 1}, versionId: idSchema, name: stringSchema}),
   rename: command('Rename this working document.', {name: stringSchema}),
+  'set-context': command('Choose one of the two packs, theme and density for this draft.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'comfortable']}}),
+  'remove-node': command('Remove a node and its descendants; required slots remain validated.', {nodeId: idSchema}),
   'set-props': command('Update declared props without changing bindings or node identity.', {nodeId: idSchema, props: recordSchema}),
+  'set-bindings': command('Explicitly choose typed binding references from the registered view.', {nodeId: idSchema, bindings: recordSchema}),
   'set-token': command('Override one typed token at document scope or on one node.', {nodeId: idSchema, token: {type: 'string'}, value: {oneOf: [{type: 'string'}, {type: 'number'}, {type: 'object', properties: {ref: {type: 'string'}}, required: ['ref'], additionalProperties: false}]}}, ['token', 'value']),
   'reset-token': command('Remove one override and inherit its prior scope.', {nodeId: idSchema, token: {type: 'string'}}, ['token']),
   'insert-node': command('Insert a stable node and optional new descendants into a declared slot atomically.', {node: recordSchema, descendants: recordSchema, parentId: idSchema, slot: idSchema, index: {type: 'integer', minimum: 0}}, ['node', 'parentId', 'slot', 'index']),
@@ -135,7 +138,20 @@ export function applyCommand(state, command) {
   const next = json(state), document = next.document;
   switch (command.type) {
     case 'rename': document.name = command.name; break;
+    case 'set-context':
+      for (const key of ['pack', 'mode', 'density']) document[key] = command[key];
+      break;
+    case 'remove-node': {
+      requireThat(command.nodeId !== document.root, 'Cannot remove the document root');
+      const remove = id => { for (const children of Object.values(node(document, id).slots)) for (const child of children) remove(child); delete document.nodes[id]; };
+      remove(command.nodeId);
+      for (const parent of Object.values(document.nodes)) for (const children of Object.values(parent.slots)) {
+        const index = children.indexOf(command.nodeId); if (index !== -1) children.splice(index, 1);
+      }
+      break;
+    }
     case 'set-props': Object.assign(node(document, command.nodeId).props, command.props); break;
+    case 'set-bindings': node(document, command.nodeId).bindings = command.bindings; break;
     case 'set-token': case 'reset-token': {
       const overrides = command.nodeId ? node(document, command.nodeId).tokens : document.tokens;
       if (command.type === 'set-token') overrides[command.token] = command.value;

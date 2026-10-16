@@ -5,6 +5,7 @@ import {REGISTRY, listComponents} from './registry.mjs';
 import {loadTokenCatalogue, resolveScopedTokens} from './tokens.mjs';
 import {COMMANDS, applyCommand, compareDocuments, validateCommand, validateDocument, validateViews} from './document.mjs';
 import {openStore} from './store.mjs';
+import {tokenImpact} from './impact.mjs';
 import {canonical, freeze, ID_PATTERN, identifier, integer, json, object, requireThat, string} from './validation.mjs';
 
 export const DEMO_VIEWS = freeze([{appId: 'studio-demo', viewId: 'review', adapter: 'document', bindings: {save: 'action', cancel: 'action', title: 'value', enabled: 'boolean', source: 'navigation'}}]);
@@ -19,13 +20,15 @@ export const METHODS = freeze({
   'documents.list': method('List saved working documents.'),
   'document.read': method('Read working content or one exact saved version.', {documentId: id, versionId: id}, ['documentId']),
   'document.tokens': method('Resolve draft token inheritance for the exact document/version and optional node.', {documentId: id, versionId: id, nodeId: id}, ['documentId']),
-  'document.compare': method('Compare a saved version with working content or another saved version.', {documentId: id, beforeVersionId: id, afterVersionId: id}, ['documentId', 'beforeVersionId']),
+  'document.impact': method('Trace potential token dependencies, declared component consumers and scoped draft nodes. Does not claim live application usage or computed pixel changes.', {documentId: id, versionId: id, nodeId: id, token: {type: 'string'}}, ['documentId', 'token']),
+  'document.compare': method('Compare a saved version with working content or another saved version.', {documentId: id, beforeVersionId: id, afterVersionId: id, includeDocuments: {type: 'boolean'}}, ['documentId', 'beforeVersionId']),
   'document.prepare': method('Return a local proposal scoped to the selected document.', {documentId: id, beforeVersionId: id}, ['documentId', 'beforeVersionId']),
   'document.command': method('Apply one validated, revision-checked command.', {documentId: id, expectedRevision: {type: 'integer', minimum: 0}, operationId: id, command: {oneOf: Object.values(COMMANDS).map(item => item.schema)}}, ['documentId', 'expectedRevision', 'operationId', 'command'], 'write')
 });
 export const SERVICE_CONTRACT = freeze({schemaVersion: 1, registry: REGISTRY, commands: COMMANDS,
   methods: METHODS,
-  capabilities: {read: true, write: 'explicit local permission', publish: false, appSourceMutation: false, livePreview: false, networkTransport: false}});
+  capabilities: {read: true, write: 'explicit local permission', publish: false, appSourceMutation: false,
+    nativeDocumentPreview: true, liveApplicationPreview: false, transport: 'adapter-owned'}});
 const icons = Object.keys(JSON.parse(fs.readFileSync(fileURLToPath(new URL('../icons.json', import.meta.url)), 'utf8')));
 
 export function createAuthoringService({directory, views, writable = false}) {
@@ -71,13 +74,15 @@ export function createAuthoringService({directory, views, writable = false}) {
     }
     return {...summary(documentId, record), document: record.state.document,
       versions: Object.entries(record.state.versions).map(([id, saved]) => ({id, name: saved.name, archived: saved.archived, sourceRevision: saved.sourceRevision})),
-      undo: record.undo ? {operationId: record.undo.operationId, expectedRevision: record.revision} : null};
+      undo: record.undo ? {operationId: record.undo.operationId, expectedRevision: record.revision,
+        direction: record.receipts[record.undo.operationId]?.result.undo?.direction ?? 'undo'} : null};
   }
-  function compare({documentId, beforeVersionId, afterVersionId}) {
+  function compare({documentId, beforeVersionId, afterVersionId, includeDocuments = false}) {
     const record = recordFrom(store.read(), documentId);
     const saved = id => { identifier(id, 'version ID'); requireThat(Object.hasOwn(record.state.versions, id), 'Unknown saved version', 'NOT_FOUND'); return record.state.versions[id].document; };
     const before = saved(beforeVersionId), after = afterVersionId === undefined ? record.state.document : saved(afterVersionId);
-    return {...summary(documentId, record), beforeVersionId, afterVersionId: afterVersionId ?? null, changes: compareDocuments(before, after)};
+    return {...summary(documentId, record), beforeVersionId, afterVersionId: afterVersionId ?? null, changes: compareDocuments(before, after),
+      ...(includeDocuments ? {beforeDocument: before, afterDocument: after} : {})};
   }
   function command(request) {
     request = json(request); object(request, 'request', ['documentId', 'expectedRevision', 'operationId', 'command']);
@@ -127,7 +132,8 @@ export function createAuthoringService({directory, views, writable = false}) {
         affectedScope: {level: affectedNode ? 'node' : affectedVersion ? 'version' : 'document',
           ...(affectedNode ? {nodeId: affectedNode} : {}), ...(operation.parentId ? {parentId: operation.parentId} : {}),
           ...(operation.token ? {token: operation.token} : {}), ...(affectedVersion ? {versionId: affectedVersion} : {})},
-        undo: updated.undo ? {operationId: request.operationId, expectedRevision: updated.revision} : null};
+        undo: updated.undo ? {operationId: request.operationId, expectedRevision: updated.revision,
+          direction: operation.type === 'undo' && (record.receipts[record.undo.operationId]?.result.undo?.direction ?? 'undo') === 'undo' ? 'redo' : 'undo'} : null};
       requireThat(Object.keys(updated.receipts).length < 10000, 'Operation history limit exceeded');
       updated.receipts[request.operationId] = {digest, result}; state.documents[request.documentId] = updated;
       return {result, changed: true};
@@ -150,7 +156,7 @@ export function createAuthoringService({directory, views, writable = false}) {
       }
       let result;
       switch (request.method) {
-        case 'describe': result = {...SERVICE_CONTRACT, permissions: {write: writable, publish: false}}; break;
+        case 'describe': result = {...SERVICE_CONTRACT, icons, permissions: {write: writable, publish: false}}; break;
         case 'components.list': result = {schemaVersion: 1, components: listComponents(args)}; break;
         case 'tokens.list': result = catalogueFor(args); break;
         case 'views.list': result = {views}; break;
@@ -170,6 +176,11 @@ export function createAuthoringService({directory, views, writable = false}) {
             coverage: catalogue.coverage}; break;
         }
         case 'document.compare': result = compare(args); break;
+        case 'document.impact': {
+          const content = read(args), document = content.document;
+          result = {documentId: content.documentId, revision: content.revision, target: document.target, version: content.version ?? null,
+            ...tokenImpact(document, catalogueFor({pack: document.pack, mode: document.mode, density: document.density}), args.token, args.nodeId)}; break;
+        }
         case 'document.prepare': {
           const comparison = compare(args);
           result = {...comparison, status: 'local-proposal', publishes: false, repositories: [],

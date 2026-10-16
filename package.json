@@ -10,6 +10,9 @@
     "check": "npm test && npm run build",
     "audit": "node scripts/audit-consumers.mjs",
     "studio": "node scripts/studio.mjs",
+    "studio:editor": "node scripts/studio-server.mjs",
+    "studio:mcp": "node tools/studio-mcp/server.mjs",
+    "studio:mcp:check": "npm --prefix tools/studio-mcp test",
     "studio:browser": "node test/serve-studio.mjs",
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs"

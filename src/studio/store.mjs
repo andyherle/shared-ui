@@ -18,6 +18,10 @@ export function openStore(directory, {writable = false} = {}) {
   while (!fs.existsSync(ancestor)) ancestor = path.dirname(ancestor);
   const prospective = path.resolve(fs.realpathSync(ancestor), path.relative(ancestor, requested));
   requireThat(!inside(repositoryRoot, prospective), 'Keep private Studio state outside the public repository');
+  for (let parent = prospective; ; parent = path.dirname(parent)) {
+    requireThat(!fs.existsSync(path.join(parent, '.git')), 'Keep private Studio state outside Git working trees');
+    if (path.dirname(parent) === parent) break;
+  }
   if (!fs.existsSync(requested)) {
     requireThat(writable, 'Store does not exist', 'STORE_NOT_FOUND');
     fs.mkdirSync(requested, {recursive: true, mode: 0o700});
