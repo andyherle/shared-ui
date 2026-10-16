@@ -90,6 +90,7 @@ export const COMPONENTS = freeze([
     },
     accessibility: {name: 'Use a named heading; preserve the native form and stable slot DOM.', keyboard: 'Native Tab, Enter, Space and Escape; layout changes do not reparent live fields.'},
     audit: {selector: '[data-ui-composition="review-workspace"]', tags: ['article'],
+      requiredAttributes: ['data-ui-composition-revision','data-ui-variant','data-ui-crowding'],
       attributes: {'data-ui-composition-revision':['1'], 'data-ui-variant':['standard','split','stack'],
         'data-ui-crowding':['wrap','scroll','priority'], 'data-ui-composition-overrides':['gap','aside','gap,aside']},
       checks: [
