@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Shared UI schema audit regression</title>
+<body><main id="fixture"></main><output id="result">Running</output>
+<script type="module">
+import { collectSchemaSnapshot, auditSchemaSnapshot } from '../src/schema-audit.mjs';
+const assert = (value, message) => { if (!value) throw new Error(message); };
+const root = document.querySelector('#fixture');
+try {
+  root.innerHTML = `<button id="save" class="ui-action" data-ui-variant="primary"><svg class="ui-icon" aria-hidden="true"></svg><span class="ui-label">Private customer name</span></button>
+    <label class="ui-field"><input id="entry" value="PRIVATE-FORM-VALUE"></label>
+    <article class="ui-popout"><header>Title</header><section data-ui-popout-body>Body</section><footer>Actions</footer></article>
+    <button id="plain">Native CSS-only button</button>`;
+  const input = root.querySelector('input'); input.focus(); input.setSelectionRange(2, 5);
+  let clicks = 0; root.querySelector('#save').addEventListener('click', () => clicks++);
+  const before = root.innerHTML;
+  const snapshot = collectSchemaSnapshot(root, { appId: 'synthetic', viewId: 'inspector' });
+  assert(snapshot.elements.length === 3, 'Only three declared component families are captured');
+  assert(auditSchemaSnapshot(snapshot).findings.length === 0, 'Canonical fixture should have no findings');
+  assert(!JSON.stringify(snapshot).includes('PRIVATE-FORM-VALUE'), 'Do not capture form values');
+  assert(!JSON.stringify(snapshot).includes('Private customer name'), 'Do not capture private labels');
+  assert(root.innerHTML === before, 'Collector must not change DOM');
+  assert(document.activeElement === input && input.selectionStart === 2 && input.selectionEnd === 5, 'Preserve focus and selection');
+  root.querySelector('#save').click(); assert(clicks === 1, 'Preserve event listeners');
+  const direct = collectSchemaSnapshot(root.querySelector('#save'), { appId: 'synthetic', viewId: 'root' });
+  assert(direct.elements.length === 1 && direct.elements[0].id === '$scope', 'Include the supplied root itself');
+  root.insertAdjacentHTML('beforeend', '<div class="ui-action" data-ui-variant="bespoke"><svg></svg></div>');
+  const bad = auditSchemaSnapshot(collectSchemaSnapshot(root, { appId: 'synthetic', viewId: 'bad' }));
+  assert(bad.findings.length === 4, 'Find native-tag, variant, label and icon drift');
+  const host = document.createElement('div'); root.append(host); const shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<button class="ui-action"><span class="ui-label">Shadow action</span></button>';
+  assert(collectSchemaSnapshot(root, { appId: 'synthetic', viewId: 'outer' }).elements.length === 4, 'Do not claim to cross shadow roots');
+  assert(collectSchemaSnapshot(shadow, { appId: 'synthetic', viewId: 'shadow' }).elements.length === 1, 'Explicit shadow root is supported');
+  const frame = document.createElement('iframe'); const loaded = new Promise(resolve => frame.addEventListener('load', resolve, { once: true }));
+  frame.srcdoc = '<button class="ui-action"><span class="ui-label">Frame action</span></button>'; root.append(frame); await loaded;
+  assert(collectSchemaSnapshot(frame.contentDocument, { appId: 'synthetic', viewId: 'frame' }).elements.length === 1, 'Explicit same-origin iframe document is supported');
+  document.querySelector('#result').textContent = 'PASS'; document.documentElement.dataset.testResult = 'pass';
+} catch (error) {
+  document.querySelector('#result').textContent = error.stack; document.documentElement.dataset.testResult = 'fail';
+}
+</script></body></html>
