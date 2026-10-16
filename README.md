@@ -458,6 +458,18 @@ Never move the surrounding table when selection changes or a lightbox opens.
 Icon-only information uses native `details.ui-disclosure` with a `summary.ui-action[data-ui-label="hidden"]`, a shared `info` icon and an accessible name. The hidden-label summary omits the chevron and keeps the full shared control target. Use `data-ui-variant="quiet"` for a soft information or dismiss symbol; the catalogue’s compact reply row demonstrates both.
 
 
+## Fleet UI fixture index
+
+For multi-app convergence, each owner builds a local, UI-only fixture **using
+their actual templates and handlers**, with deterministic synthetic adapters.
+Keep application fixture code, data, routes and manifests in the owning
+repository. The public shared-ui repository contains only the versioned
+[fixture manifest contract](docs/FIXTURE_MANIFEST.md), an offline
+`scripts/fixture-index.mjs` generator and a mock-only Style Lab example
+(`fixtures/manifest.example.json`). The index does **not** launch apps or
+claim browser verification; a fixture is verified only with source-backed run
+evidence. A shared token's adoption is independent of the fixture harness.
+
 ## Shared UI Studio
 
 Studio development tooling shares a versioned catalogue registry, typed token
