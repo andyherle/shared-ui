@@ -31,12 +31,28 @@ function loopback(base, route, where) {
       target.origin !== origin.origin || target.username || target.password) fail(where, 'unsafe route');
   return target.href;
 }
+function manifestRows(document,source) {
+  if (Array.isArray(document)) return document; // Original Portal test-owned JSON array.
+  if (!isObject(document)) fail(source,'manifest must be an object or fixture array');
+  if (document.schemaVersion === 1 && Array.isArray(document.fixtures)) {
+    if (Object.keys(document).some(key=>!['schemaVersion','fixtures','description'].includes(key))) fail(source,'unknown top-level key');
+    return document.fixtures;
+  }
+  if (document.schemaVersion === 1 && Array.isArray(document.fixtureStates)) {
+    if (Object.keys(document).some(key=>!['schemaVersion','app','repository','ref','scope','command','baseUrl','reset','fixtureStates'].includes(key))) fail(source,'unknown v1 ledger key');
+    return document.fixtureStates;
+  }
+  if (document.schema === 'shared-ui-fixture-manifest-v1' && document.fixtureOnly === true && Array.isArray(document.entries)) {
+    if (Object.keys(document).some(key=>!['schema','fixtureOnly','sharedBundle','ownership','entries'].includes(key))) fail(source,'unknown v1 delivery key');
+    return document.entries;
+  }
+  fail(source,'unsupported fixture manifest wrapper');
+}
 export function validateManifest(document, source = 'manifest') {
-  if (!isObject(document) || document.schemaVersion !== 1 || !Array.isArray(document.fixtures) ||
-      !document.fixtures.length || document.fixtures.length > 400) fail(source, 'expected schemaVersion 1 with 1–400 fixtures');
-  if (Object.keys(document).some(key => !['schemaVersion','fixtures','description'].includes(key))) fail(source, 'unknown top-level key');
+  const entries=manifestRows(document,source);
+  if(!entries.length || entries.length > 400) fail(source,'expected 1–400 fixture entries');
   const result = [], seen = new Set();
-  for (const [index, record] of document.fixtures.entries()) {
+  for (const [index, record] of entries.entries()) {
     const where = source + ' fixture ' + (index + 1);
     if (!isObject(record) || Object.keys(record).some(key => !allowed.has(key))) fail(where, 'unexpected fixture key (do not include private data)');
     const item = {};
@@ -76,15 +92,17 @@ export function validateManifest(document, source = 'manifest') {
 export function collectManifests(manifests) {
   if (!Array.isArray(manifests) || !manifests.length) throw new Error('At least one fixture manifest is required');
   const fixtures = manifests.flatMap(({document,source}) => validateManifest(document,source));
-  const ids = new Set(), routes = new Set(), launchers = new Map();
+  const ids = new Set(), launchers = new Map();
   for (const item of fixtures) {
-    const identity = item.app + '/' + item.id, routeKey=item.app + '/' + item.href;
+    const identity = item.app + '/' + item.id;
     if (ids.has(identity)) fail('combined manifest','duplicate ' + identity);
-    if (routes.has(routeKey)) fail('combined manifest','two fixture states share the same direct route ' + routeKey);
-    ids.add(identity); routes.add(routeKey);
-    const fingerprint=JSON.stringify([item.repository,item.ref,item.command,item.baseUrl,item.backendAdapter,item.reset,item.sourceKind]);
-    if(launchers.has(item.app) && launchers.get(item.app)!==fingerprint) fail('combined manifest','app ' + item.app + ' must advertise one launch/reset/adapter contract');
-    launchers.set(item.app,fingerprint);
+    ids.add(identity);
+    // One launch/reset contract per profile, but a single app may expose separate
+    // Personal and Postvisual fixtures on different loopback ports.
+    const profile=JSON.stringify([item.app,item.baseUrl,item.command]);
+    const fingerprint=JSON.stringify([item.repository,item.ref,item.backendAdapter,item.reset,item.sourceKind]);
+    if(launchers.has(profile) && launchers.get(profile)!==fingerprint) fail('combined manifest','inconsistent launch profile for ' + item.app);
+    launchers.set(profile,fingerprint);
   }
   return fixtures.sort((a,b) => a.app.localeCompare(b.app) || a.id.localeCompare(b.id));
 }
@@ -95,12 +113,13 @@ export function escapeHTML(value) {
 export function renderIndex(fixtures) {
   const e=escapeHTML, groups=new Map();
   for(const item of fixtures) {
-    if(!groups.has(item.app))groups.set(item.app,[]);
-    groups.get(item.app).push(item);
+    const profile=JSON.stringify([item.app,item.baseUrl,item.command]);
+    if(!groups.has(profile))groups.set(profile,[]);
+    groups.get(profile).push(item);
   }
   const counts={prepared:0,verified:0,blocked:0};
   for(const item of fixtures)counts[item.status]++;
-  const sections=[...groups].map(([app,items])=>{
+  const sections=[...groups].map(([,items])=>{
     const head=items[0], rows=items.map(item=>{
       const ev=item.evidence;
       const receipt=ev.result==='unrun'?'No fixture execution recorded.':
@@ -113,7 +132,7 @@ export function renderIndex(fixtures) {
         '<td>'+e(item.expectedInteraction)+'</td>'+
         '<td><strong>'+e(item.status)+'</strong><small>'+e(receipt)+'</small><details><summary>Evidence</summary><pre>'+e(details.join('\n'))+'</pre></details></td></tr>';
     }).join('');
-    return '<section><h2>'+e(app)+'</h2><p>Source: '+e(head.repository)+' @ '+e(head.ref)+
+    return '<section><h2>'+e(head.app)+' — '+e(head.baseUrl)+'</h2><p>Source: '+e(head.repository)+' @ '+e(head.ref)+
       ' · '+e(head.sourceKind)+'</p><dl><dt>Start locally</dt><dd><code>'+e(head.command)+
       '</code></dd><dt>Reset synthetic state</dt><dd><code>'+e(head.reset)+'</code></dd>'+
       '<dt>Backend boundary</dt><dd>'+e(head.backendAdapter)+'</dd><dt>Isolation</dt><dd>'+e(head.isolation)+'</dd></dl>'+
