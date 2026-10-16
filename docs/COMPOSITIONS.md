@@ -34,6 +34,8 @@ The composer creates a native `article.ui-card.ui-composition`:
 <article class="ui-card ui-composition"
          data-ui-composition="review-workspace"
          data-ui-composition-revision="1"
+         data-ui-composition-instance="example-review-42"
+         data-ui-composition-origin="canonical"
          data-ui-variant="standard"
          data-ui-crowding="wrap">
   <div class="ui-composition-layout">
@@ -116,13 +118,56 @@ strings or HTML and does not attach listeners, observers, fetches, timers,
 global state or background refresh loops. Slot elements are appended **once**.
 `setLayout` only updates supported attributes and tokens, retaining the
 same event handlers, selection, composing input, native focus, values and
-open disclosures. Use stable `instanceId` when the app has a stable
-view identity; it is not a request for a database identifier.
+open disclosures. Use stable `instanceId` for **every promoted app composition** (for example
+`aura.studio.library` or `portal.review-document`); it is distinct from
+`review-workspace@1` and need not be a database or customer identifier. The
+factory allows a prototype with no instance ID but the warning-only audit
+flags its missing `data-ui-composition-instance` attribute. App IDs may
+contain ASCII lowercase letters, numerals, dots and hyphens only. Audit
+snapshots intentionally retain **presence only**, not private instance ID text.
+Studio uses each already-stable node ID as the corresponding preview instance
+and sets origin `studio-draft` for authored token overrides. The native
+factory sets origin `canonical` or `instance`, with allowed explicit
+`gap/aside` override keys and reason queryable via `getConfiguration()`.
 
 For existing mounted application UI, retain the app markup/handlers until a
 reviewed migration can construct the composition at view creation. Do not
 disconnect a focused form and silently reparent it during rendering to
 achieve adoption.
+
+### Existing server-rendered reviews and overlays
+
+This first source contract **does not** automatically adopt already connected
+DOM nodes: mounting an existing focused server-rendered `ui-popout` review by
+unwrapping its live native form would disconnect/reconnect the input and
+potentially reset focus, native Undo/IME, dialog placement or selection. Do not
+perform that operation to make the audit green. For a server-rendered application
+the owning app should instead choose the composition before the initial
+render/hydration, or keep the existing form/panel unchanged until a separate
+explicit hydrate-in-place adapter has been designed and browser-tested. The
+factory rejects currently connected nodes as a guardrail.
+
+`dialog.ui-popout` remains the canonical native *overlay host*. The
+`review-workspace` is a **content composition**, not a substitute for the
+dialog's native modal focus, scroll/body/footer sizing or overlay geometry.
+An app with an existing modal should keep the dialog, `showModal()`,
+focus restore and native form state, and add the composition **inside** only
+if it provides real layout reuse; avoid duplicate bounded scrolling or a
+second form. An external global page toolbar belongs outside the composition
+if moving it would break app layout/keyboard interaction; an existing
+overlay dialog belongs outside and should not be moved into an aside.
+Real DOM nested selection/scroll and `form` submission require synthetic
+browser proof before any adoption. World media and graph geometry stays
+application-owned.
+
+For dynamic app-owned elements added after initial hydration (e.g. a
+Workshop view selector), create the parent native action group at mount and
+let the application append its new action *inside that existing live slot*;
+call `SharedUI.refreshActions` or `observeActions` as documented.
+Do **not** call `setLayout` to remount slot children. This contract
+does not yet support arbitrary structural slot replacement on a mounted
+instance; that would need a separate lifecycle and state-preservation review.
+
 
 ## Variants and crowding
 
@@ -137,7 +182,9 @@ Layout is centrally editable through the two shared tokens and the
 registered variants. Per-instance runtime overrides are intentionally
 restricted to `gap` and `aside`, with unit/range validation and a mandatory
 4–200-character reason. A nonempty override sets
-`data-ui-composition-overrides="gap,aside"` (keys only) and stores the reason
+`data-ui-composition-overrides="gap,aside"` (keys only) and
+`data-ui-composition-origin="instance"`, while unchanged native
+instances retain `data-ui-composition-origin="canonical"`. The reason
 in `getConfiguration().overrides.reason`; business/private reasons are
 not written to the public catalogue or structural audit. Studio's
 `set-token` for an authored workspace likewise requires an explicit
