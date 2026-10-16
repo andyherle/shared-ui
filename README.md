@@ -98,6 +98,47 @@ For a review card, put the decision form first. Keep a file link with a `.ui-tru
 
 `.ui-field` composes a native input or select with icons, an inline `.ui-label`, or adjacent actions using one field border and focus indicator. Use it for selectors such as Zoom, with the label inside the field instead of a separate heading. A readonly URL input plus a Copy action keeps long links to one line while retaining native selection and keyboard copy. `.ui-truncate` keeps compact filenames to one line; retain the complete text in the accessible name/title. Apps must reuse these native DOM patterns and action helpers rather than inventing custom controls. Native `progress` uses the pack track and accent. Plain Markdown details retain native markers and body typography. `.ui-card` is a quiet surface; `.ui-panel` is a raised overlay. `.ui-item` keeps a structured clickable row's app layout with common control paint. `.ui-swatch` renders a data color inside the standard touch target. `.ui-graphic-action` preserves a native icon action’s physical target inside a scaled world without changing app placement. `.ui-resize-handle` separates the visual handle from its hit area. A transformed world can publish its positive zoom as `--ui-graphic-scale`; the shared hit area and visual handle stay the same physical size. Update that variable when zoom changes, using the existing viewport controller. Timeline markers use `--ui-playhead-color`, `--ui-playhead-outline` and `--ui-playhead-width` for theme contrast. Graphic controls retain app-layer touch gestures; resize handles use `touch-action:none`. Clipped rows can set `--ui-focus-offset` to a negative inset while retaining shared focus paint. Use `data-ui-surface="graphic"` for positioned interactive diagrams, `media` for preview buttons, and `.ui-inline-field` for in-place canvas text. In-place fields retain app-layer padding and resize geometry so a canvas card keeps its writing inset and its own handles. These explicit roles preserve domain geometry without creating new palettes or control implementations.
 
+## One outer content width
+
+Participating applications can use one shared `--ui-page-width` token (default
+`70%` in both packs) for their **desktop content page**, not the browser chrome
+or app sidebar. Put the host on the app-owned, full-width main content region,
+and exactly one direct root within it:
+
+```html
+<div data-ui-page-host>
+  <main data-ui-page-root>
+    <article class="ui-card ui-stack">Real application content and handlers</article>
+  </main>
+</div>
+```
+
+The host must have an independently determined width (e.g. a grid track using
+`minmax(0,1fr)`); its `container-type:inline-size` lets an embedded 360px pane
+reflow like a phone even in a wide desktop window. The content root receives
+`inline-size:min(var(--ui-page-width), calc(100% - 32px), 96rem)` and automatic
+inline margins. At host widths up to `48rem`, it uses the host width minus 16px
+gutters on both sides; a viewport fallback covers narrow phones. The desktop
+96rem cap is independent of the 70% ratio. Changing **only**
+`--ui-page-width` on the top-level `[data-ui]` pack source changes all adopting
+pages at their next compatible CSS release; it is a typed semantic Studio token.
+
+**Apply this root exactly once per page.** Nested cards, field groups, tables,
+inspectors and panels must not reapply the 70% rule; give their containing flex/grid
+tracks `min-width:0` and `minmax(0,1fr)` as appropriate. Do not apply the
+constraint inside transformed canvases or timeline worlds. A full-workspace page
+that must preserve its available canvas/table width can use
+`data-ui-page-mode="full"` on the outer root; the full mode retains gutters.
+An app with a layout it cannot wrap yet may keep its existing layout until a
+verified consumer migration. Domain-specific modal, canvas and renderer geometry
+remains app-owned and uses existing UI roles.
+
+The Style Lab's **One-time content width** section shows desktop, narrow
+embedded, nested content and the explicit full-width exception. Test actual
+desktop, 70%-desktop, 768px tablet, 390px phone, narrow host, coarse pointer,
+zoom and multi-view state preservation before adopting or releasing the contract.
+The shared source/Studio contract does not itself prove any app has adopted it.
+
 ## Packaging the baseline
 
 Run from this repository to update an app's generated assets:
