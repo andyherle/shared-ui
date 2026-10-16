@@ -24,6 +24,12 @@
     body { margin:0; font:inherit; background:var(--ui-bg); }
     *, *::before, *::after { box-sizing:border-box; }
     [hidden] { display:none!important; }
+    /* Apply the desktop constraint once, inside the application's actual content region. */
+    [data-ui-page-host] { container-type:inline-size; inline-size:100%; min-inline-size:0; }
+    [data-ui-page-host] > [data-ui-page-root] { inline-size:min(var(--ui-page-width),calc(100% - 32px),96rem); min-inline-size:0; margin-inline:auto; }
+    @container (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
+    @media (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
+    [data-ui-page-root][data-ui-page-mode=full] { inline-size:calc(100% - 32px); }
     :where(button,input,select,textarea,output) { font:inherit; color:inherit; }
     :where(button,.ui-button,.ui-action,.button,.ui-menu>summary,.ui-disclosure>summary,.ui-toggle,.ui-icon-choice) {
       display:inline-flex; align-items:center; justify-content:center; gap:var(--ui-gap); min-inline-size:var(--ui-control-height); max-inline-size:100%; overflow-wrap:anywhere;
