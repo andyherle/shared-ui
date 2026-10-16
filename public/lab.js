@@ -53,13 +53,13 @@ $('fixture-tag-form').addEventListener('submit',event=>{event.preventDefault();f
 $('fixture-tag-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.shiftKey){event.preventDefault();fixtureTagInput.flush();$('fixture-tag-status').textContent='Saved · next media';}});
 const fixtureZoom=UI.createZoom($('fixture-zoom'),{min:72,max:420,step:20,value:220,outLabel:'Smaller tiles',inLabel:'Larger tiles',format:value=>value+' px',sprite:'./v1/icons.svg'});
 UI.adoptAction($('fixture-save'),{labelStates:['Save','Saving…','Saved'],sprite:'./v1/icons.svg'});
-UI.reserveText($('fixture-workspace-status'),['Live','Unsaved changes','Saving…','Saved','Save failed']);
+UI.reserveText($('fixture-workspace-status'),['Live','Unsaved','Saving…','Saved','Save failed']);
 function fixtureState(){
  const header=$('fixture-workspace-header'),before=UI.captureLayout(header),state=$('fixture-state').value,button=$('fixture-save');
  $('fixture-layout-check').textContent='Checking…';delete $('fixture-layout-check').dataset.checkedState;
  UI.setActionLabel(button,state==='saving'?'Saving…':state==='saved'?'Saved':'Save',{ariaLabel:state==='saving'?'Saving…':state==='saved'?'Saved':'Save'});
  button.setAttribute('aria-busy',String(state==='saving'));button.disabled=state==='saving';
- UI.setText($('fixture-workspace-status'),{live:'Live',dirty:'Unsaved changes',saving:'Saving…',saved:'Saved',error:'Save failed'}[state]);
+ UI.setText($('fixture-workspace-status'),{live:'Live',dirty:'Unsaved',saving:'Saving…',saved:'Saved',error:'Save failed'}[state]);
  $('fixture-workspace-status').dataset.state=state==='error'?'error':state==='saving'?'pending':state==='saved'?'success':'live';
  requestAnimationFrame(()=>requestAnimationFrame(()=>{const issues=[...UI.compareLayout(before),...UI.auditControls(header).issues.filter(issue=>issue.severity==='error')],output=$('fixture-layout-check');output.textContent=issues.length?issues.map(issue=>issue.code+': '+issue.name).join('; '):'Stable · no command movement';output.dataset.state=issues.length?'error':'live';output.dataset.checkedState=state;}));
 }

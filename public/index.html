@@ -31,6 +31,7 @@
   <div class="ui-actions" aria-label="Fixture widths">
     <button type="button" data-fixture-width="320">Phone</button><button type="button" data-fixture-width="480">Panel</button><button type="button" data-fixture-width="960">Desktop</button><button type="button" data-fixture-width="fit">Fit</button>
     <label class="ui-field"><span class="ui-label">Width</span><input class="ui-range" id="fixture-width" type="range" min="240" max="1120" value="960" aria-label="Control fixture width"><output id="fixture-width-value">960 px</output></label>
+    <label class="ui-field"><span class="ui-label">State</span><select id="fixture-state" aria-label="Fixture workspace state"><option value="live">Live</option><option value="dirty">Unsaved changes</option><option value="saving">Saving</option><option value="saved">Saved</option><option value="error">Save failed</option></select></label><output id="fixture-layout-check" class="ui-status" role="status"></output>
   </div>
   <div id="fixture-container" class="lab-fixture ui-stack ui-container">
     <header class="ui-toolbar ui-header ui-chrome" aria-label="Fixture gallery header">
@@ -51,11 +52,9 @@
       <a class="ui-action ui-back" href="#control-fixture" data-ui-icon="arrow-left" aria-label="Return to library">Library</a>
       <div class="lab-workspace-identity ui-actions ui-inline ui-chrome"><strong>Motion study</strong><span id="fixture-workspace-status" class="ui-status ui-meta" role="status">Live</span></div>
       <nav class="ui-actions ui-inline" aria-label="Fixture workspace commands">
-        <div class="ui-actions ui-inline" role="group" aria-label="Workspace views"><button type="button" data-ui-icon="sliders" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-toast="Presentation opened">Present</button></div>
-        <div class="ui-actions ui-inline" role="group" aria-label="Save workspace"><button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button><details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details></div>
+        <button type="button" data-ui-icon="sliders" data-ui-label="hidden" aria-label="Controls" title="Controls" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-ui-label="hidden" aria-label="Present" title="Present" data-toast="Presentation opened">Present</button><button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button><details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details>
       </nav>
     </header>
-    <div class="ui-actions"><label class="ui-field"><span class="ui-label">Workspace state</span><select id="fixture-state" aria-label="Fixture workspace state"><option value="live">Live</option><option value="dirty">Unsaved changes</option><option value="saving">Saving</option><option value="saved">Saved</option><option value="error">Save failed</option></select></label><output id="fixture-layout-check" class="ui-status" role="status"></output></div>
     <div class="lab-fixture-date-range" aria-label="Fixture date range">
       <label class="ui-field"><span class="ui-label">From</span><input type="date" aria-label="Fixture from date"></label>
       <label class="ui-field"><span class="ui-label">To</span><input type="date" value="2026-10-15" aria-label="Fixture to date"></label>
