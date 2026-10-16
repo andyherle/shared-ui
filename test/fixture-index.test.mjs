@@ -56,7 +56,7 @@ test('reject remote origins, credentials, traversal, ambiguous route and unackno
     f=>{f.productionWritesDisabled=false;},
     f=>{f.unredactedCustomerData={customer:'secret'};},
     f=>{delete f.evidence;},
-    f=>{f.app='Invalid App';},
+    f=>{f.app='Invalid<script>';},
     f=>{f.sourceKind='unknown';}
   ];
   for(const fn of rejected) assert.throws(()=>validateManifest(mutate(fn)),Error);
