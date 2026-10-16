@@ -36,6 +36,9 @@ test('an explicit caption stays readable while neighboring actions compact',()=>
 test('narrow pure action rows share space only when every control fits its slot',()=>{
  const f=fixture(),first=f.action('Open'),second=f.action('Save');f.row.append(first,second);f.UI.observeActions(f.row);f.flush();assert.equal(f.row.hasAttribute('data-ui-equal'),true);f.resize(90);assert.equal(f.row.hasAttribute('data-ui-equal'),true);f.resize(500);assert.equal(f.row.hasAttribute('data-ui-equal'),false);
 });
+test('intrinsic action groups keep natural widths instead of becoming equal tiles',()=>{
+ const f=fixture(),host=new f.Node('div','',400);f.row.className='ui-actions ui-inline';f.row.append(f.action('Blue'),f.action('Red'),f.action('Gold'));host.append(f.row);f.UI.observeActions(f.row);f.flush();assert.equal(f.row.hasAttribute('data-ui-equal'),false);host.clientWidth=180;f.observer.notify(host);f.flush();assert.equal(f.row.hasAttribute('data-ui-equal'),false);
+});
 test('compact tab navigation shares one row without losing accessible names',()=>{
  const f=fixture();f.row.className='ui-actions ui-tabs';f.row.setAttribute('data-ui-layout','bar');const tabs=['Activity','Ledger','Invoices','Balances','Position','Review','Records','Reconcile'].map(name=>f.action(name));f.row.append(...tabs);f.UI.observeActions(f.row);f.flush();f.resize(300);assert.equal(f.row.hasAttribute('data-ui-equal'),true);for(const tab of tabs){assert.equal(tab.hasAttribute('data-ui-compact'),true);assert.ok(tab.textContent);}f.resize(800);assert.equal(f.row.hasAttribute('data-ui-equal'),false);for(const tab of tabs)assert.equal(tab.hasAttribute('data-ui-compact'),false);
 });
