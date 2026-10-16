@@ -51,7 +51,7 @@ export function buildSite(directory=root){
   const css=buildCSS(JSON.parse(read('tokens.json')),read('controls.css'));
   // Composition layout is shared behavior. Bound raw and transfer size independently.
   const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css).length;
-  if(rawBytes>36864||gzipBytes>8192||/@import|url\\s*\\(/i.test(css))
+  if(rawBytes>36864||gzipBytes>8192||/@import|url\s*\(/i.test(css))
     throw new Error('Styles must remain within 36 KiB raw / 8 KiB gzip with no external imports');
   const release=manifest(css),out=path.join(directory,'public/v1');
   const icons=JSON.parse(read('icons.json'));
