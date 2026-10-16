@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en" data-ui="postvisual" data-theme="dark" data-ui-density="compact" data-ui-theme-scope="view">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared UI Studio</title>
+<link rel="stylesheet" href="/v1/styles.css"><link rel="stylesheet" href="/editor.css">
+<script src="/v1/runtime.js" defer></script><script type="module" src="/editor.mjs"></script>
+<body class="studio-shell">
+<header class="ui-toolbar ui-header ui-pad">
+  <div class="ui-stack"><h1>Shared UI Studio</h1><p id="document-context" class="ui-meta">Private drafts</p></div>
+  <div class="ui-actions ui-inline">
+    <label class="ui-field"><span class="ui-label">Document</span><select id="documents" aria-label="Document"></select></label>
+    <button id="new-document" data-icon="add" data-ui-label="always">New document</button>
+    <button id="refresh" data-icon="refresh">Refresh</button>
+    <button id="discard" data-icon="close">Discard form changes</button>
+    <button id="undo" data-icon="arrow-left">Undo latest</button>
+  </div>
+</header>
+<p id="message" class="ui-status studio-status" role="status" aria-live="polite"></p>
+<section id="conflict" class="ui-notice ui-pad" data-state="warning" hidden>
+  <p id="conflict-message"></p><div class="ui-actions"><button id="retry" data-icon="refresh">Retry same request</button><button id="reload" data-icon="file-text">Load current revision</button></div>
+</section>
+<main class="ui-stack ui-pad studio-workspace">
+  <section class="ui-stack studio-main" aria-label="Working document">
+    <section class="ui-card ui-stack ui-pad">
+      <div class="ui-actions">
+        <label class="ui-field"><span class="ui-label">View</span><select id="preview-mode" aria-label="Preview mode"><option value="live">Live changes</option><option value="split">Before / after</option><option value="wipe">Drag to compare</option></select></label>
+        <label class="ui-field" id="baseline-field"><span class="ui-label">Before</span><select id="baseline" aria-label="Before snapshot"></select></label>
+        <button id="pin-before" data-icon="pin">Use current as before</button>
+        <label class="ui-field"><span class="ui-label">Width</span><select id="preview-width" aria-label="Preview width"><option value="fluid">Available width</option><option value="phone">Phone · 390px</option></select></label>
+      </div>
+      <div class="studio-canvas" id="canvas" data-mode="live">
+        <section class="studio-pane studio-before"><h2 class="ui-section-title" id="before-label">Before</h2><iframe id="before-preview" title="Before preview" src="/preview.html"></iframe></section>
+        <section class="studio-pane studio-after"><h2 class="ui-section-title" id="after-label">Live draft</h2><iframe id="preview" title="Working document preview" src="/preview.html"></iframe></section>
+        <button id="compare-divider" class="ui-resize-handle studio-divider" type="button" role="slider" aria-label="Comparison divider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-orientation="horizontal"></button>
+      </div>
+      <p id="preview-caption" class="ui-meta">Agent edits appear here automatically. Click a component to inspect it.</p>
+      <div class="ui-actions"><button id="quick-snapshot" data-icon="save" data-ui-label="always">Keep a snapshot</button><span id="live-status" class="ui-meta" role="status"></span></div>
+    </section>
+    <section class="ui-card ui-stack ui-pad" aria-labelledby="impact-title">
+      <h2 id="impact-title" class="ui-section-title">What this affects</h2>
+      <div class="ui-actions"><label class="ui-field"><span class="ui-label">Value</span><select id="impact-token" aria-label="Trace a value"></select></label><button id="edit-impact-token" data-icon="edit">Edit this value</button></div>
+      <p class="ui-meta">Potential effects in this draft and the shared library. Running apps are not connected yet.</p>
+      <div id="impact-tree" class="studio-impact" aria-live="polite"></div>
+    </section>
+  </section>
+  <details id="advanced" class="ui-section">
+    <summary><h2>Advanced editing</h2><p class="ui-meta">Components, values, structure and saved versions · agents can manage these for you</p></summary>
+    <div class="ui-split studio-advanced">
+  <aside class="ui-stack studio-library" aria-label="Component library">
+    <section class="ui-card ui-stack ui-pad">
+      <h2 class="ui-section-title">Library</h2>
+      <label class="ui-field"><span class="ui-label">Search</span><input id="search" type="search" placeholder="Find a component" aria-label="Search library"></label>
+      <label class="ui-field"><span class="ui-label">Family</span><select id="family" aria-label="Component family"><option value="">All families</option></select></label>
+      <div id="library" class="ui-stack studio-library-list"></div>
+      <article id="component-detail" class="ui-stack studio-facts" hidden></article>
+    </section>
+    <section class="ui-card ui-stack ui-pad">
+      <h2 class="ui-section-title">Structure</h2><p class="ui-meta">Select a node. Option + ↑/↓ reorders siblings.</p>
+      <nav id="tree" class="studio-tree" aria-label="Document structure"></nav>
+    </section>
+  </aside>
+  <section class="ui-stack studio-main" data-ui-main aria-label="Working document">
+    <section class="ui-card ui-stack ui-pad">
+      <form id="context-form" class="ui-actions">
+        <label class="ui-field"><span class="ui-label">Pack</span><select name="pack" aria-label="Pack"><option value="postvisual">Postvisual</option><option value="personal">Personal</option></select></label>
+        <label class="ui-field"><span class="ui-label">Theme</span><select name="mode" aria-label="Theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+        <label class="ui-field"><span class="ui-label">Density</span><select name="density" aria-label="Density"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="dense">Dense</option><option value="default">Default</option></select></label>
+        <button data-icon="appearance" type="submit">Apply appearance</button>
+      </form>
+    </section>
+    <section class="ui-card ui-stack ui-pad">
+      <form id="rename-form" class="ui-stack"><label class="ui-field"><span class="ui-label">Name</span><input name="name" required maxlength="200" aria-label="Document name"></label><div class="ui-actions"><button data-icon="edit" type="submit">Rename</button></div></form>
+      <form id="save-form" class="ui-stack"><label class="ui-field"><span class="ui-label">Version</span><input name="name" required maxlength="200" placeholder="Name this snapshot" aria-label="Version name"></label><div class="ui-actions"><button data-icon="save" data-ui-variant="primary" data-ui-label="always" type="submit">Save version</button></div></form>
+      <div id="versions" class="ui-stack"></div>
+    </section>
+  </section>
+  <aside class="ui-card ui-stack ui-pad studio-inspector" aria-label="Inspector">
+    <div class="ui-actions"><button id="document-scope" data-icon="file-text">Document tokens</button></div>
+    <h2 id="selection-title" class="ui-section-title">Inspector</h2><p id="selection-context" class="ui-meta studio-facts"></p>
+    <form id="props-form" class="ui-stack"><div id="props" class="ui-stack"></div><div class="ui-actions"><button type="submit" data-icon="check" data-ui-variant="primary" data-ui-label="always">Apply properties</button></div></form>
+    <div id="node-actions" class="ui-stack"></div>
+    <details class="ui-section" open><summary><h3>Style values</h3><p class="ui-meta">Inherited values and scoped overrides</p></summary><div id="tokens" class="ui-stack"></div></details>
+    <details class="ui-section"><summary><h3>Bindings</h3><p class="ui-meta">Retained through compatible changes</p></summary><div id="bindings" class="ui-stack studio-facts"></div></details>
+  </aside>
+    </div>
+  </details>
+</main>
+<dialog id="new-dialog" class="ui-popout studio-dialog" aria-labelledby="new-title">
+  <header><h2 id="new-title">New document</h2></header>
+  <form id="create-form" data-ui-popout-body class="ui-stack">
+    <label class="ui-field"><span class="ui-label">Name</span><input name="name" required maxlength="200" value="Untitled composition"></label>
+    <label class="ui-field"><span class="ui-label">View</span><select name="view" required aria-label="Registered view"></select></label>
+    <label class="ui-field"><span class="ui-label">Kind</span><select name="kind"><option value="composition">Composition</option><option value="variation">Component variation</option><option value="tokens">Token draft</option></select></label>
+  </form>
+  <footer class="ui-actions ui-fill"><button data-close="new-dialog" data-icon="close">Cancel</button><button form="create-form" type="submit" data-icon="add" data-ui-variant="primary" data-ui-label="always">Create draft</button></footer>
+</dialog>
+<dialog id="compare-dialog" class="ui-popout studio-dialog" aria-labelledby="compare-title">
+  <header><h2 id="compare-title">Compare versions</h2></header><section data-ui-popout-body class="ui-stack" id="comparison"></section>
+  <footer class="ui-actions"><button data-close="compare-dialog" data-icon="close">Close comparison</button></footer>
+</dialog>
+</body></html>

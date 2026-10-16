@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "composition",
+  "name": "Synthetic review",
+  "target": {"appId": "studio-demo", "viewId": "review"},
+  "pack": "postvisual", "mode": "dark", "density": "compact",
+  "root": "review", "tokens": {},
+  "nodes": {
+    "review": {"id": "review", "componentId": "stack", "props": {}, "tokens": {}, "bindings": {}, "layout": {"kind": "stack"}, "slots": {"children": ["title", "decisions"]}},
+    "title": {"id": "title", "componentId": "text", "props": {"label": "Review example", "role": "heading"}, "tokens": {}, "bindings": {}, "slots": {}},
+    "decisions": {"id": "decisions", "componentId": "actions", "props": {"fill": true}, "tokens": {}, "bindings": {}, "layout": {"kind": "row"}, "slots": {"children": ["save", "cancel"]}},
+    "save": {"id": "save", "componentId": "action", "props": {"label": "Save", "icon": "save", "variant": "primary"}, "tokens": {}, "bindings": {"activate": "save"}, "slots": {}},
+    "cancel": {"id": "cancel", "componentId": "action", "props": {"label": "Cancel", "icon": "close"}, "tokens": {}, "bindings": {"activate": "cancel"}, "slots": {}}
+  }
+}

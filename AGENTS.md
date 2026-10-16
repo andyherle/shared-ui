@@ -1,6 +1,6 @@
 # Shared UI
 
-One repository, two packs: Postvisual and Personal. There are no runtime or build dependencies outside Node's standard library. Keep the shared CSS below 32 KB uncompressed; report gzip size when changing it. This includes common selection, playhead, composed-field and scaled-action roles replacing duplicated app CSS. Delete superseded app paint and shared rules rather than adding compatibility overrides; mark only the bundled UI sheet for replacement.
+One repository, two packs: Postvisual and Personal. The shared runtime, build, and local editor have no dependencies outside Node's standard library. Optional MCP development tooling isolates the official SDK in tools/studio-mcp; never add it to the consumer bundle or root build. Keep the shared CSS below 32 KB uncompressed; report gzip size when changing it. This includes common selection, playhead, composed-field and scaled-action roles replacing duplicated app CSS. Delete superseded app paint and shared rules rather than adding compatibility overrides; mark only the bundled UI sheet for replacement.
 
 Edit src, then run npm run check. The build validates inputs before replacing working assets and writes the update manifest last. public is generated deployment output, including synthetic catalogue media. Never copy private application source, client media, credentials, or data into this public repository.
 

@@ -456,3 +456,25 @@ detail. Load a visible stable shell immediately; async results fill that shell.
 Never move the surrounding table when selection changes or a lightbox opens.
 
 Icon-only information uses native `details.ui-disclosure` with a `summary.ui-action[data-ui-label="hidden"]`, a shared `info` icon and an accessible name. The hidden-label summary omits the chevron and keeps the full shared control target. Use `data-ui-variant="quiet"` for a soft information or dismiss symbol; the catalogue’s compact reply row demonstrates both.
+
+
+## Shared UI Studio
+
+Studio development tooling shares a versioned catalogue registry, typed token
+inventory and a private local document service. It supports revision-checked
+commands, named snapshots, scoped overrides, compatible node swaps/moves,
+comparison and undo through one API and JSON CLI. The runtime and automatic CSS
+channel remain independent. The local visual editor renders 20 authorable native
+components, with scoped tokens, typed bindings, slots, saved versions and conflicts.
+The preview supports live changes, side-by-side snapshots and a draggable comparison
+line, with a declared dependency tree. Advanced editing stays collapsed by default.
+The optional official-SDK adapter provides stdio and authenticated local HTTP MCP.
+After installing it, `./studio` starts a temporary editor + MCP session; Ctrl-C stops
+both. No background service is installed.
+Private drafts and registrations stay outside Git working trees.
+
+Start with [the editor and MCP setup](docs/STUDIO_EDITOR_MCP.md) and
+[public/private downstream releases](docs/STUDIO_RELEASES.md). Also see
+[the foundation API](docs/STUDIO_FOUNDATION.md) and
+[the Studio implementation direction](docs/STUDIO.md). Run `npm run studio -- --describe` for generated contract discovery, `npm run check` for validation, and
+`npm run studio:browser` for the isolated browser fixture.

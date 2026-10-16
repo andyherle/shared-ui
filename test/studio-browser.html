@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio registry browser checks</title>
+<body><output id="result">Running registry checks…</output>
+<script type="module">
+import {COMPONENTS, ROLE_OWNERS} from '../src/studio/registry.mjs';
+import {collectSchemaSnapshot, auditSchemaSnapshot} from '../src/schema-audit.mjs';
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
+try {
+  const frames = await Promise.all([390, 1280].map(width => new Promise((resolve, reject) => {
+    const frame = document.createElement('iframe'); frame.width = width; frame.height = 600; frame.title = `Synthetic ${width}px catalogue`;
+    const timeout = setTimeout(() => reject(new Error('Catalogue load timed out')), 15000);
+    frame.addEventListener('load', () => { clearTimeout(timeout); resolve(frame); }, {once: true}); frame.src = '/'; document.body.append(frame);
+  })));
+  const results = [];
+  for (const frame of frames) {
+    const doc = frame.contentDocument;
+    assert(frame.contentWindow.SharedUI, 'Catalogue runtime loaded');
+    for (const component of COMPONENTS) for (const fixture of component.fixtures) {
+      const scope = doc.getElementById(fixture.anchor);
+      assert(scope, `${component.id}: fixture anchor ${fixture.anchor}`);
+      assert(scope.matches(component.selector) || scope.querySelector(component.selector), `${component.id}: selector absent from #${fixture.anchor}`);
+    }
+    for (const element of doc.querySelectorAll('[class]')) for (const role of element.classList) {
+      if (role.startsWith('ui-')) assert(Object.hasOwn(ROLE_OWNERS, role.slice(3)), `Unregistered live role: ${role}`);
+    }
+    const entry = doc.querySelector('#fields input[name=name]'); entry.value = 'Synthetic retained draft'; entry.focus(); entry.setSelectionRange(2, 8);
+    const before = entry;
+    for (const pack of ['postvisual', 'personal']) for (const mode of ['light', 'dark']) {
+      doc.documentElement.dataset.ui = pack; doc.documentElement.dataset.theme = mode;
+      const report = auditSchemaSnapshot(collectSchemaSnapshot(doc, {appId: 'catalogue', viewId: `${pack}-${mode}-${frame.width}`}));
+      assert(doc.querySelector('#fields input[name=name]') === before, 'Audit preserves native input identity');
+      assert(entry.value === 'Synthetic retained draft' && entry.selectionStart === 2 && entry.selectionEnd === 8, 'Audit preserves native value and selection');
+      assert(doc.activeElement === entry, 'Audit preserves focus');
+      results.push({width: Number(frame.width), pack, mode, registered: COMPONENTS.length, audited: report.coverage.captured, advisoryFindings: report.findings.length});
+    }
+  }
+  assert(frames[0].contentDocument.querySelector('#fields input[name=name]') !== frames[1].contentDocument.querySelector('#fields input[name=name]'), 'Views retain independent input nodes');
+  const auditFrame = document.createElement('iframe'); auditFrame.src = '/test/schema-audit-browser.html'; auditFrame.title = 'Structural audit regression';
+  const loaded = new Promise(resolve => auditFrame.addEventListener('load', resolve, {once: true})); document.body.append(auditFrame); await loaded;
+  const deadline = performance.now() + 5000;
+  while (!auditFrame.contentDocument.documentElement.dataset.testResult && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+  assert(auditFrame.contentDocument.documentElement.dataset.testResult === 'pass', auditFrame.contentDocument.querySelector('#result').textContent);
+  document.querySelector('#result').textContent = `PASS: ${COMPONENTS.length} registered components; eight pack/mode/width contexts; structural privacy fixture.`;
+  document.documentElement.dataset.testResult = 'pass'; window.studioChecks = results;
+} catch (error) {
+  document.querySelector('#result').textContent = error.stack; document.documentElement.dataset.testResult = 'fail';
+}
+</script></body></html>
