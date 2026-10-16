@@ -30,8 +30,11 @@ function fixture(){
 test('a horizontal group compacts primary and secondary captions together',()=>{
  const f=fixture(),save=f.action('Save',{primary:true}),other=f.action('Long secondary caption');f.row.append(save,other);f.UI.observeActions(f.row);f.flush();assert.equal(other.hasAttribute('data-ui-compact'),false);f.resize(180);assert.equal(other.hasAttribute('data-ui-compact'),true);assert.equal(save.hasAttribute('data-ui-compact'),true);assert.equal(other.getAttribute('aria-label'),null);f.resize(500);assert.equal(other.hasAttribute('data-ui-compact'),false);assert.equal(save.hasAttribute('data-ui-compact'),false);
 });
-test('an explicit caption keeps the whole group readable',()=>{
- const f=fixture(),fixed=f.action('Keep',{always:true}),other=f.action('Secondary');f.row.append(fixed,other);f.UI.observeActions(f.row);f.flush();f.resize(100);assert.equal(other.hasAttribute('data-ui-compact'),false);assert.equal(fixed.hasAttribute('data-ui-compact'),false);
+test('an explicit caption stays readable while neighboring actions compact',()=>{
+ const f=fixture(),fixed=f.action('Keep',{always:true}),other=f.action('Secondary');f.row.append(fixed,other);f.UI.observeActions(f.row);f.flush();f.resize(100);assert.equal(other.hasAttribute('data-ui-compact'),true);assert.equal(fixed.hasAttribute('data-ui-compact'),false);
+});
+test('narrow pure action rows share space only when every control fits its slot',()=>{
+ const f=fixture(),first=f.action('Open'),second=f.action('Save');f.row.append(first,second);f.UI.observeActions(f.row);f.flush();assert.equal(f.row.hasAttribute('data-ui-equal'),true);f.resize(90);assert.equal(f.row.hasAttribute('data-ui-equal'),true);f.resize(500);assert.equal(f.row.hasAttribute('data-ui-equal'),false);
 });
 test('priority tiles collapse as whole native groups without changing controls or handlers',()=>{
  const f=fixture(),save=f.action('Save',{primary:true}),a=f.action('A'),b=f.action('B'),c=f.action('C'),d=f.action('D'),low=f.overflow([a,b],0),high=f.overflow([c,d],1),handler=a.onclick;f.row.append(save,low,high);f.UI.observeActions(f.row);f.flush();assert.equal(low.dataset.uiOverflow,'expanded');f.resize(150);assert.equal(low.dataset.uiOverflow,'collapsed');assert.equal(high.dataset.uiOverflow,'expanded');assert.equal(low.open,false);assert.equal(a.hasAttribute('data-ui-compact'),false);assert.equal(a.onclick,handler);assert.equal(low.children[1].children[0],a);f.resize(500);assert.equal(low.dataset.uiOverflow,'expanded');assert.equal(low.open,true);

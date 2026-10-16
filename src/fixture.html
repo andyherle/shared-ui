@@ -1,8 +1,8 @@
 <section id="control-fixture" class="lab-section">
   <header><h2>Control fixture</h2></header>
-  <div class="ui-actions" aria-label="Fixture widths">
-    <button type="button" data-fixture-width="320">Phone</button><button type="button" data-fixture-width="480">Panel</button><button type="button" data-fixture-width="960">Desktop</button><button type="button" data-fixture-width="fit">Fit</button>
-    <label class="ui-field"><span class="ui-label">Width</span><input class="ui-range" id="fixture-width" type="range" min="240" max="1120" value="960" aria-label="Control fixture width"><output id="fixture-width-value">960 px</output></label>
+  <div class="lab-fixture-controls" aria-label="Fixture widths">
+    <div class="ui-actions ui-fill" aria-label="Choose fixture width"><button type="button" data-fixture-width="320">Phone</button><button type="button" data-fixture-width="480">Panel</button><button type="button" data-fixture-width="960">Wide</button><button type="button" data-fixture-width="fit">Fit</button></div>
+    <label class="ui-field"><span class="ui-label">Width</span><input class="ui-range" id="fixture-width" type="range" min="240" max="1120" value="960" aria-label="Control fixture width"><output id="fixture-width-value">960</output></label>
     <label class="ui-field"><span class="ui-label">State</span><select id="fixture-state" aria-label="Fixture workspace state"><option value="live">Live</option><option value="dirty">Unsaved changes</option><option value="saving">Saving</option><option value="saved">Saved</option><option value="error">Save failed</option></select></label><output id="fixture-layout-check" class="ui-status" role="status"></output>
   </div>
   <div id="fixture-container" class="lab-fixture ui-stack ui-container">

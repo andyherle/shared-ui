@@ -179,7 +179,7 @@
     /* Container-owned responsiveness; the same row works in a panel, pop-out or page. */
     :where(.ui-actions,.ui-toolbar,.ui-tabs) { display:flex; flex-wrap:wrap; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; inline-size:100%; container:ui-actions / inline-size; }
     :where(.ui-actions,.ui-toolbar) > * { margin-block:0; max-inline-size:100%; }
-    :where(.ui-actions,.ui-toolbar) > select { flex:1 1 8rem; inline-size:auto; }
+    :where(.ui-actions,.ui-toolbar) > select { flex:1 1 8rem; }
     :where(form,fieldset,.ui-panel,.ui-card) { min-inline-size:0; }
     .ui-toolbar { padding:var(--ui-gap); border:1px solid var(--ui-line); border-radius:var(--ui-radius); background:var(--ui-surface); }
     .ui-header { position:sticky; inset-block-start:0; z-index:50; align-items:center; justify-content:flex-end; border-radius:0; border-inline:0; border-block-start:0; }
@@ -194,7 +194,7 @@
     .ui-app-tile[data-ui-editing=true] .ui-app-symbol { border-style:dashed; border-color:var(--ui-accent); }
     .ui-app-tile:is([data-ui-dragging=true],[aria-busy=true]) { opacity:.5; }
     .ui-header > :first-child:not(.ui-actions,.ui-action,.ui-field,button,details) { margin-inline-end:auto; }
-    .ui-search { inline-size:100%; min-inline-size:min(100%,8rem); max-inline-size:100%; }
+    .ui-search { inline-size:100%; min-inline-size:min(100%,8rem); }
 :where(.ui-actions,.ui-toolbar) {
   &[data-ui-layout=bar] { flex-wrap:nowrap; overflow-x:auto; }
   &[data-ui-layout=bar] > * { flex-shrink:0; }
@@ -223,7 +223,7 @@
     .ui-dynamic { display:inline-grid; > span { grid-area:1/1; white-space:pre; } > [aria-hidden] { visibility:hidden; &::before { content:attr(data-ui-text); } } }
     .ui-actions:not([data-ui-layout=vertical]) > .ui-search { flex:1 1 0; }
     .ui-search :where(input,select) { inline-size:100%; }
-    .ui-fill > :where(button,.ui-button,.ui-action):not(summary) { flex:1 1 8rem; }
+    :is(.ui-fill,[data-ui-equal]) > :where(button,a,.ui-action) { flex:1 1 0; min-inline-size:var(--ui-control-height); }
     .ui-fill > :where(.ui-icon-button,[data-ui-label=hidden]) { flex:none; }
     /* Native priority groups flatten while there is room, and disclose as a tile otherwise. */
 .ui-overflow[data-ui-overflow=expanded] {

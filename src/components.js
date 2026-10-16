@@ -82,7 +82,7 @@
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,pools=new WeakMap();
   const actionSelector='.ui-action',overflowSelector='details.ui-overflow';
-  const fixedLabel='[data-ui-label=hidden],.ui-item';
+  const fixedLabel='[data-ui-label=hidden],[data-ui-label=always],.ui-item';
   const number=value=>parseFloat(value)||0;
   function poolFor(doc){
     if(pools.has(doc))return pools.get(doc);
@@ -160,11 +160,12 @@
         available-=margins(css)+sides(css);
       }
       const collapsed=new Set(),limit=Math.max(0,available-2);
-      const captioned=descendants(nodes);
-      const pinned=captioned.some(node=>node.dataset.uiLabel==='always'||node.getAttribute('data-ui-label')==='always'||isAction(node)&&node.querySelector(':scope > .ui-label')&&!eligible(node)&&node.dataset.uiLabel!=='hidden');
       const required=mode=>rowWidth(nodes,css,mode,collapsed,group.matches('.ui-fill'));
-      const compact=!vertical&&!pinned&&required(false)>limit;
+      const compact=!vertical&&required(false)>limit;
       for(const node of actions)setCompact(node,compact);
+      const equal=nodes.length>1&&limit<480&&!vertical&&!group.matches('.ui-fill,.ui-tabs')&&nodes.every(node=>node.matches('.ui-action,button'));
+      const slot=(limit-number(css.columnGap)*(nodes.length-1))/nodes.length;
+      if(equal&&nodes.every(node=>width(node,compact,collapsed)<=slot))group.setAttribute('data-ui-equal','');else group.removeAttribute('data-ui-equal');
       if(!vertical){
         // Higher numeric priority stays visible longer. Collapse entire authored groups.
         for(const node of [...overflows].sort((a,b)=>number(a.dataset.uiPriority)-number(b.dataset.uiPriority))){
