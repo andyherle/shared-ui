@@ -57,8 +57,7 @@ export function validateDocument(input, {views, catalogue, icons}) {
       const overridden = Object.keys(node.tokens).length > 0;
       requireThat(!overridden || typeof node.props.overrideReason === 'string' && node.props.overrideReason.trim().length >= 4,
         'Review workspace custom tokens need a visible overrideReason');
-      requireThat(overridden || node.props.overrideReason === undefined,
-        'Review workspace overrideReason needs an actual token override');
+      // A reason may be staged first so Studio's separate set-props/set-token commands remain usable.
     }
     resolveScopedTokens(catalogue, document.tokens, node.tokens, id);
     if (node.layout !== undefined) {
