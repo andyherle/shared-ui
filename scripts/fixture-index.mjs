@@ -38,6 +38,10 @@ function manifestRows(document,source) {
     if (Object.keys(document).some(key=>!['schemaVersion','fixtures','description'].includes(key))) fail(source,'unknown top-level key');
     return document.fixtures;
   }
+  if (document.version === 1 && Array.isArray(document.fixtures)) {
+    if (Object.keys(document).some(key=>!['version','source','fixtures'].includes(key))) fail(source,'unknown v1 canvas/gallery key');
+    return document.fixtures;
+  }
   if (document.schemaVersion === 1 && Array.isArray(document.fixtureStates)) {
     if (Object.keys(document).some(key=>!['schemaVersion','app','repository','ref','scope','command','baseUrl','reset','fixtureStates'].includes(key))) fail(source,'unknown v1 ledger key');
     return document.fixtureStates;
@@ -61,7 +65,7 @@ export function validateManifest(document, source = 'manifest') {
     if (!/^[\w.-]+\/[\w.-]+$/.test(item.repository)) fail(where, 'repository must be owner/repo');
     if (record.sourceKind !== undefined && !['real-app','shared-ui-catalogue'].includes(record.sourceKind)) fail(where, 'invalid sourceKind');
     if (record.mockOnly === false || record.productionWritesDisabled === false) fail(where, 'production writes or live adapters must be prohibited');
-    const legacy = record.status === 'prepared-unrun';
+    const legacy = ['prepared-unrun','prepared/unrun'].includes(record.status);
     item.status = legacy ? 'prepared' : record.status;
     if (!statuses.has(item.status)) fail(where, 'invalid status');
     const declaredIsolation = record.mockOnly === true && record.productionWritesDisabled === true;
