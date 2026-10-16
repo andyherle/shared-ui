@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {COMPONENTS, getComponent, ROLE_OWNERS} from '../src/studio/registry.mjs';
 import {loadTokenCatalogue} from '../src/studio/tokens.mjs';
 import {validateDocument} from '../src/studio/document.mjs';
-import {auditSchemaSnapshot} from '../src/schema-audit.mjs';
+import {auditSchemaSnapshot,collectSchemaSnapshot} from '../src/schema-audit.mjs';
 import {RENDERED_COMPONENTS} from '../src/studio/renderer.mjs';
 import {buildCSS} from '../scripts/build.mjs';
 import {gzipSync} from 'node:zlib';
@@ -171,6 +171,32 @@ test('development audit detects wrong/missing composition slots and variants wit
   assert.ok(report.findings.some(f=>f.rule==='composition-body'));
   assert.ok(report.findings.length>=3);
   assert.ok(report.findings.every(f=>f.severity==='warning'));
+});
+
+test('composition schema captures instance presence without leaking app-provided IDs or content',()=>{
+  const contract=getComponent('review-workspace').audit;
+  const attributes={
+    'data-ui-composition':'review-workspace',
+    'data-ui-composition-instance':'private.customer-345-not-for-export',
+    'data-ui-composition-revision':'1',
+    'data-ui-variant':'standard',
+    'data-ui-crowding':'wrap',
+    'data-ui-composition-origin':'canonical'
+  };
+  const scope={querySelectorAll:()=>[element],matches:()=>false};
+  const expected=new Map(contract.checks.map(check=>[check.selector,check.min]));
+  const element={nodeType:1,localName:'article',previousElementSibling:null,parentElement:scope,
+    matches:selector=>selector===contract.selector,
+    hasAttribute:name=>Object.hasOwn(attributes,name),
+    getAttribute:name=>attributes[name],
+    querySelectorAll:selector=>Array(expected.get(selector)||0).fill({})};
+  const shot=collectSchemaSnapshot(scope,{appId:'synthetic',viewId:'review'});
+  assert.equal(shot.elements[0].attributes['data-ui-composition-instance'],'present');
+  assert.ok(!JSON.stringify(shot).includes('private.customer-345'));
+  assert.deepEqual(auditSchemaSnapshot(shot).findings,[]);
+  delete attributes['data-ui-composition-instance'];
+  const missing=collectSchemaSnapshot(scope,{appId:'synthetic',viewId:'review'});
+  assert.ok(auditSchemaSnapshot(missing).findings.some(f=>f.rule==='review-workspace-required-attribute'));
 });
 
 test('composition remains a bounded shared CSS and JS addition with local clickable fixture',()=>{
