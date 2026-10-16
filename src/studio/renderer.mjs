@@ -68,9 +68,10 @@ export function createRenderer(root, {onSelect = () => {}} = {}) {
     }
     if (label) label.textContent = props.label ?? '';
     if (id === 'review-workspace') {
-      el.dataset.uiComposition = 'review-workspace'; el.dataset.uiCompositionRevision = '1';
+      el.dataset.uiComposition = 'review-workspace'; el.dataset.uiCompositionRevision = '1'; el.dataset.uiCompositionInstance = node.id;
       el.dataset.uiCrowding = props.crowding ?? 'wrap';
       const layoutOverrides = ['gap','aside'].filter(key => Object.hasOwn(node.tokens, '--ui-composition-' + key));
+      el.dataset.uiCompositionOrigin = layoutOverrides.length ? 'studio-draft' : 'canonical';
       if (layoutOverrides.length) el.dataset.uiCompositionOverrides = layoutOverrides.join(',');
       else delete el.dataset.uiCompositionOverrides;
       for (const [slot, host] of entry.slots) host.hidden = !(node.slots[slot]?.length);
