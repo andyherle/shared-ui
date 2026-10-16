@@ -421,8 +421,8 @@ of showing a wall of code or a row of disclosure buttons. The catalogue's
 Record detail example demonstrates this in both packs.
 
 Use `.ui-popout` on a native `dialog` for an overlay, on a direct child
-`form` when the entire dialog submits, or on `article` for an in-page record
-or review. Give it three direct children: `header`, a
+`form` when the entire dialog submits or an in-page editor needs native
+submission, or on `article` for an in-page record or review. Give it three direct children: `header`, a
 `[data-ui-popout-body]` scrolling area, and `footer`. The shell keeps the header
 and footer in view while only the body scrolls. Put the title and close action
 on separate header rows; put decisions and previous/next navigation in the

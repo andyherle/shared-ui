@@ -67,7 +67,7 @@
     .ui-popout { width:min(var(--ui-popout-width,900px),100%); height:fit-content; max-height:min(var(--ui-popout-height,760px),calc(100dvh - var(--ui-popout-space,24px))); grid-template-rows:auto minmax(0,1fr) auto; padding:0; overflow:hidden; }
     :is(article,form,dialog[open]).ui-popout { display:grid; }
     dialog:has(>form.ui-popout) { padding:0; overflow:hidden; }
-    form.ui-popout { border:0; }
+    dialog > form.ui-popout { border:0; }
     .ui-popout > :is(header,footer) { padding:var(--ui-gap); }
     .ui-popout > footer { border-top:1px solid var(--ui-line); max-height:40dvh; overflow:auto; }
     .ui-popout > [data-ui-popout-body] { min-height:0; overflow:auto; padding:var(--ui-gap); }
