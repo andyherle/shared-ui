@@ -24,12 +24,6 @@
     body { margin:0; font:inherit; background:var(--ui-bg); }
     *, *::before, *::after { box-sizing:border-box; }
     [hidden] { display:none!important; }
-    /* Apply the desktop constraint once, inside the application's actual content region. */
-    [data-ui-page-host] { container-type:inline-size; inline-size:100%; min-inline-size:0; }
-    [data-ui-page-host] > [data-ui-page-root] { inline-size:min(var(--ui-page-width),calc(100% - 32px),96rem); min-inline-size:0; margin-inline:auto; }
-    @container (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
-    @media (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
-    [data-ui-page-root][data-ui-page-mode=full] { inline-size:calc(100% - 32px); }
     :where(button,input,select,textarea,output) { font:inherit; color:inherit; }
     :where(button,.ui-button,.ui-action,.button,.ui-menu>summary,.ui-disclosure>summary,.ui-toggle,.ui-icon-choice) {
       display:inline-flex; align-items:center; justify-content:center; gap:var(--ui-gap); min-inline-size:var(--ui-control-height); max-inline-size:100%; overflow-wrap:anywhere;
@@ -88,7 +82,7 @@
     :where(svg.ui-icon,.ui-icon>svg,button>svg,summary>svg,a.button>svg) { inline-size:18px; block-size:18px; flex:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
     .ui-icon { display:inline-flex; align-items:center; justify-content:center; }
     .ui-muted { color:var(--ui-muted); }
-    .ui-range { appearance:none; -webkit-appearance:none; display:block; inline-size:100%; min-inline-size:0; max-inline-size:100%; block-size:var(--ui-control-height); padding:0; border:0; background:#0000; cursor:pointer; }
+    .ui-range { appearance:none; -webkit-appearance:none; display:block; inline-size:100%; min-inline-size:0; block-size:var(--ui-control-height); padding:0; border:0; background:#0000; cursor:pointer; }
     .ui-range::-webkit-slider-runnable-track { block-size:4px; border-radius:2px; background:var(--ui-control); }
     .ui-range::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; inline-size:var(--ui-range-thumb); block-size:var(--ui-range-thumb); margin-block-start:calc((4px - var(--ui-range-thumb))/2); border:0; border-radius:50%; background:var(--ui-accent); }
     .ui-range::-moz-range-track { block-size:4px; border:0; border-radius:2px; background:var(--ui-control); }
@@ -179,7 +173,7 @@
     .ui-value-control > input[type=number] { flex:0 1 12ch; inline-size:12ch; min-inline-size:0; }
     .ui-truncate { min-inline-size:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     :where([data-ui-variant=quiet]:is(.ui-field,:not(:hover))) { background:#0000; border-color:#0000; }
-    :is(progress,meter) { inline-size:100%; max-inline-size:100%; block-size:8px; border:0; border-radius:var(--ui-radius); overflow:hidden; appearance:none; background:var(--ui-surface-soft); color:var(--ui-accent); accent-color:var(--ui-accent); }
+    :is(progress,meter) { inline-size:100%; block-size:8px; border:0; border-radius:var(--ui-radius); overflow:hidden; appearance:none; background:var(--ui-surface-soft); color:var(--ui-accent); accent-color:var(--ui-accent); }
     progress::-webkit-progress-bar, meter::-webkit-meter-bar { block-size:100%; border:0; border-radius:0; background:var(--ui-surface-soft); }
     progress::-webkit-progress-value, meter::-webkit-meter-optimum-value, meter::-webkit-meter-suboptimum-value, meter::-webkit-meter-even-less-good-value { background:var(--ui-accent); }
     progress::-moz-progress-bar, meter::-moz-meter-bar { background:var(--ui-accent); }
