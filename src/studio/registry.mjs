@@ -90,9 +90,9 @@ export const COMPONENTS = freeze([
     },
     accessibility: {name: 'Use a named heading; preserve the native form and stable slot DOM.', keyboard: 'Native Tab, Enter, Space and Escape; layout changes do not reparent live fields.'},
     audit: {selector: '[data-ui-composition="review-workspace"]', tags: ['article'],
-      requiredAttributes: ['data-ui-composition-revision','data-ui-variant','data-ui-crowding'],
+      requiredAttributes: ['data-ui-composition-instance','data-ui-composition-revision','data-ui-variant','data-ui-crowding','data-ui-composition-origin'],
       attributes: {'data-ui-composition-revision':['1'], 'data-ui-variant':['standard','split','stack'],
-        'data-ui-crowding':['wrap','scroll','priority'], 'data-ui-composition-overrides':['gap','aside','gap,aside']},
+        'data-ui-crowding':['wrap','scroll','priority'], 'data-ui-composition-origin':['canonical','instance','studio-draft'], 'data-ui-composition-overrides':['gap','aside','gap,aside']},
       checks: [
         {id:'composition-frame',selector:':scope > .ui-composition-layout',min:1,max:1,expected:'Exactly one native composition layout frame.'},
         {id:'composition-header',selector:':scope > .ui-composition-layout > [data-ui-composition-slot=header]',min:1,max:1,expected:'One heading region.'},
