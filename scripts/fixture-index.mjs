@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('../', import.meta.url)));
-const allowed = new Set(['id','app','repository','ref','command','baseUrl','route','state','expectedInteraction','backendAdapter','reset','sourceKind','mockOnly','productionWritesDisabled','status','evidence']);
+const allowed = new Set(['id','app','repository','ref','command','baseUrl','route','state','expectedInteraction','backendAdapter','reset','sourceKind','mockOnly','productionWritesDisabled','status','evidence','launchUrl']);
 const statuses = new Set(['prepared','verified','blocked']);
 
 function fail(where, message) { throw new Error(where + ': ' + message); }
@@ -34,22 +34,32 @@ function loopback(base, route, where) {
 export function validateManifest(document, source = 'manifest') {
   if (!isObject(document) || document.schemaVersion !== 1 || !Array.isArray(document.fixtures) ||
       !document.fixtures.length || document.fixtures.length > 400) fail(source, 'expected schemaVersion 1 with 1–400 fixtures');
-  if (Object.keys(document).some(key => !['schemaVersion','fixtures'].includes(key))) fail(source, 'unknown top-level key');
+  if (Object.keys(document).some(key => !['schemaVersion','fixtures','description'].includes(key))) fail(source, 'unknown top-level key');
   const result = [], seen = new Set();
   for (const [index, record] of document.fixtures.entries()) {
     const where = source + ' fixture ' + (index + 1);
     if (!isObject(record) || Object.keys(record).some(key => !allowed.has(key))) fail(where, 'unexpected fixture key (do not include private data)');
     const item = {};
     for (const key of ['id','app','repository','ref','command','baseUrl','route','state','expectedInteraction','backendAdapter','reset']) item[key] = string(record,key,where);
-    if (!/^[a-z][a-z0-9-]{1,79}$/.test(item.id) || !/^[a-z][a-z0-9-]{1,79}$/.test(item.app)) fail(where, 'invalid stable app or fixture id');
+    if (!/^[a-z][a-z0-9-]{1,79}$/.test(item.id) || !/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,79}$/.test(item.app)) fail(where, 'invalid app label or stable fixture id');
     if (!/^[\w.-]+\/[\w.-]+$/.test(item.repository)) fail(where, 'repository must be owner/repo');
-    if (record.sourceKind !== 'real-app' && record.sourceKind !== 'shared-ui-catalogue') fail(where, 'sourceKind must identify real-app or shared-ui-catalogue');
-    if (record.mockOnly !== true || record.productionWritesDisabled !== true) fail(where, 'fixture must explicitly disable production writes and use mock-only data');
-    if (!statuses.has(record.status)) fail(where, 'invalid status');
+    if (record.sourceKind !== undefined && !['real-app','shared-ui-catalogue'].includes(record.sourceKind)) fail(where, 'invalid sourceKind');
+    if (record.mockOnly === false || record.productionWritesDisabled === false) fail(where, 'production writes or live adapters must be prohibited');
+    const legacy = record.status === 'prepared-unrun';
+    item.status = legacy ? 'prepared' : record.status;
+    if (!statuses.has(item.status)) fail(where, 'invalid status');
+    const declaredIsolation = record.mockOnly === true && record.productionWritesDisabled === true;
+    if (!declaredIsolation && item.status !== 'prepared') fail(where, 'unattested isolation cannot be called verified or blocked');
+    item.isolation = declaredIsolation ? 'declared mock-only' : 'legacy: isolation not explicitly attested in manifest';
     item.href = loopback(item.baseUrl,item.route,where);
-    item.sourceKind = record.sourceKind;
-    item.status = record.status;
-    item.evidence = record.evidence;
+    if (record.launchUrl !== undefined) {
+      const launch=string(record,'launchUrl',where), base=new URL(item.baseUrl), target=new URL(launch,base);
+      if (launch.includes('\\') || target.origin!==base.origin || target.username || target.password) fail(where,'launchUrl must remain same-origin loopback');
+      item.href=loopback(item.baseUrl,target.pathname+target.search+target.hash,where);
+    }
+    item.sourceKind = record.sourceKind ?? 'real-app';
+    item.evidence = typeof record.evidence === 'string' && item.status==='prepared'
+      ? {result:'unrun',detail:string(record,'evidence',where)} : record.evidence;
     if (!isObject(item.evidence) ||
         Object.keys(item.evidence).some(key => !['result','runner','command','commit','observedAt','detail'].includes(key))) fail(where, 'invalid evidence');
     if (item.status === 'verified') {
@@ -106,7 +116,7 @@ export function renderIndex(fixtures) {
     return '<section><h2>'+e(app)+'</h2><p>Source: '+e(head.repository)+' @ '+e(head.ref)+
       ' · '+e(head.sourceKind)+'</p><dl><dt>Start locally</dt><dd><code>'+e(head.command)+
       '</code></dd><dt>Reset synthetic state</dt><dd><code>'+e(head.reset)+'</code></dd>'+
-      '<dt>Backend boundary</dt><dd>'+e(head.backendAdapter)+'</dd></dl>'+
+      '<dt>Backend boundary</dt><dd>'+e(head.backendAdapter)+'</dd><dt>Isolation</dt><dd>'+e(head.isolation)+'</dd></dl>'+
       '<div class="scroller"><table><thead><tr><th>Fixture / state</th><th>Direct route</th><th>Expected interaction</th><th>Status</th></tr></thead><tbody>'+
       rows+'</tbody></table></div></section>';
   }).join('');
