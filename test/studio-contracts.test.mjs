@@ -42,7 +42,7 @@ test('schema auditing projects the exact registry objects and accepts quiet acti
     {id: 'save', tag: 'button', roles: ['action'], attributes: {'data-ui-variant': 'quiet'}, counts: {'action-label': 1, 'action-icon': 0}},
     {id: 'form', tag: 'form', roles: ['popout'], attributes: {}, counts: {'popout-header': 1, 'popout-body': 1, 'popout-footer': 1}}
   ], coverage: {matched: 2, captured: 2, truncated: false}});
-  assert.deepEqual(report.findings, []); assert.deepEqual(report.coverage.contracts, ['action', 'field', 'popout']);
+  assert.deepEqual(report.findings, []); assert.deepEqual(report.coverage.contracts, ['action', 'field', 'review-workspace', 'popout']);
 });
 test('all JSON/CSS tokens have descriptors, source locations and declared consumer projections', () => {
   const catalogue = loadTokenCatalogue();
