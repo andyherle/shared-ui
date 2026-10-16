@@ -28,11 +28,15 @@ test('the index merges real application manifests and keeps one launch/reset per
   const entries=collectManifests([{source:'a',document:a},{source:'b',document:b}]);
   assert.equal(entries.length,8);
   assert.deepEqual([...new Set(entries.map(x=>x.app))],['other-app','shared-ui-catalogue']);
+  const differentProfile=copy();
+  differentProfile.fixtures[1].command='separate profile launcher';
+  differentProfile.fixtures[1].baseUrl='http://localhost:43112';
+  assert.equal(collectManifests([{source:'profiles',document:differentProfile}]).length,4);
   const inconsistent=copy();
-  inconsistent.fixtures[1].command='different launcher';
-  assert.throws(()=>collectManifests([{source:'inconsistent',document:inconsistent}]),/one launch\/reset\/adapter/);
-  const duplicate=copy();duplicate.fixtures[1].route=duplicate.fixtures[0].route;
-  assert.throws(()=>collectManifests([{source:'duplicate',document:duplicate}]),/same direct route/);
+  inconsistent.fixtures[1].reset='different reset on same launch profile';
+  assert.throws(()=>collectManifests([{source:'inconsistent',document:inconsistent}]),/inconsistent launch profile/);
+  const reused=copy();reused.fixtures[1].route=reused.fixtures[0].route;
+  assert.equal(collectManifests([{source:'reused',document:reused}]).length,4);
   assert.throws(()=>collectManifests([{source:'a',document:a},{source:'a2',document:a}]),/duplicate/);
 });
 
@@ -80,6 +84,33 @@ test('imports coordinator CONTRACT v1 prepared manifests without inventing verif
   unsafe.fixtures[0].status='prepared-unrun';
   unsafe.fixtures[0].launchUrl='https://example.org/login';
   assert.throws(()=>validateManifest(unsafe),/same-origin/);
+});
+
+test('normalizes Home, Ledger, Delivery and Portal v1 wrapper formats',()=>{
+  const f=structuredClone(copy().fixtures[0]);
+  f.app='Example Home';f.status='prepared-unrun';f.evidence='Source only, runtime unrun';
+  delete f.sourceKind;delete f.mockOnly;delete f.productionWritesDisabled;
+  const wrappers=[
+    {schemaVersion:1,description:'Synthetic Home',fixtures:[f]},
+    {schemaVersion:1,app:'Ledger',repository:'example/ledger',ref:'fixture',
+      command:f.command,baseUrl:f.baseUrl,reset:f.reset,scope:'synthetic',
+      fixtureStates:[{...f,app:'Ledger'}]},
+    {schema:'shared-ui-fixture-manifest-v1',fixtureOnly:true,
+      sharedBundle:{version:'1.10.2'},ownership:'synthetic only',
+      entries:[{...f,app:'Delivery'}]},
+    [{...f,app:'portal',launchUrl:f.baseUrl+'/fixture-login?mode=rich&next=%2Ftools'}]
+  ];
+  for(const [i,document] of wrappers.entries()){
+    const entries=validateManifest(document,'legacy-'+i);
+    assert.equal(entries.length,1);
+    assert.equal(entries[0].status,'prepared');
+    assert.equal(entries[0].evidence.result,'unrun');
+    assert.match(entries[0].isolation,/not explicitly attested/);
+  }
+  const combined=collectManifests(wrappers.map((document,i)=>({document,source:'legacy-'+i})));
+  assert.equal(combined.length,4);
+  assert.ok(renderIndex(combined).includes('Example Home'));
+  assert.ok(renderIndex(combined).includes('fixture-login'));
 });
 
 test('only real observed execution receipts can label a fixture verified',()=>{
