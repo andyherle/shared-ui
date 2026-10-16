@@ -21,15 +21,14 @@
     </header>
     <header id="fixture-workspace-header" class="ui-toolbar ui-header ui-chrome" aria-label="Fixture workspace header">
       <a class="ui-action ui-back" href="#control-fixture" data-ui-icon="arrow-left" aria-label="Return to library">Library</a>
-      <div class="lab-workspace-identity ui-stack ui-chrome"><strong>Motion study</strong><span id="fixture-workspace-status" class="ui-status ui-meta" role="status">Live</span></div>
-      <nav class="ui-actions ui-inline" data-ui-label="always" aria-label="Fixture workspace commands">
-        <button type="button" data-ui-icon="sliders" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-toast="Presentation opened">Present</button>
-        <button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button>
-        <details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details>
+      <div class="lab-workspace-identity ui-actions ui-inline ui-chrome"><strong>Motion study</strong><span id="fixture-workspace-status" class="ui-status ui-meta" role="status">Live</span></div>
+      <nav class="ui-actions ui-inline" aria-label="Fixture workspace commands">
+        <div class="ui-actions ui-inline" role="group" aria-label="Workspace views"><button type="button" data-ui-icon="sliders" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-toast="Presentation opened">Present</button></div>
+        <div class="ui-actions ui-inline" role="group" aria-label="Save workspace"><button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button><details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details></div>
       </nav>
     </header>
     <div class="ui-actions"><label class="ui-field"><span class="ui-label">Workspace state</span><select id="fixture-state" aria-label="Fixture workspace state"><option value="live">Live</option><option value="dirty">Unsaved changes</option><option value="saving">Saving</option><option value="saved">Saved</option><option value="error">Save failed</option></select></label><output id="fixture-layout-check" class="ui-status" role="status"></output></div>
-    <div class="ui-actions" data-ui-label="always" aria-label="Fixture date range">
+    <div class="lab-fixture-date-range" aria-label="Fixture date range">
       <label class="ui-field"><span class="ui-label">From</span><input type="date" aria-label="Fixture from date"></label>
       <label class="ui-field"><span class="ui-label">To</span><input type="date" value="2026-10-15" aria-label="Fixture to date"></label>
       <label class="ui-field"><span class="ui-label">Time</span><input type="time" value="13:30" aria-label="Fixture time"></label>
@@ -71,9 +70,17 @@
         <form class="ui-actions ui-inline" id="fixture-task-form"><button type="submit" data-ui-variant="primary" data-ui-icon="check" data-ui-label="always">Approve</button><button type="submit" data-ui-icon="close" data-ui-label="always">Decline</button></form>
 
         <details class="ui-disclosure"><summary data-ui-icon="message">Reply</summary><form class="ui-disclosure-body ui-stack" id="fixture-reply-form"><label class="ui-field"><input aria-label="Fixture reply" placeholder="Your reply" required></label><div class="ui-actions"><button type="submit" data-ui-icon="send" data-ui-variant="primary">Send reply</button></div></form></details>
-        <details class="ui-disclosure"><summary data-ui-icon="info">Why this?</summary><p class="ui-disclosure-body">The next revision is ready to review.</p></details>
       </div>
       <p class="ui-status" id="fixture-task-status" role="status"></p>
+    </article>
+    <article class="ui-card ui-pad ui-chrome ui-stack" aria-label="Review a file">
+      <h3 class="ui-section-title">Review a file</h3><p class="ui-meta">Awaiting your review</p>
+      <form class="ui-actions ui-inline" id="fixture-file-review"><button type="submit" data-ui-variant="primary" data-ui-icon="check" data-ui-label="always">Approve</button><button type="button" data-ui-icon="close" data-ui-label="always">Decline</button></form>
+      <div class="ui-actions ui-fill" data-ui-label="always" aria-label="File and details">
+        <a class="ui-action" data-ui-label="always" href="#control-fixture" aria-label="Open example invoice with a very long file name.pdf" title="Example invoice with a very long file name.pdf"><svg class="ui-icon" aria-hidden="true"><use href="./v1/icons.svg#ui-file"/></svg><span class="ui-label ui-truncate">Example invoice with a very long file name.pdf</span></a>
+        <details class="ui-disclosure"><summary data-ui-icon="info">Details</summary><div class="ui-disclosure-body ui-stack"><h4>Why review it?</h4><p>This example keeps the explanation in one panel.</p><label class="ui-field"><span class="ui-label">Link</span><input readonly aria-label="Example file link" value="https://example.test/files/example-invoice.pdf"></label></div></details>
+      </div>
+      <nav class="ui-actions" data-ui-layout="bar" aria-label="Example review navigation"><div class="ui-actions ui-inline" role="group" aria-label="Move between examples"><a class="ui-action" href="#control-fixture" data-ui-icon="arrow-left">Previous</a><a class="ui-action" href="#control-fixture" data-ui-icon="arrow-right">Next</a></div><span class="ui-meta">2 of 3</span></nav>
     </article>
     <form class="ui-card ui-pad ui-stack" id="fixture-capture-form" aria-label="Fixture capture">
       <label class="ui-field"><input name="text" aria-label="Fixture capture text" placeholder="What’s on your mind?" required></label>
