@@ -18,13 +18,13 @@ test('the desktop page width is one typed, inherited semantic setting in both pa
   }
 });
 
-test('only direct outer page roots receive the width, with container and mobile fallback',()=>{
-  assert.match(controls,/\[data-ui-page-host\] \{ container-type:inline-size; inline-size:100%; min-inline-size:0;/);
-  assert.match(controls,/\[data-ui-page-host\] > \[data-ui-page-root\] \{ inline-size:min\(var\(--ui-page-width\),calc\(100% - 32px\),96rem\)/);
-  assert.match(controls,/@container \(max-width:48rem\)/);
-  assert.match(controls,/@media \(max-width:48rem\)/);
-  assert.match(controls,/\[data-ui-page-root\]\[data-ui-page-mode=full\]/);
-  assert.doesNotMatch(controls,/\[data-ui-page-root\] \[data-ui-page-root\]/);
+test('app-owned layout demonstrates one outer root with mobile and workspace exceptions',()=>{
+  const layout=source('src/lab.css');
+  assert.match(layout,/\\[data-ui-page-host\\] \\{ container-type:inline-size; inline-size:100%; min-inline-size:0;/);
+  assert.match(layout,/\\[data-ui-page-host\\] > \\[data-ui-page-root\\] \\{ inline-size:min\\(var\\(--ui-page-width\\),calc\\(100% - 32px\\),96rem\\)/);
+  assert.match(layout,/@container \\(max-width:48rem\\)/);
+  assert.match(layout,/@media \\(max-width:48rem\\)/);
+  assert.match(layout,/\\[data-ui-page-root\\]\\[data-ui-page-mode=full\\]/);
   const html=source('src/index.html');
   assert.match(html,/id="page-width"/);
   assert.match(html,/data-ui-page-mode="full"/);
