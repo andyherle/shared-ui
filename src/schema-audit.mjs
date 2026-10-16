@@ -96,6 +96,10 @@ export function auditSchemaSnapshot(snapshot) {
     const contract = AUDIT_CONTRACTS.find(item => item.id === role);
     if (contract.tags && !contract.tags.includes(element.tag))
       add(element, role, `${role}-native-tag`, `Native ${contract.tags.join(', ')} element.`, element.tag);
+    for (const attribute of contract.requiredAttributes || []) {
+      if (!Object.hasOwn(element.attributes, attribute))
+        add(element, role, `${role}-required-attribute`, `${attribute} must be present.`, 'missing');
+    }
     for (const [attribute, values] of Object.entries(contract.attributes || {})) {
       if (Object.hasOwn(element.attributes, attribute) && !values.includes(element.attributes[attribute]))
         add(element, role, `${role}-variant`, `${attribute} absent or one of: ${values.join(', ')}.`, element.attributes[attribute]);
