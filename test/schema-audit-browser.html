@@ -6,9 +6,9 @@ import { collectSchemaSnapshot, auditSchemaSnapshot } from '../src/schema-audit.
 const assert = (value, message) => { if (!value) throw new Error(message); };
 const root = document.querySelector('#fixture');
 try {
-  root.innerHTML = `<button id="save" class="ui-action" data-ui-variant="primary"><svg class="ui-icon" aria-hidden="true"></svg><span class="ui-label">Private customer name</span></button>
+  root.innerHTML = `<button id="save" class="ui-action" data-ui-variant="quiet"><svg class="ui-icon" aria-hidden="true"></svg><span class="ui-label">Private customer name</span></button>
     <label class="ui-field"><input id="entry" value="PRIVATE-FORM-VALUE"></label>
-    <article class="ui-popout"><header>Title</header><section data-ui-popout-body>Body</section><footer>Actions</footer></article>
+    <form class="ui-popout"><header>Title</header><section data-ui-popout-body>Body</section><footer>Actions</footer></form>
     <button id="plain">Native CSS-only button</button>`;
   const input = root.querySelector('input'); input.focus(); input.setSelectionRange(2, 5);
   let clicks = 0; root.querySelector('#save').addEventListener('click', () => clicks++);

@@ -1,49 +1,8 @@
 /* Opt-in development tooling. Never bundled into the automatic CSS channel. */
 export const AUDIT_SCHEMA_VERSION = 1;
 const MAX_ELEMENTS = 10000;
-const freeze = value => {
-  if (value && typeof value === 'object') {
-    for (const child of Object.values(value)) freeze(child);
-    Object.freeze(value);
-  }
-  return value;
-};
-
-// Initial structural coverage, NOT a claim to describe the entire UI catalogue.
-// Native unadopted buttons are intentionally valid; CSS-only use is supported.
-export const AUDIT_CONTRACTS = freeze([
-  {
-    id: 'action', selector: '.ui-action', tags: ['button', 'a', 'summary', 'label'],
-    description: 'Adopted native action; app handlers remain owned by the app.',
-    attributes: { 'data-ui-variant': ['primary', 'danger'] },
-    checks: [
-      { id: 'action-label', selector: ':scope > .ui-label', min: 1, max: 1,
-        expected: 'Exactly one direct .ui-label child.' },
-      { id: 'action-icon', selector: ':scope > svg:not(.ui-icon)', min: 0, max: 0,
-        expected: 'Every direct SVG uses .ui-icon.' }
-    ]
-  },
-  {
-    id: 'field', selector: '.ui-field',
-    description: 'Composed field around native input, select or textarea controls.',
-    checks: [
-      { id: 'field-control', selector: 'input,select,textarea', min: 1,
-        expected: 'At least one native input, select or textarea.' }
-    ]
-  },
-  {
-    id: 'popout', selector: '.ui-popout', tags: ['dialog', 'article'],
-    description: 'Bounded overlay or in-page shell with a scrollable body.',
-    checks: [
-      { id: 'popout-header', selector: ':scope > header', min: 1, max: 1,
-        expected: 'Exactly one direct header.' },
-      { id: 'popout-body', selector: ':scope > [data-ui-popout-body]', min: 1, max: 1,
-        expected: 'Exactly one direct [data-ui-popout-body] child.' },
-      { id: 'popout-footer', selector: ':scope > footer', min: 1, max: 1,
-        expected: 'Exactly one direct footer.' }
-    ]
-  }
-]);
+import { AUDIT_CONTRACTS } from './studio/registry.mjs';
+export { AUDIT_CONTRACTS };
 
 function text(value, name, limit = 512) {
   if (typeof value !== 'string' || !value.trim() || value.length > limit)
@@ -128,7 +87,7 @@ export function auditSchemaSnapshot(snapshot) {
   validateSnapshot(snapshot);
   const findings = [];
   const add = (element, component, rule, expected, observed) => {
-    const identity = [snapshot.appId, snapshot.viewId, element.id, rule, observed];
+    const identity = [snapshot.appId, snapshot.viewId, element.id, rule, expected, observed];
     findings.push({ fingerprint: 'ui-schema-v1:' + encodeURIComponent(JSON.stringify(identity)),
       appId: snapshot.appId, viewId: snapshot.viewId, elementId: element.id, component,
       rule, severity: 'warning', evidence: 'dom-structure', expected, observed });

@@ -456,3 +456,17 @@ detail. Load a visible stable shell immediately; async results fill that shell.
 Never move the surrounding table when selection changes or a lightbox opens.
 
 Icon-only information uses native `details.ui-disclosure` with a `summary.ui-action[data-ui-label="hidden"]`, a shared `info` icon and an accessible name. The hidden-label summary omits the chevron and keeps the full shared control target. Use `data-ui-variant="quiet"` for a soft information or dismiss symbol; the catalogue’s compact reply row demonstrates both.
+
+
+## Studio authoring foundation
+
+Studio development tooling now shares a versioned catalogue registry, typed token
+inventory and a private local document service. It supports revision-checked
+commands, named snapshots, scoped overrides, compatible node swaps/moves,
+comparison and undo through one API and JSON CLI. The runtime and automatic CSS
+channel remain independent. This is the authoring foundation; the visual editor
+and live MCP transport are not implemented.
+
+Read [the foundation API and local walkthrough](docs/STUDIO_FOUNDATION.md) and
+[the Studio implementation direction](docs/STUDIO.md). Run `npm run studio -- --describe` for generated contract discovery, `npm run check` for validation, and
+`npm run studio:browser` for the isolated browser fixture.

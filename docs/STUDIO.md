@@ -1,6 +1,11 @@
 # Shared UI Studio
 
-Status: product direction and first audit foundation, not a shipped editor.
+Status: product direction, registry, token inventory and local authoring foundation; not a shipped editor.
+
+The next foundation increment is implemented in `src/studio/`. See
+[STUDIO_FOUNDATION.md](STUDIO_FOUNDATION.md) for its exact capabilities, command
+contract, private storage, validation and remaining renderer/MCP integration.
+The initial audit implementation described below is now registry-backed.
 
 ## Outcome
 
