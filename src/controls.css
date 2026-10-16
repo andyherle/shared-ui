@@ -159,7 +159,8 @@
   & > :where(input,select):focus-visible { outline:none; }
 }
     .ui-actions:not([data-ui-layout=vertical]) > .ui-field:has(>input:only-child) { flex:1 1 12ch; }
-    :is(.ui-form,.ui-grid) { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--ui-grid-min,14rem)),1fr)); gap:var(--ui-grid-gap,var(--ui-gap)); }
+    :is(.ui-form,.ui-grid) { display:grid; grid-template-columns:repeat(var(--ui-fill,auto-fit),minmax(min(100%,var(--ui-grid-min,14rem)),1fr)); gap:var(--ui-grid-gap,var(--ui-gap)); }
+    [data-ui-grid=fill] { --ui-fill:auto-fill; }
     .ui-form { --ui-grid-min:var(--ui-form-column,24rem); --ui-grid-gap:calc(var(--ui-gap)*2); }
     .ui-grid>* { min-inline-size:0; }
     .ui-form {
