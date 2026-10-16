@@ -458,6 +458,29 @@ Never move the surrounding table when selection changes or a lightbox opens.
 Icon-only information uses native `details.ui-disclosure` with a `summary.ui-action[data-ui-label="hidden"]`, a shared `info` icon and an accessible name. The hidden-label summary omits the chevron and keeps the full shared control target. Use `data-ui-variant="quiet"` for a soft information or dismiss symbol; the catalogue’s compact reply row demonstrates both.
 
 
+## Canonical reusable compositions
+
+Beyond palettes and individual controls, the native
+[review-workspace@1 contract](docs/COMPOSITIONS.md) provides a stable reusable
+panel with named header/toolbar/filters/body/aside/footer slots, real native
+form and event ownership, composable nested instances, container-aware
+standard/split/stack variants and wrap/scroll/priority crowding. Use
+`SharedUI.createComposition('review-workspace', slots, options)` from a
+**bundled application runtime**, not copied app markup/CSS. A
+`setLayout` switch retains the original nodes, focus and unsaved values.
+Typed `--ui-composition-gap` and `--ui-composition-aside` values are
+shared across both packs; intentional per-instance deviations require a
+reason and expose an audit marker. Studio registers this as an authorable
+node with a native keyed preview and explicit override provenance;
+source-level structural drift is warning-only.
+
+From this source checkout, `npm run dev` serves the local-only
+[interactive synthetic composition review](http://127.0.0.1:41910/#compositions).
+No consumer receives its new runtime helper until a normal explicit
+bundle upgrade; compatible CSS refresh alone cannot install JavaScript.
+The source/CI checks are separate from actual multi-app browser acceptance.
+See the contract for 390px/narrow/full and real-app fixture requirements.
+
 ## Shared UI Studio
 
 Studio development tooling shares a versioned catalogue registry, typed token

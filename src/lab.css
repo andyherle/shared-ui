@@ -27,3 +27,12 @@
 }
 
 @layer app{.lab-file-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:calc(2 * var(--ui-gap));max-width:640px}.lab-file-preview{inline-size:100%;aspect-ratio:4/3;overflow:hidden;display:grid;place-items:center}.lab-file-preview img{inline-size:100%;block-size:100%;object-fit:contain}.lab-file-preview>span{display:block;text-align:start}.lab-file-grid .ui-item{inline-size:100%;justify-content:start;min-inline-size:0}}
+
+@layer app {
+  .lab-comp-controls { margin-block:calc(var(--ui-gap) * 2); }
+  .lab-comp-shell { inline-size:100%; min-inline-size:0; max-inline-size:100%; overflow-x:auto; padding-block:var(--ui-gap); }
+  .lab-comp-host { inline-size:100%; max-inline-size:100%; min-inline-size:0; }
+  .lab-comp-host > .ui-composition { inline-size:100%; }
+  .lab-comp-host .ui-composition-body textarea { inline-size:100%; min-inline-size:0; }
+  .lab-comp-host .ui-composition-header { white-space:normal; overflow-wrap:anywhere; }
+}

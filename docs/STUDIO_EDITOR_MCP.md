@@ -120,7 +120,7 @@ through the same revision-checked commands.
 
 ## Editing workflow
 
-- Search all 59 registered components. Twenty have native document renderers;
+- Search all 60 registered components. Twenty-one have native document renderers;
   other entries explain their availability and link to the existing catalogue.
 - Select through the preview or Structure list. Edit declared props, typed token
   values/aliases, layout, and registered binding references in the inspector.
@@ -225,7 +225,7 @@ npm run studio:browser
 Node coverage includes HTTP authentication/origin/path/body boundaries, read-only
 permissions, revisions, atomic edits, deletion/undo, binding validation, private
 storage, downstream packaging, and official SDK clients using both transports.
-The renderer fixture exercises all 20 renderers in two simultaneous views, both
+The renderer fixture exercises all 21 renderers in two simultaneous views, both
 packs/themes, and 390px/1280px widths, preserving native focus/value/selection,
 checking scoped paint, inert content/navigation and cleanup.
 

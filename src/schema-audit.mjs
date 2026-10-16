@@ -40,6 +40,10 @@ export function collectSchemaSnapshot(scope, { appId, viewId } = {}) {
     const contracts = AUDIT_CONTRACTS.filter(contract => element.matches(contract.selector));
     const attributes = {}, counts = {};
     for (const contract of contracts) {
+      // Instance identity is private app state: retain its presence only, never its value.
+      for (const attribute of contract.requiredAttributes || [])
+        if (!Object.hasOwn(contract.attributes || {}, attribute) && element.hasAttribute(attribute))
+          attributes[attribute] = 'present';
       for (const attribute of Object.keys(contract.attributes || {})) {
         if (element.hasAttribute(attribute)) attributes[attribute] = element.getAttribute(attribute).slice(0, 128);
       }
@@ -96,6 +100,10 @@ export function auditSchemaSnapshot(snapshot) {
     const contract = AUDIT_CONTRACTS.find(item => item.id === role);
     if (contract.tags && !contract.tags.includes(element.tag))
       add(element, role, `${role}-native-tag`, `Native ${contract.tags.join(', ')} element.`, element.tag);
+    for (const attribute of contract.requiredAttributes || []) {
+      if (!Object.hasOwn(element.attributes, attribute))
+        add(element, role, `${role}-required-attribute`, `${attribute} must be present.`, 'missing');
+    }
     for (const [attribute, values] of Object.entries(contract.attributes || {})) {
       if (Object.hasOwn(element.attributes, attribute) && !values.includes(element.attributes[attribute]))
         add(element, role, `${role}-variant`, `${attribute} absent or one of: ${values.join(', ')}.`, element.attributes[attribute]);

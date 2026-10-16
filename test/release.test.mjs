@@ -18,7 +18,7 @@ test('both packs use the same controls and distinct light/dark palettes',()=>{
  for(let level=1;level<=6;level++)assert.ok(css.includes(`--ui-h${level}:`));
  assert.ok(css.includes('@layer app,ui.tokens,ui.controls,ui.prose;'));
  assert.doesNotMatch(css,/@import|url\s*\(/i);
- assert.ok(Buffer.byteLength(css)<=32768);
+ assert.ok(Buffer.byteLength(css)<=36864);
 });
 
 test('compact CSS preserves strings, descendant selectors and calc arithmetic',()=>{
