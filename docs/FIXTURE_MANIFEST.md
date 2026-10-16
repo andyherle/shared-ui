@@ -63,8 +63,9 @@ private code in the public manifest example or coordination hub.
 
 Existing app agents began fixture work before this offline generator was
 implemented. For their **prepared-only** manifests the generator recognizes
-four existing wrappers without copying their private data to shared-ui:
-`{schemaVersion:1,fixtures:[...]}` (Home), `{schemaVersion:1,fixtureStates:[...]}`
+five existing wrappers without copying their private data to shared-ui:
+`{schemaVersion:1,fixtures:[...]}` (Home), `{version:1,fixtures:[...]}`
+(StaticRef's gallery/Canvas), `{schemaVersion:1,fixtureStates:[...]}`
 (Ledger), `{schema:"shared-ui-fixture-manifest-v1",fixtureOnly:true,entries:[...]}`
 (Delivery), and a bare JSON array of fixture entries (Portal's test-only
 `/fixture/manifest.json` endpoint). For these manifests it also accepts:
