@@ -40,15 +40,17 @@ Required fields per fixture are `id`, `app`, `repository`, `ref`,
 `command`, `baseUrl`, `route`, `state`, `expectedInteraction`,
 `backendAdapter`, `reset`, `sourceKind`, `mockOnly`,
 `productionWritesDisabled`, `status` and `evidence`. Stable IDs use
-lowercase hyphenated ASCII; `repository` is owner/repo. Each app should have
-one deterministic one-command launch and reset procedure shared by all its
-entries. If it runs multiple views, the launch command should expose all of
-them. Local-only base URLs must use an explicit port and `http` or `https`
+lowercase hyphenated ASCII; `repository` is owner/repo. Each launch profile should have one deterministic command and reset shared by
+all its routes. One app can expose more than one launch profile for separate
+style packs or fixture servers. Local-only base URLs must use an explicit port and `http` or `https`
 on `localhost`, `127.0.0.1` or `[::1]`. Direct routes begin with
 `/` and may include query and fragment. External origins, credentialed URLs,
 path traversal and unrecognized keys are rejected by the index generator.
 `sourceKind` is `real-app` for consumer fixtures or
-`shared-ui-catalogue` for the generic sample.
+`shared-ui-catalogue` for the generic sample. Apps with genuinely separate
+Postvisual and Personal fixture servers may declare multiple launch profiles;
+the index groups by `app + baseUrl + command` and requires a consistent
+reset and adapter **within** each profile.
 
 `productionWritesDisabled: true` and `mockOnly: true` are required. Those
 declarations **do not enforce isolation** on a running application: the owner
@@ -60,7 +62,12 @@ private code in the public manifest example or coordination hub.
 ## Compatibility with the fleet's initial CONTRACT v1
 
 Existing app agents began fixture work before this offline generator was
-implemented. For their **prepared-only** manifests the generator accepts:
+implemented. For their **prepared-only** manifests the generator recognizes
+four existing wrappers without copying their private data to shared-ui:
+`{schemaVersion:1,fixtures:[...]}` (Home), `{schemaVersion:1,fixtureStates:[...]}`
+(Ledger), `{schema:"shared-ui-fixture-manifest-v1",fixtureOnly:true,entries:[...]}`
+(Delivery), and a bare JSON array of fixture entries (Portal's test-only
+`/fixture/manifest.json` endpoint). For these manifests it also accepts:
 - A human-readable app label (for example `Example Home`), not only a slug.
 - Existing `status: "prepared-unrun"`, normalized to **prepared**, never
   called verified.
