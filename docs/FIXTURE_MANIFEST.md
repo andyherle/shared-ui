@@ -57,6 +57,27 @@ live record updates, and add regression tests proving production state cannot
 change. Do not include credentials, live project data, unredacted logs or
 private code in the public manifest example or coordination hub.
 
+## Compatibility with the fleet's initial CONTRACT v1
+
+Existing app agents began fixture work before this offline generator was
+implemented. For their **prepared-only** manifests the generator accepts:
+- A human-readable app label (for example `Example Home`), not only a slug.
+- Existing `status: "prepared-unrun"`, normalized to **prepared**, never
+  called verified.
+- Legacy `evidence` text, displayed as an **unrun** human description.
+- An optional top-level `description` and optional same-loopback-origin
+  `launchUrl` for fixtures with a test-only login gate.
+- Missing new `sourceKind`, `mockOnly`, `productionWritesDisabled`
+  assertions: they are marked **legacy, isolation not explicitly attested**
+  and **cannot** be labelled verified until the owner supplies the flags and
+  exact passed runtime receipt. An explicit false is never accepted.
+
+Compatibility does **not** relax loopback URL restrictions, encoded route
+traversal checks, output locality, HTML escaping or the prohibition on
+claiming browser verification without evidence. No private app manifest is
+checked into this public repository. Owners should add explicit attestations
+in their next private PR without rewriting the existing 18/43+ deep links.
+
 ## Coverage every consumer is expected to deliver
 
 Each consumer should deep-link directly into its own **actual** pages and
