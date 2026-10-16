@@ -86,12 +86,13 @@ test('imports coordinator CONTRACT v1 prepared manifests without inventing verif
   assert.throws(()=>validateManifest(unsafe),/same-origin/);
 });
 
-test('normalizes Home, Ledger, Delivery and Portal v1 wrapper formats',()=>{
+test('normalizes Home, Canvas, Ledger, Delivery and Portal v1 wrapper formats',()=>{
   const f=structuredClone(copy().fixtures[0]);
   f.app='Example Home';f.status='prepared-unrun';f.evidence='Source only, runtime unrun';
   delete f.sourceKind;delete f.mockOnly;delete f.productionWritesDisabled;
   const wrappers=[
     {schemaVersion:1,description:'Synthetic Home',fixtures:[f]},
+    {version:1,source:'Synthetic Canvas fixture',fixtures:[{...f,app:'Example Canvas',status:'prepared/unrun'}]},
     {schemaVersion:1,app:'Ledger',repository:'example/ledger',ref:'fixture',
       command:f.command,baseUrl:f.baseUrl,reset:f.reset,scope:'synthetic',
       fixtureStates:[{...f,app:'Ledger'}]},
@@ -108,7 +109,7 @@ test('normalizes Home, Ledger, Delivery and Portal v1 wrapper formats',()=>{
     assert.match(entries[0].isolation,/not explicitly attested/);
   }
   const combined=collectManifests(wrappers.map((document,i)=>({document,source:'legacy-'+i})));
-  assert.equal(combined.length,4);
+  assert.equal(combined.length,5);
   assert.ok(renderIndex(combined).includes('Example Home'));
   assert.ok(renderIndex(combined).includes('fixture-login'));
 });
