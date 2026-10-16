@@ -2,7 +2,7 @@
 
 One native HTML control language for Aura, StaticRef and Portal. Postvisual follows StaticRef's neutral media-first interface; Personal follows Portal. Theme, control density and application layout are separate choices.
 
-The package has no runtime dependencies. Shared CSS has a 32 KB raw budget. Build and validation use Node's standard library:
+The package has no runtime dependencies. Shared CSS has a 32 KiB raw budget. Build and validation use Node's standard library:
 
 ```sh
 npm run check
@@ -235,7 +235,9 @@ The **Control fixture** demonstrates the same markup in both packs: right-aligne
 
 ## Aligned native forms and inline toggles
 
-Use `.ui-form` for a responsive field grid. Each direct native label occupies three shared subgrid tracks: caption, control, and optional description. Controls align at the top even beside multiline descriptions or taller native multi-selects. `--ui-form-column` sets the minimum preferred column width (24rem by default); `--ui-gap` controls the rhythm. Put full-width placement in app CSS.
+Use `.ui-grid` for content-independent panels and cards. It creates as many columns as fit, then wraps without a page breakpoint. `--ui-grid-min` sets the preferred minimum (14rem by default), and `--ui-grid-gap` sets spacing. Children may contain any native content; the grid and its items can shrink without horizontal overflow. Use `.ui-split` for an aside and primary region: mark the primary child `data-ui-main`, in either DOM order. Its flex tracks wrap into full rows when they cannot both fit; `--ui-aside` and `--ui-main` set their preferred widths. Use `.ui-stack` inside a card, `.ui-actions` for commands, and `.ui-popout` when a panel needs a visible header and footer around scrolling content. The catalogue's Adaptive panel layout fixture shows mixed content at phone, panel and desktop widths.
+
+Use `.ui-form` for a responsive field grid. It shares the grid sizing variables, with a 24rem minimum and twice the normal gap by default. Each direct native label occupies three shared subgrid tracks: caption, control, and optional description. Controls align at the top even beside multiline descriptions or taller native multi-selects. Put full-width placement in app CSS.
 
 `label.ui-toggle.ui-action` is the inline two-state action subtype. Compose it with a decorative shared SVG, `.ui-label`, and a native `input[type=checkbox][role=switch]` at the end. Give the input an accessible name that remains available when captions compact. Name/value/checked/disabled retain native form behavior without JavaScript. The small trailing switch uses `--ui-switch-width`, `--ui-switch-height`, `--ui-switch-thumb` and `--ui-switch-inset`; it shares action font, padding, height, focus, pressed paint and group fitting. `.ui-switch` is the standalone larger switch subtype. Both packs expose both types with identical DOM and behavior.
 
@@ -386,19 +388,17 @@ Control fixture includes an empty From date, a populated To date and a time.
 
 ### Adjustable columns and stable lightboxes
 
-`SharedUI.createColumnManager(table, details, {order, hidden, pinFirst,
-onBeforeChange, onChange, sprite})` adds a native column chooser to a sheet.
-Give every header a unique `data-column` ID and provide a sibling
-`details.ui-disclosure` with a `summary` and an empty direct
-`.ui-disclosure-body`. Every table row needs one cell per header, without spans.
-The chooser uses native checkboxes to show or hide columns and shared actions to
-move them left or right. Its `state` returns `{order, hidden}`; the application
-may save and restore that state. `pinFirst` keeps the identifying column visible
-and first. The chooser moves existing cells, preserving their links and handlers.
-`reset()` restores the source order and all columns; `dispose()` restores the
-original table and releases listeners. Call `dispose()` on an active column
-resizer in `onBeforeChange`, then create a new resizer in `onChange` using the
-visible headers. The catalogue's Spreadsheet scan demonstrates both controls.
+`SharedUI.createColumnDrag(table, {order, pinFirst, onBeforeChange, onChange})`
+lets someone drag a native column heading to reorder the sheet. Give each
+heading a unique `data-column` ID; every row needs one cell per heading, without
+spans. A focused heading moves with Option + Left/Right, while a resize handle
+retains its own pointer and keyboard behavior. The returned `state` is `{order}`
+for application persistence. `pinFirst` keeps an identifying column in place.
+The helper moves existing cells, preserving their links and handlers. `reset()`
+restores source order; `dispose()` restores the original table, attributes and
+listeners. Call `dispose()` on an active column resizer in `onBeforeChange`,
+then create a new resizer in `onChange`. The catalogue's Spreadsheet scan
+demonstrates both direct gestures without a separate column editor.
 
 `SharedUI.createColumnResize(table, {min:72, max:1200, widths, onChange})`
 enhances a native sheet with one header per column and no existing colgroup.
@@ -408,8 +408,8 @@ moving the table edge. Use Left/Right (Shift for one pixel), Home/End or
 double-click to reset a boundary. Escape or pointer cancellation restores the
 starting widths. Narrow containers scroll when minimum column widths require it.
 Applications own saved proportions through `onChange(widths)`; validate them per
-view. Hidden columns are excluded from the width budget. `reset()` restores
-initial proportions; `dispose()` restores the native table.
+view. `reset()` restores initial proportions; `dispose()` restores the native
+table.
 
 For dense record or review information, use native `details.ui-section` with
 `summary` containing an `h3` or `h4` `.ui-section-title` and a short `.ui-meta`

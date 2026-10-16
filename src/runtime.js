@@ -212,63 +212,90 @@
     setValue(value);out.addEventListener('click',decrease);into.addEventListener('click',increase);view?.addEventListener('pagehide',pagehide);
     return {get value(){return current;},setValue,dispose};
   }
-  function createColumnManager(table,details,{order=[],hidden=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{},sprite='./shared-ui/icons.svg'}={}){
-    const header=table?.tHead?.rows?.[0],body=details?.querySelector?.(':scope > .ui-disclosure-body');
-    if(!header||!body||details.tagName!=='DETAILS')throw new TypeError('A simple table and native column disclosure are required');
+  function createColumnDrag(table,{order=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{}}={}){
+    const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
+    if(!header||!view)throw new TypeError('A native table with one header row is required');
     const heads=[...header.cells],ids=heads.map(cell=>cell.dataset.column);
     if(!ids.length||ids.some(id=>!id||!/^[a-z][a-z0-9-]*$/.test(id))||new Set(ids).size!==ids.length)throw new TypeError('Each column needs a unique data-column ID');
     const rows=[header,...[...table.tBodies].flatMap(section=>[...section.rows]),...(table.tFoot?[...table.tFoot.rows]:[])];
-    if(rows.some(row=>row.cells.length!==ids.length||[...row.cells].some(cell=>cell.colSpan>1||cell.rowSpan>1)))throw new TypeError('Column choices require one cell per column in every row');
-    const cells=rows.map(row=>new Map(ids.map((id,index)=>[id,row.cells[index]])));
-    const originalVisibility=rows.map((_row,index)=>new Map(ids.map(id=>[id,cells[index].get(id).hidden])));
-    const original=[...ids],validOrder=value=>{const list=Array.isArray(value)?value:[];return [...new Set(list.filter(id=>ids.includes(id))),...ids.filter(id=>!list.includes(id))];};
-    let current=validOrder(order),concealed=new Set((Array.isArray(hidden)?hidden:[]).filter(id=>ids.includes(id))),disposed=false;
-    if(pinFirst){current=[ids[0],...current.filter(id=>id!==ids[0])];concealed.delete(ids[0]);}
-    if(concealed.size===ids.length)concealed.delete(current[0]);
-    const label=new Map(ids.map((id,index)=>[id,heads[index].textContent.trim()]));
-    function apply(){
-      for(let i=0;i<rows.length;i++){
-        rows[i].append(...current.map(id=>cells[i].get(id)));
-        for(const id of ids)cells[i].get(id).hidden=concealed.has(id);
+    if(rows.some(row=>row.cells.length!==ids.length||[...row.cells].some(cell=>cell.colSpan>1||cell.rowSpan>1)))throw new TypeError('Column dragging requires one cell per column in every row');
+    const cells=rows.map(row=>new Map(ids.map((id,index)=>[id,row.cells[index]]))),original=[...ids];
+    const saved=Array.isArray(order)?order:[];
+    let current=[...new Set(saved.filter(id=>ids.includes(id))),...ids.filter(id=>!saved.includes(id))],drag=null,disposed=false;
+    if(pinFirst)current=[ids[0],...current.filter(id=>id!==ids[0])];
+    const prior=heads.map(head=>({tabindex:head.getAttribute('tabindex'),title:head.getAttribute('title'),keys:head.getAttribute('aria-keyshortcuts'),touch:head.style.touchAction}));
+    const removers=[];
+    function on(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
+    function apply(){for(const [index,row] of rows.entries())row.append(...current.map(id=>cells[index].get(id)));}
+    function change(next,id){
+      if(next.every((value,index)=>value===current[index]))return;
+      onBeforeChange();current=next;apply();onChange({order:[...current]});
+      if(id)cells[0].get(id).focus?.({preventScroll:true});
+    }
+    function reorder(id,slot){
+      const next=current.filter(value=>value!==id);slot=Math.max(pinFirst?1:0,Math.min(next.length,slot));next.splice(slot,0,id);change(next,id);
+    }
+    function slotAt(x,id){
+      const rtl=view.getComputedStyle(table).direction==='rtl',rest=current.filter(value=>value!==id);
+      let slot=0;
+      for(const value of rest){const rect=cells[0].get(value).getBoundingClientRect(),middle=rect.left+rect.width/2;if(rtl?x<middle:x>middle)slot++;}
+      return Math.max(pinFirst?1:0,slot);
+    }
+    function clearMarker(){for(const head of heads)delete head.dataset.uiColumnDrop;}
+    function mark(slot,id){
+      clearMarker();const rest=current.filter(value=>value!==id),target=rest[Math.min(slot,rest.length-1)];
+      if(target)cells[0].get(target).dataset.uiColumnDrop=slot===rest.length?'after':'before';
+    }
+    function finish(cancel){
+      if(!drag)return;const active=drag;drag=null;
+      try{active.head.releasePointerCapture?.(active.pointerId);}catch(_){}
+      delete active.head.dataset.uiColumnDragging;delete table.dataset.uiColumnDragging;clearMarker();
+      if(!cancel&&active.moving)reorder(active.id,active.slot);
+    }
+    function down(event){
+      const head=event.currentTarget,id=head.dataset.column;
+      if(disposed||event.button!==0||pinFirst&&id===ids[0]||event.target.closest?.('button,a,input,select,textarea,[role=separator]'))return;
+      finish(true);drag={head,id,pointerId:event.pointerId,x:event.clientX,y:event.clientY,slot:current.indexOf(id),moving:false};
+      head.setPointerCapture?.(event.pointerId);
+    }
+    function move(event){
+      if(!drag||event.pointerId!==drag.pointerId)return;
+      if(!drag.moving&&Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<6)return;
+      drag.moving=true;drag.head.dataset.uiColumnDragging='';table.dataset.uiColumnDragging='true';event.preventDefault?.();
+      const port=table.closest?.('.ui-table-scroll');
+      if(port&&port.scrollWidth>port.clientWidth){const rect=port.getBoundingClientRect();if(event.clientX<rect.left+24)port.scrollLeft-=18;else if(event.clientX>rect.right-24)port.scrollLeft+=18;}
+      drag.slot=slotAt(event.clientX,drag.id);mark(drag.slot,drag.id);
+    }
+    function key(event){
+      const head=event.currentTarget,id=head.dataset.column;
+      if(disposed||event.target!==head||!event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight'].includes(event.key))return;
+      event.preventDefault();event.stopPropagation();
+      const rtl=view.getComputedStyle(table).direction==='rtl',step=(event.key==='ArrowRight'?1:-1)*(rtl?-1:1),index=current.indexOf(id),other=index+step;
+      if(index<(pinFirst?1:0)||other<(pinFirst?1:0)||other>=current.length)return;
+      const next=[...current];[next[index],next[other]]=[next[other],next[index]];change(next,id);
+    }
+    apply();
+    for(const [index,head] of heads.entries()){
+      if(pinFirst&&index===0)continue;
+      head.dataset.uiColumnDrag='';head.style.touchAction='none';
+      if(!head.hasAttribute('tabindex'))head.setAttribute('tabindex','0');
+      head.setAttribute('aria-keyshortcuts','Alt+ArrowLeft Alt+ArrowRight');
+      head.title=(prior[index].title?prior[index].title+' · ':'')+'Drag to reorder · Option + Left/Right to move';
+      on(head,'pointerdown',down);on(head,'keydown',key);
+    }
+    on(doc,'pointermove',move);on(doc,'pointerup',event=>{if(drag?.pointerId===event.pointerId)finish(false);});
+    on(doc,'pointercancel',event=>{if(drag?.pointerId===event.pointerId)finish(true);});
+    on(doc,'visibilitychange',()=>{if(doc.visibilityState==='hidden')finish(true);});
+    on(view,'pagehide',event=>{finish(true);if(!event.persisted)dispose();});
+    function dispose(){
+      if(disposed)return;finish(true);disposed=true;for(const remove of removers)remove();
+      for(const [index,head] of heads.entries()){
+        delete head.dataset.uiColumnDrag;delete head.dataset.uiColumnDrop;delete head.dataset.uiColumnDragging;head.style.touchAction=prior[index].touch;
+        for(const [name,value] of [['tabindex',prior[index].tabindex],['title',prior[index].title],['aria-keyshortcuts',prior[index].keys]])if(value===null)head.removeAttribute(name);else head.setAttribute(name,value);
       }
+      for(const [index,row] of rows.entries())row.append(...original.map(id=>cells[index].get(id)));
     }
-    function render(){
-      const doc=table.ownerDocument,group=doc.createElement('fieldset');group.className='ui-group';
-      const legend=doc.createElement('legend');legend.textContent='Visible columns and order';group.append(legend);
-      for(const [index,id] of current.entries()){
-        const row=doc.createElement('div');row.className='ui-actions';
-        const choice=doc.createElement('label');choice.className='ui-check ui-field';
-        const input=doc.createElement('input');input.type='checkbox';input.checked=!concealed.has(id);input.disabled=pinFirst&&id===ids[0];input.dataset.columnVisible=id;
-        const caption=doc.createElement('span');caption.className='ui-label';caption.textContent=label.get(id);choice.append(input,caption);row.append(choice);
-        for(const [direction,glyph] of [[-1,'arrow-left'],[1,'arrow-right']]){
-          const button=doc.createElement('button');button.type='button';button.dataset.columnMove=id;button.dataset.direction=String(direction);
-          button.disabled=(pinFirst&&index===0)||index+direction< (pinFirst?1:0)||index+direction>=current.length;
-          adoptAction(button,{icon:glyph,label:`Move ${label.get(id)} ${direction<0?'left':'right'}`,iconOnly:true,sprite});row.append(button);
-        }
-        group.append(row);
-      }
-      api.releaseActions?.(body);body.replaceChildren(group);
-      for(const row of group.querySelectorAll('.ui-actions'))api.observeActions?.(row);
-    }
-    function change(nextOrder,nextHidden,focus){
-      onBeforeChange();current=nextOrder;concealed=nextHidden;apply();render();onChange({order:[...current],hidden:[...concealed]});
-      if(focus){const candidates=[...body.querySelectorAll(focus.selector)].filter(item=>item.dataset[focus.key]===focus.id&&!item.disabled);const node=candidates.find(item=>item.dataset.direction===focus.direction)||candidates[0];node?.focus?.({preventScroll:true});}
-    }
-    function checked(event){
-      const id=event.target?.dataset?.columnVisible;if(!id||disposed)return;
-      const next=new Set(concealed);if(event.target.checked)next.delete(id);else next.add(id);
-      if(next.size===ids.length){event.target.checked=true;return;}
-      change([...current],next,{selector:'[data-column-visible]',key:'columnVisible',id});
-    }
-    function moved(event){
-      const button=event.target?.closest?.('button[data-column-move]');if(!button||!body.contains(button)||disposed)return;
-      const id=button.dataset.columnMove,direction=Number(button.dataset.direction),index=current.indexOf(id),other=index+direction;
-      if(index<0||other<(pinFirst?1:0)||other>=current.length)return;
-      const next=[...current];[next[index],next[other]]=[next[other],next[index]];
-      change(next,new Set(concealed),{selector:'[data-column-move]',key:'columnMove',id,direction:button.dataset.direction});
-    }
-    body.addEventListener('change',checked);body.addEventListener('click',moved);apply();render();
-    return {get state(){return {order:[...current],hidden:[...concealed]};},reset(){if(disposed)return;change([...original],new Set(),null);},dispose(){if(disposed)return;disposed=true;body.removeEventListener('change',checked);body.removeEventListener('click',moved);api.releaseActions?.(body);body.replaceChildren();for(let i=0;i<rows.length;i++){rows[i].append(...original.map(id=>cells[i].get(id)));for(const id of ids)cells[i].get(id).hidden=originalVisibility[i].get(id);}}};
+    return {get state(){return {order:[...current]};},reset(){if(!disposed)change([...original],null);},dispose};
   }
   function createColumnResize(table,{min=72,max=1200,widths=[],onChange=()=>{}}={}){
     if(!Number.isFinite(min)||!Number.isFinite(max)||min<24||max<min)throw new TypeError('Column resizing requires finite positive bounds');
@@ -325,7 +352,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.9.1',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.10.0',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

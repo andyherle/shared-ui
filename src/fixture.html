@@ -7,11 +7,8 @@
   </div>
   <div id="fixture-container" class="lab-fixture ui-stack ui-container">
     <header class="ui-toolbar ui-header ui-chrome" aria-label="Fixture gallery header">
-      <nav class="ui-actions ui-inline" aria-label="Fixture app navigation">
+      <div class="ui-actions ui-inline" aria-label="Fixture gallery controls">
         <a class="ui-action ui-icon-button ui-back" href="#foundations" data-ui-label="hidden" aria-label="Home" title="Return to launcher"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><use href="./v1/icons.svg#ui-home"/></svg><span class="ui-label">Home</span></a>
-        <span class="ui-meta">526 media</span>
-      </nav>
-      <div class="ui-actions ui-inline" aria-label="Fixture header commands">
         <div id="fixture-zoom" class="ui-actions ui-inline" role="group" aria-label="Gallery tile size">
           <button type="button" data-ui-zoom="out" aria-label="Smaller tiles">−</button><button type="button" data-ui-zoom="in" aria-label="Larger tiles">+</button>
           <output data-ui-zoom="value" class="ui-sr-only" aria-live="polite">220 px</output>
@@ -21,10 +18,13 @@
       </div>
     </header>
     <header id="fixture-workspace-header" class="ui-toolbar ui-header ui-chrome" aria-label="Fixture workspace header">
-      <a class="ui-action ui-back" href="#control-fixture" data-ui-icon="arrow-left" aria-label="Return to library">Library</a>
-      <div class="lab-workspace-identity ui-actions ui-inline ui-chrome"><strong>Motion study</strong><span id="fixture-workspace-status" class="ui-status ui-meta" role="status">Live</span></div>
       <nav class="ui-actions ui-inline" aria-label="Fixture workspace commands">
-        <button type="button" data-ui-icon="sliders" data-ui-label="hidden" aria-label="Controls" title="Controls" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-ui-label="hidden" aria-label="Present" title="Present" data-toast="Presentation opened">Present</button><button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button><details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details>
+        <a class="ui-action ui-icon-button ui-back" href="#control-fixture" data-ui-icon="arrow-left" data-ui-label="hidden" aria-label="Return to library" title="Return to library">Library</a>
+        <strong class="ui-section-title" data-ui-header-context>Motion study</strong>
+        <span id="fixture-workspace-status" class="ui-status ui-tag" data-state="success" role="status">Live</span>
+        <details class="ui-disclosure ui-overflow" data-ui-priority="0"><summary class="ui-action" data-ui-icon="sliders" data-ui-label="hidden" aria-label="Workspace tools" title="Workspace tools">Tools</summary><div class="ui-actions ui-disclosure-body"><button type="button" data-ui-icon="sliders" data-ui-label="hidden" aria-label="Controls" title="Controls" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-ui-label="hidden" aria-label="Present" title="Present" data-toast="Presentation opened">Present</button></div></details>
+        <button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button>
+        <details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details>
       </nav>
     </header>
     <nav class="ui-actions ui-tabs" data-ui-layout="bar" aria-label="Fixture accounting views"><a class="ui-action" data-ui-icon="list" href="#control-fixture" aria-current="page">Activity</a><a class="ui-action" data-ui-icon="columns" href="#control-fixture">Ledger</a><a class="ui-action" data-ui-icon="file" href="#control-fixture">Invoices</a><a class="ui-action" data-ui-icon="vault" href="#control-fixture">Balances</a><a class="ui-action" data-ui-icon="chart" href="#control-fixture">Position</a><a class="ui-action" data-ui-icon="search" href="#control-fixture">Review</a><a class="ui-action" data-ui-icon="receipt" href="#control-fixture">Records</a><a class="ui-action" data-ui-icon="check" href="#control-fixture">Reconcile</a></nav>
@@ -87,6 +87,19 @@
       <details class="ui-section"><summary><h4 class="ui-section-title">Document</h4><p class="ui-meta">1 PDF · Example invoice.pdf</p></summary><div class="ui-actions ui-fill"><a class="ui-action" data-ui-icon="file" data-ui-label="always" href="#control-fixture">Open Example invoice.pdf</a><a class="ui-action" data-ui-icon="download" href="#control-fixture" aria-label="Download example invoice">Download</a></div></details>
       <details class="ui-section"><summary><h4 class="ui-section-title">Source</h4><p class="ui-meta">Ledger record · line 42</p></summary><a class="ui-action" data-ui-icon="arrow-up-right" href="#control-fixture">Open source record</a></details>
     </article>
+    <section class="ui-stack" aria-label="Adaptive panel layout">
+      <h3 class="ui-section-title">Adaptive panel layout</h3>
+      <p class="ui-meta">The same grid holds text, controls and records. Resize the fixture: tracks wrap around their contents without a page breakpoint.</p>
+      <div class="ui-grid" style="--ui-grid-min:12rem">
+        <article class="ui-card ui-pad ui-stack"><h4 class="ui-section-title">Short note</h4><p>One sentence is enough.</p><div class="ui-actions"><button type="button" data-ui-icon="edit">Edit</button></div></article>
+        <article class="ui-card ui-pad ui-stack"><h4 class="ui-section-title">Long source name</h4><p class="ui-meta">Example-project-with-a-very-long-unbroken-reference-name.pdf</p><label class="ui-field"><input readonly aria-label="Example source URL" value="https://example.test/files/a-very-long-reference-name.pdf"><button type="button" data-ui-icon="copy" data-copy-field>Copy</button></label></article>
+        <article class="ui-card ui-pad ui-stack"><h4 class="ui-section-title">Choice</h4><label class="ui-field"><span class="ui-label">Status</span><select aria-label="Example record status"><option>Ready to review</option><option>Waiting</option></select></label><p class="ui-meta">This card has different content and the same outer layout.</p></article>
+      </div>
+      <div class="ui-split" aria-label="Adaptive panel with context beside primary content">
+        <aside class="ui-card ui-pad ui-stack"><h4 class="ui-section-title">Context</h4><p class="ui-meta">A compact rail with a long source-reference/identifier-that-can-wrap.</p></aside>
+        <article class="ui-card ui-pad ui-stack" data-ui-main><h4 class="ui-section-title">Primary work</h4><p>The main content takes the remaining room. On a narrow panel, context and work each get a full row.</p><div class="ui-actions"><button type="button" data-ui-icon="check" data-ui-variant="primary">Continue</button><button type="button" data-ui-icon="close">Cancel</button></div></article>
+      </div>
+    </section>
     <form class="ui-card ui-pad ui-stack" id="fixture-capture-form" aria-label="Fixture capture">
       <label class="ui-field"><input name="text" aria-label="Fixture capture text" placeholder="What’s on your mind?" required></label>
       <div class="ui-actions" aria-label="Fixture capture actions">

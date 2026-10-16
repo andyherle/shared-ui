@@ -14,7 +14,6 @@
 
 @layer app {
 .lab-fixture{inline-size:min(100%,960px);margin-block-start:calc(var(--ui-gap)*2)}
-.lab-workspace-identity{flex:1 1 12ch}
 .lab-fixture-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--ui-gap)}
 }
 

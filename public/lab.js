@@ -11,8 +11,8 @@ $('sample-selection').addEventListener('click',event=>{const open=event.target.c
 $('sample-clear').addEventListener('click',()=>{for(const input of $('sample-selection').querySelectorAll('input'))input.checked=false;sampleSelection();});
 UI.createBackToTop($('sample-top'),{scrollTarget:$('sample-scroll'),focusTarget:$('sample-scroll'),sprite:'./v1/icons.svg'});
 let sampleResize;
-UI.createColumnManager($('resizable-sheet'),$('sheet-columns'),{
-  pinFirst:true,sprite:'./v1/icons.svg',
+UI.createColumnDrag($('resizable-sheet'),{
+  pinFirst:true,
   onBeforeChange:()=>sampleResize?.dispose(),
   onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
 });
@@ -66,7 +66,7 @@ function fixtureState(){
  UI.setActionLabel(button,state==='saving'?'Saving…':state==='saved'?'Saved':'Save',{ariaLabel:state==='saving'?'Saving…':state==='saved'?'Saved':'Save'});
  button.setAttribute('aria-busy',String(state==='saving'));button.disabled=state==='saving';
  UI.setText($('fixture-workspace-status'),{live:'Live',dirty:'Unsaved',saving:'Saving…',saved:'Saved',error:'Save failed'}[state]);
- $('fixture-workspace-status').dataset.state=state==='error'?'error':state==='saving'?'pending':state==='saved'?'success':'live';
+ $('fixture-workspace-status').dataset.state=state==='error'?'error':state==='saving'?'pending':state==='dirty'?'warning':'success';
  requestAnimationFrame(()=>requestAnimationFrame(()=>{const issues=[...UI.compareLayout(before),...UI.auditControls(header).issues.filter(issue=>issue.severity==='error')],output=$('fixture-layout-check');output.textContent=issues.length?issues.map(issue=>issue.code+': '+issue.name).join('; '):'Stable · no command movement';output.dataset.state=issues.length?'error':'live';output.dataset.checkedState=state;}));
 }
 $('fixture-state').addEventListener('change',fixtureState);

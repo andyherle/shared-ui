@@ -6,89 +6,78 @@ import vm from 'node:vm';
 const module={exports:{}};
 vm.runInNewContext(fs.readFileSync(new URL('../src/runtime.js',import.meta.url),'utf8'),{module,URL});
 
-class Element {
-  constructor(tag,doc){
-    this.tagName=tag.toUpperCase();this.ownerDocument=doc;this.childNodes=[];this.dataset={};
-    this.attrs=new Map();this.listeners=new Map();this.colSpan=1;this.rowSpan=1;this.hidden=false;
+class Events {
+  constructor(){this.listeners=new Map();}
+  addEventListener(type,listener){const set=this.listeners.get(type)||new Set();set.add(listener);this.listeners.set(type,set);}
+  removeEventListener(type,listener){this.listeners.get(type)?.delete(listener);}
+  fire(type,values={}){
+    const event={type,target:this,button:0,pointerId:1,clientX:0,clientY:0,preventDefault(){this.prevented=true;},stopPropagation(){this.stopped=true;},...values};
+    for(const listener of this.listeners.get(type)||[])listener({...event,currentTarget:this});
   }
-  get children(){return this.childNodes.filter(node=>node.tagName!=='#TEXT');}
+}
+class Element extends Events {
+  constructor(tag,doc){super();this.tagName=tag.toUpperCase();this.ownerDocument=doc;this.childNodes=[];this.dataset={};this.style={touchAction:''};this.attrs=new Map();this.colSpan=1;this.rowSpan=1;this.hidden=false;}
+  get children(){return this.childNodes;}
   get cells(){return this.children.filter(node=>['TH','TD'].includes(node.tagName));}
   get rows(){return this.children.filter(node=>node.tagName==='TR');}
-  get classList(){return {contains:name=>this.className?.split(' ').includes(name)||false,
-    add:name=>{this.className=[...new Set([...(this.className||'').split(' ').filter(Boolean),name])].join(' ');}};}
-  get textContent(){return this.tagName==='#TEXT'?this.value||'':this.childNodes.map(node=>node.textContent).join('');}
-  set textContent(value){if(this.tagName==='#TEXT'){this.value=String(value);return;}const node=new Element('#text',this.ownerDocument);node.value=String(value);this.replaceChildren(node);}
+  get textContent(){return this._text||this.children.map(node=>node.textContent).join('');}
+  set textContent(value){this._text=String(value);}
   append(...nodes){for(const node of nodes){if(node.parentElement)node.parentElement.childNodes=node.parentElement.childNodes.filter(other=>other!==node);node.parentElement=this;this.childNodes.push(node);}}
-  prepend(node){this.append(node);this.childNodes=[node,...this.childNodes.filter(other=>other!==node)];}
-  replaceChildren(...nodes){for(const node of this.childNodes)node.parentElement=null;this.childNodes=[];this.append(...nodes);}
-  matches(selector){return selector.split(',').some(part=>part.trim().toUpperCase()===this.tagName);}
-  closest(selector){if(selector==='button[data-column-move]')return this.tagName==='BUTTON'&&this.dataset.columnMove?this:this.parentElement?.closest(selector)||null;return null;}
-  contains(other){return this===other||this.children.some(child=>child.contains(other));}
-  querySelector(selector){
-    if(selector===':scope > .ui-disclosure-body')return this.children.find(node=>node.classList.contains('ui-disclosure-body'))||null;
-    if(selector===':scope > .ui-label')return this.children.find(node=>node.classList.contains('ui-label'))||null;
-    if(selector===':scope > svg')return this.children.find(node=>node.tagName==='SVG')||null;
-    if(selector==='use')return this.querySelectorAll('use')[0]||null;
-    return null;
-  }
-  querySelectorAll(selector){
-    const out=[];const match=node=>selector==='.ui-actions'?node.classList.contains('ui-actions'):
-      selector==='[data-column-visible]'?Boolean(node.dataset.columnVisible):
-      selector==='[data-column-move]'?Boolean(node.dataset.columnMove):
-      selector==='use'?node.tagName==='USE':false;
-    const walk=node=>{for(const child of node.children){if(match(child))out.push(child);walk(child);}};walk(this);return out;
-  }
+  getBoundingClientRect(){const index=this.parentElement?.cells.indexOf(this)||0;return {left:index*100,right:(index+1)*100,width:100,top:0,bottom:24,height:24};}
+  closest(selector){return selector==='button,a,input,select,textarea,[role=separator]'&&['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(this.tagName)?this:null;}
   setAttribute(name,value){this.attrs.set(name,String(value));}
-  getAttribute(name){return this.attrs.get(name)||null;}
+  getAttribute(name){return this.attrs.get(name)??null;}
   hasAttribute(name){return this.attrs.has(name);}
+  removeAttribute(name){this.attrs.delete(name);}
   focus(){this.ownerDocument.activeElement=this;}
-  addEventListener(type,listener){const list=this.listeners.get(type)||new Set();list.add(listener);this.listeners.set(type,list);}
-  removeEventListener(type,listener){this.listeners.get(type)?.delete(listener);}
-  fire(type,target){for(const listener of this.listeners.get(type)||[])listener({type,target});}
+  setPointerCapture(){}
+  releasePointerCapture(){}
 }
-
 function fixture(){
-  const doc={baseURI:'https://app.example/ledger',createElement(tag){return new Element(tag,doc);},createElementNS(_ns,tag){return new Element(tag,doc);}};
-  const table=doc.createElement('table'),head=doc.createElement('thead'),heading=doc.createElement('tr'),bodySection=doc.createElement('tbody');
-  const ids=['entry','amount','documents'];for(const id of ids){const cell=doc.createElement('th');cell.dataset.column=id;cell.textContent=id;heading.append(cell);}
-  head.append(heading);table.tHead=head;table.tBodies=[bodySection];table.tFoot=null;table.append(head,bodySection);
-  const row=doc.createElement('tr'),link=doc.createElement('a');link.textContent='Open entry';
-  for(const id of ids){const cell=doc.createElement('td');cell.textContent=id;row.append(cell);}
-  row.cells[0].append(link);bodySection.append(row);
-  const details=doc.createElement('details'),summary=doc.createElement('summary'),panel=doc.createElement('div');panel.className='ui-disclosure-body ui-stack';details.append(summary,panel);
-  return {table,details,heading,row,link,panel};
+  const doc=new Events();doc.visibilityState='visible';doc.defaultView=new Events();doc.defaultView.getComputedStyle=()=>({direction:'ltr'});
+  const create=tag=>new Element(tag,doc),table=create('table'),head=create('thead'),heading=create('tr'),body=create('tbody'),row=create('tr');
+  const ids=['entry','amount','documents'];for(const id of ids){const cell=create('th');cell.dataset.column=id;cell.textContent=id;heading.append(cell);const td=create('td');td.textContent=id;row.append(td);}
+  head.append(heading);body.append(row);table.append(head,body);table.tHead=head;table.tBodies=[body];table.tFoot=null;
+  const link=create('a');link.textContent='Open entry';row.cells[0].append(link);
+  return {doc,table,heading,row,link,heads:Object.fromEntries(heading.cells.map(cell=>[cell.dataset.column,cell]))};
 }
+const order=row=>row.cells.map(cell=>cell.dataset.column||cell._text);
 
-test('native column chooser hides and reorders existing cells, then restores the table',()=>{
-  const f=fixture(),changes=[];
-  const manager=module.exports.createColumnManager(f.table,f.details,{order:['entry','documents','amount'],hidden:['documents'],pinFirst:true,sprite:'/icons.svg',onChange:state=>changes.push(state)});
-  assert.deepEqual(f.heading.cells.map(cell=>cell.dataset.column),['entry','documents','amount']);
-  assert.equal(f.heading.cells[1].hidden,true);assert.equal(f.row.cells[1].hidden,true);
-  assert.equal(f.row.cells[0].children.at(-1),f.link);
-  const move=f.panel.querySelectorAll('[data-column-move]').find(button=>button.dataset.columnMove==='amount'&&button.dataset.direction==='-1');
-  f.panel.fire('click',move);
-  assert.deepEqual(f.heading.cells.map(cell=>cell.dataset.column),['entry','amount','documents']);
-  assert.equal(f.table.ownerDocument.activeElement?.dataset.columnMove,'amount');
-  assert.equal(changes.length,1);assert.equal(changes[0].order[1],'amount');
-  const checkbox=f.panel.querySelectorAll('[data-column-visible]').find(input=>input.dataset.columnVisible==='documents');
-  checkbox.checked=true;f.panel.fire('change',checkbox);
-  assert.equal(f.heading.cells[2].hidden,false);assert.equal(f.row.cells[2].hidden,false);
-  assert.equal(changes.length,2);assert.equal(f.row.cells[0].children.at(-1),f.link);
-  manager.dispose();assert.deepEqual(f.heading.cells.map(cell=>cell.dataset.column),['entry','amount','documents']);
-  assert.equal(f.heading.cells.every(cell=>!cell.hidden),true);
-  assert.equal(f.panel.listeners.get('click').size,0);assert.equal(f.panel.listeners.get('change').size,0);
+test('dragging a native heading moves existing cells and keeps the first column pinned',()=>{
+  const f=fixture(),changes=[];const drag=module.exports.createColumnDrag(f.table,{pinFirst:true,onChange:state=>changes.push(state)});
+  f.heads.entry.fire('pointerdown',{clientX:50});f.doc.fire('pointermove',{clientX:270});f.doc.fire('pointerup',{clientX:270});
+  assert.deepEqual(order(f.heading),['entry','amount','documents']);
+  f.heads.amount.fire('pointerdown',{clientX:150});f.doc.fire('pointermove',{clientX:270});f.doc.fire('pointerup',{clientX:270});
+  assert.deepEqual(order(f.heading),['entry','documents','amount']);
+  assert.deepEqual(order(f.row),['entry','documents','amount']);
+  assert.equal(f.row.cells[0].children[0],f.link);
+  assert.deepEqual(Array.from(changes.at(-1).order),['entry','documents','amount']);
+  assert.equal(drag.state.order[2],'amount');
+  drag.dispose();assert.deepEqual(order(f.heading),['entry','amount','documents']);
+  assert.equal(f.heads.amount.hasAttribute('tabindex'),false);
+  assert.equal(f.heads.amount.listeners.get('pointerdown').size,0);
 });
 
-test('column chooser rejects merged cells and duplicate column identities',()=>{
-  const duplicate=fixture();duplicate.heading.cells[1].dataset.column='entry';
-  assert.throws(()=>module.exports.createColumnManager(duplicate.table,duplicate.details),/unique data-column/);
+test('Option arrows move a focused heading; resize controls and cancelled drags do not reorder',()=>{
+  const f=fixture(),drag=module.exports.createColumnDrag(f.table,{pinFirst:true});
+  const resize=new Element('button',f.doc);f.heads.amount.append(resize);
+  f.heads.amount.fire('pointerdown',{target:resize,clientX:150});f.doc.fire('pointermove',{clientX:270});f.doc.fire('pointerup',{clientX:270});
+  assert.deepEqual(order(f.heading),['entry','amount','documents']);
+  f.heads.amount.fire('pointerdown',{clientX:150});f.doc.fire('pointermove',{clientX:270});f.doc.fire('pointercancel',{clientX:270});
+  assert.deepEqual(order(f.heading),['entry','amount','documents']);
+  f.heads.amount.fire('keydown',{key:'ArrowRight',altKey:true});
+  assert.deepEqual(order(f.heading),['entry','documents','amount']);
+  assert.equal(f.doc.activeElement,f.heads.amount);
+  f.heads.amount.fire('keydown',{key:'ArrowLeft',altKey:true});
+  assert.deepEqual(order(f.heading),['entry','amount','documents']);
+  drag.dispose();
+});
+
+test('invalid saved order cannot lose columns; merged cells and duplicate IDs are rejected',()=>{
+  const f=fixture(),drag=module.exports.createColumnDrag(f.table,{order:['documents','documents','unknown'],pinFirst:true});
+  assert.deepEqual(order(f.heading),['entry','documents','amount']);drag.dispose();
+  const duplicate=fixture();duplicate.heads.amount.dataset.column='entry';
+  assert.throws(()=>module.exports.createColumnDrag(duplicate.table),/unique data-column/);
   const merged=fixture();merged.row.cells[0].colSpan=2;
-  assert.throws(()=>module.exports.createColumnManager(merged.table,merged.details),/one cell per column/);
-});
-
-test('invalid saved column state cannot drop a column',()=>{
-  const f=fixture();const manager=module.exports.createColumnManager(f.table,f.details,{order:'entry',hidden:['entry','amount','documents'],pinFirst:true,sprite:'/icons.svg'});
-  assert.deepEqual(f.heading.cells.map(cell=>cell.dataset.column),['entry','amount','documents']);
-  assert.equal(f.heading.cells[0].hidden,false);
-  manager.dispose();
+  assert.throws(()=>module.exports.createColumnDrag(merged.table),/one cell per column/);
 });
