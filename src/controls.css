@@ -209,7 +209,7 @@
   &[data-ui-layout=vertical] > .ui-search { inline-size:100%; }
 }
     .ui-header > .ui-actions.ui-inline:last-child { flex:1 1 min(100%,26rem); container:ui-actions / inline-size; }
-    .ui-action[data-ui-compact] { flex:0 1 auto; padding-inline:min(8px,calc((var(--ui-control-height) - 20px)/2)); }
+    .ui-action[data-ui-compact] { padding-inline:min(8px,calc((var(--ui-control-height) - 20px)/2)); }
     :is(.ui-action,.ui-field)[data-ui-compact] > .ui-label { display:none; }
     .ui-action:has(>svg.ui-icon) > .ui-label { white-space:nowrap; }
     :where(.ui-actions,.ui-toolbar) > .ui-disclosure[open]:not(.ui-overflow) {

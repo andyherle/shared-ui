@@ -500,7 +500,7 @@
       const required=mode=>rowWidth(nodes,css,mode,collapsed,group.matches('.ui-fill'));
       const compact=!vertical&&required(false)>limit;
       for(const node of actions)setCompact(node,compact);
-      const equal=nodes.length>1&&limit<480&&!vertical&&!group.matches('.ui-fill,.ui-tabs')&&nodes.every(node=>node.matches('.ui-action,button'));
+      const equal=nodes.length>1&&!vertical&&!group.matches('.ui-fill')&&nodes.every(node=>node.matches('.ui-action,button'))&&(group.matches('.ui-tabs')?compact:limit<480);
       const slot=(limit-number(css.columnGap)*(nodes.length-1))/nodes.length;
       if(equal&&nodes.every(node=>width(node,compact,collapsed)<=slot))group.setAttribute('data-ui-equal','');else group.removeAttribute('data-ui-equal');
       if(!vertical){

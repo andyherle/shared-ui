@@ -36,6 +36,9 @@ test('an explicit caption stays readable while neighboring actions compact',()=>
 test('narrow pure action rows share space only when every control fits its slot',()=>{
  const f=fixture(),first=f.action('Open'),second=f.action('Save');f.row.append(first,second);f.UI.observeActions(f.row);f.flush();assert.equal(f.row.hasAttribute('data-ui-equal'),true);f.resize(90);assert.equal(f.row.hasAttribute('data-ui-equal'),true);f.resize(500);assert.equal(f.row.hasAttribute('data-ui-equal'),false);
 });
+test('compact tab navigation shares one row without losing accessible names',()=>{
+ const f=fixture();f.row.className='ui-actions ui-tabs';f.row.setAttribute('data-ui-layout','bar');const tabs=['Activity','Ledger','Invoices','Balances','Position','Review','Records','Reconcile'].map(name=>f.action(name));f.row.append(...tabs);f.UI.observeActions(f.row);f.flush();f.resize(300);assert.equal(f.row.hasAttribute('data-ui-equal'),true);for(const tab of tabs){assert.equal(tab.hasAttribute('data-ui-compact'),true);assert.ok(tab.textContent);}f.resize(800);assert.equal(f.row.hasAttribute('data-ui-equal'),false);for(const tab of tabs)assert.equal(tab.hasAttribute('data-ui-compact'),false);
+});
 test('priority tiles collapse as whole native groups without changing controls or handlers',()=>{
  const f=fixture(),save=f.action('Save',{primary:true}),a=f.action('A'),b=f.action('B'),c=f.action('C'),d=f.action('D'),low=f.overflow([a,b],0),high=f.overflow([c,d],1),handler=a.onclick;f.row.append(save,low,high);f.UI.observeActions(f.row);f.flush();assert.equal(low.dataset.uiOverflow,'expanded');f.resize(150);assert.equal(low.dataset.uiOverflow,'collapsed');assert.equal(high.dataset.uiOverflow,'expanded');assert.equal(low.open,false);assert.equal(a.hasAttribute('data-ui-compact'),false);assert.equal(a.onclick,handler);assert.equal(low.children[1].children[0],a);f.resize(500);assert.equal(low.dataset.uiOverflow,'expanded');assert.equal(low.open,true);
 });
