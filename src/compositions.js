@@ -44,7 +44,7 @@
     const doc = options.document || SLOTS.flatMap(key => slots[key] == null ? [] : Array.isArray(slots[key]) ? slots[key] : [slots[key]])[0]?.ownerDocument || window.document;
     if (!doc || typeof doc.createElement !== 'function') throw new TypeError('DOM document required');
     const instanceId = options.instanceId;
-    if (instanceId !== undefined && (typeof instanceId !== 'string' || !/^[a-z][a-z0-9-]{1,79}$/.test(instanceId))) throw new TypeError('Invalid stable instance identity');
+    if (instanceId !== undefined && (typeof instanceId !== 'string' || !/^[a-z][a-z0-9.-]{1,79}$/.test(instanceId))) throw new TypeError('Invalid stable instance identity');
     let config = configuration(options);
     const nodes = new Map(), seen = new Set();
     for (const key of SLOTS) {
@@ -91,6 +91,7 @@
       for (const key of Object.keys(OVERRIDES)) if (previous[key] !== undefined) root.style.removeProperty(OVERRIDES[key].property);
       for (const key of Object.keys(OVERRIDES)) if (next.overrides[key] !== undefined) root.style.setProperty(OVERRIDES[key].property, next.overrides[key]);
       root.dataset.uiVariant = next.variant; root.dataset.uiCrowding = next.crowding;
+      root.dataset.uiCompositionOrigin = Object.keys(next.overrides).some(key => key !== 'reason') ? 'instance' : 'canonical';
       const keys = Object.keys(next.overrides).filter(key => key !== 'reason');
       if (keys.length) root.dataset.uiCompositionOverrides = keys.join(',');
       else delete root.dataset.uiCompositionOverrides;
@@ -102,7 +103,7 @@
       slots: Object.freeze(Object.fromEntries(hosts)),
       getConfiguration() {
         return Object.freeze({id: ID, revision: REVISION, instanceId: instanceId ?? null, variant: config.variant,
-          crowding: config.crowding, overrides: Object.freeze({...config.overrides})});
+          crowding: config.crowding, origin: root.dataset.uiCompositionOrigin, overrides: Object.freeze({...config.overrides})});
       },
       setLayout(next = {}) {
         if (disposed) throw new Error('Composition disposed');
