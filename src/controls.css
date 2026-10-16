@@ -80,8 +80,8 @@
     .ui-composition-footer { padding-block-start:var(--ui-gap); border-block-start:1px solid var(--ui-line); }
     .ui-composition[data-ui-crowding=scroll] .ui-composition-toolbar > .ui-actions { flex-wrap:nowrap; overflow-x:auto; }
     .ui-composition[data-ui-crowding=scroll] .ui-composition-toolbar > .ui-actions > * { flex-shrink:0; }
-    @container (min-width:48rem) { .ui-composition[data-ui-variant=standard] > .ui-composition-layout > .ui-composition-main:has(>.ui-composition-aside) { grid-template-columns:minmax(0,1fr) minmax(0,var(--ui-composition-aside)); } }
-    @container (min-width:36rem) { .ui-composition[data-ui-variant=split] > .ui-composition-layout > .ui-composition-main:has(>.ui-composition-aside) { grid-template-columns:minmax(0,1fr) minmax(0,var(--ui-composition-aside)); } }
+    @container (min-width:48rem) { .ui-composition[data-ui-variant=standard] > .ui-composition-layout > .ui-composition-main:has(>.ui-composition-aside:not([hidden])) { grid-template-columns:minmax(0,1fr) minmax(0,var(--ui-composition-aside)); } }
+    @container (min-width:36rem) { .ui-composition[data-ui-variant=split] > .ui-composition-layout > .ui-composition-main:has(>.ui-composition-aside:not([hidden])) { grid-template-columns:minmax(0,1fr) minmax(0,var(--ui-composition-aside)); } }
     .ui-menu:not([data-ui-position=overlay]) { position:relative; }
     :where(.ui-menu>summary,summary.ui-action) { list-style:none; }
     :where(.ui-menu>summary,summary.ui-action)::-webkit-details-marker { display:none; }
