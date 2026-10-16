@@ -58,6 +58,30 @@ test('reject remote origins, credentials, traversal, ambiguous route and unackno
   for(const fn of rejected) assert.throws(()=>validateManifest(mutate(fn)),Error);
 });
 
+test('imports coordinator CONTRACT v1 prepared manifests without inventing verification',()=>{
+  const legacy=copy();
+  legacy.description='Old private app fixture matrix; stay app-owned';
+  for(const item of legacy.fixtures) {
+    item.app='Example Home';
+    item.status='prepared-unrun';
+    item.evidence='Prepared only; runtime and browser checks unrun';
+    delete item.sourceKind;delete item.mockOnly;delete item.productionWritesDisabled;
+  }
+  legacy.fixtures[0].launchUrl='http://127.0.0.1:41910/fixture-login?mode=rich&next=%2F%23buttons';
+  const fixtures=collectManifests([{source:'existing-owner',document:legacy}]);
+  assert.equal(fixtures.length,4);
+  assert.equal(fixtures[0].status,'prepared');
+  assert.equal(fixtures[0].evidence.result,'unrun');
+  assert.match(fixtures[0].isolation,/not explicitly attested/);
+  assert.ok(fixtures[0].href.startsWith('http://127.0.0.1:41910/fixture-login'));
+  const unsafe=structuredClone(legacy);
+  unsafe.fixtures[0].status='verified';
+  assert.throws(()=>validateManifest(unsafe));
+  unsafe.fixtures[0].status='prepared-unrun';
+  unsafe.fixtures[0].launchUrl='https://example.org/login';
+  assert.throws(()=>validateManifest(unsafe),/same-origin/);
+});
+
 test('only real observed execution receipts can label a fixture verified',()=>{
   const doc=mutate(f=>{f.status='verified';});assert.throws(()=>validateManifest(doc),/verified fixtures require|invalid runner/);
   doc.fixtures[0].evidence={
