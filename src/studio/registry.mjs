@@ -75,6 +75,31 @@ export const COMPONENTS = freeze([
   component('breadcrumb', 'Breadcrumb', 'navigation', 'nav[aria-label="Breadcrumb"]', ['nav'], 'navigation', {tokens: ['--ui-text', '--ui-muted']}),
   component('pagination', 'Pagination', 'navigation', 'nav[aria-label="Pagination"]', ['nav'], 'data', {tokens: paint}),
   component('dialog', 'Native dialog', 'overlay', 'dialog', ['dialog'], 'sample-dialog', {variants: ['default', 'drawer', 'confirmation'], tokens: surfaceTokens, accessibility: {name: 'Name the dialog from its heading.', keyboard: 'Native modal focus, Escape dismissal, restore trigger focus.'}}),
+  component('review-workspace', 'Canonical review workspace', 'composition', '[data-ui-composition="review-workspace"]', ['article'], 'compositions', {
+    ...editable,
+    props: {variant: choice('standard','split','stack'), crowding: choice('wrap','scroll','priority'), overrideReason: text},
+    variants: ['standard','split','stack'], states: ['editing','busy','error','conflict'],
+    tokens: [...surfaceTokens, '--ui-composition-gap', '--ui-composition-aside'],
+    slots: {
+      header: {families: ['content','layout'], min: 1, max: 4},
+      toolbar: {families: ['layout','action','field','disclosure'], min: 0, max: 20},
+      filters: {families: ['layout','field'], min: 0, max: 12},
+      body: {families: ['layout','content','data','composition','disclosure','feedback','field'], min: 1, max: 20},
+      aside: {families: ['layout','content','data','composition','disclosure','feedback','field'], min: 0, max: 12},
+      footer: {families: ['layout','action','feedback','content'], min: 0, max: 12}
+    },
+    accessibility: {name: 'Use a named heading; preserve the native form and stable slot DOM.', keyboard: 'Native Tab, Enter, Space and Escape; layout changes do not reparent live fields.'},
+    audit: {selector: '[data-ui-composition="review-workspace"]', tags: ['article'],
+      attributes: {'data-ui-composition-revision':['1'], 'data-ui-variant':['standard','split','stack'],
+        'data-ui-crowding':['wrap','scroll','priority'], 'data-ui-composition-overrides':['gap','aside','gap,aside']},
+      checks: [
+        {id:'composition-frame',selector:':scope > .ui-composition-layout',min:1,max:1,expected:'Exactly one native composition layout frame.'},
+        {id:'composition-header',selector:':scope > .ui-composition-layout > [data-ui-composition-slot=header]',min:1,max:1,expected:'One heading region.'},
+        {id:'composition-body',selector:':scope > .ui-composition-layout > .ui-composition-main > [data-ui-composition-slot=body]',min:1,max:1,expected:'Exactly one real content region.'},
+        ...['toolbar','filters','footer'].map(slot => ({id:'composition-'+slot,selector:':scope > .ui-composition-layout > [data-ui-composition-slot='+slot+']',min:0,max:1,expected:'At most one '+slot+' slot.'})),
+        {id:'composition-aside',selector:':scope > .ui-composition-layout > .ui-composition-main > [data-ui-composition-slot=aside]',min:0,max:1,expected:'At most one inspector region.'}
+      ]}
+  }),
   component('popout', 'Bounded review shell', 'overlay', '.ui-popout', ['dialog', 'article', 'form'], 'control-fixture', {tokens: [...surfaceTokens, '--ui-popout-width', '--ui-popout-height', '--ui-popout-space'], slots: {header: flow.children, body: flow.children, footer: flow.children}, audit: {selector: '.ui-popout', tags: ['dialog', 'article', 'form'], checks: checks.popout}}),
   component('popover', 'Native popover', 'overlay', '[popover]', ['div'], 'overlays', {tokens: surfaceTokens}),
   component('tooltip', 'Tooltip', 'feedback', '[role="tooltip"]', ['span'], 'overlays', {tokens: surfaceTokens, accessibility: {name: 'Connect descriptive text with aria-describedby.', keyboard: 'Visible on keyboard focus as well as hover.'}}),
@@ -111,6 +136,9 @@ export function listComponents({text = '', family, pack, status, authorable} = {
 // Roles that are parts, modifiers or helpers rather than independent components.
 // This explicit classification makes newly introduced catalogue roles fail coverage.
 export const ROLE_OWNERS = freeze({
+  'composition':'review-workspace', 'composition-layout':'review-workspace', 'composition-main':'review-workspace',
+  'composition-header':'review-workspace', 'composition-toolbar':'review-workspace', 'composition-filters':'review-workspace',
+  'composition-body':'review-workspace', 'composition-aside':'review-workspace', 'composition-footer':'review-workspace',
   action: 'action', actions: 'actions', 'app-symbol': 'app-tile', 'app-tile': 'app-tile', back: 'toolbar',
   'back-to-top': 'back-to-top', button: 'button', card: 'card', check: 'checkbox', choice: 'checkbox',
   chrome: 'text', 'column-resize': 'table', combobox: 'combobox', container: 'actions', 'context-bar': 'context-bar',
