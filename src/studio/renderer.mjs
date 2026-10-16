@@ -82,6 +82,7 @@ export function createRenderer(root, {onSelect = () => {}} = {}) {
       if (props.state && props.state !== 'neutral') el.dataset.state = props.state; else delete el.dataset.state;
     }
     if (props.variant && props.variant !== 'default') el.dataset.uiVariant = props.variant; else delete el.dataset.uiVariant;
+    if (id === 'review-workspace') el.dataset.uiVariant = props.variant ?? 'standard';
     if (props.align) el.dataset.uiAlign = props.align; else delete el.dataset.uiAlign;
     el.classList.toggle('ui-fill', !!props.fill); el.classList.toggle('ui-header', !!props.header);
     if (['stack', 'column'].includes(node.layout?.kind) && id !== 'actions') el.classList.add('ui-stack');
