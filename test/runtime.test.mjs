@@ -88,6 +88,14 @@ test('saved column widths remain the scrollable table floor on a phone',()=>{
  assert.equal(e.table.style.width,'100%');assert.equal(e.table.style.minWidth,'550px');
  resize.dispose();assert.equal(e.table.style.minWidth,undefined);
 });
+test('hidden sheet columns do not reserve width or get resize handles',()=>{
+ const e=geometryEnvironment();e.heads[1].hidden=true;
+ const resize=module.exports.createColumnResize(e.table,{widths:[220,180]});
+ assert.equal(e.table.style.minWidth,'400px');
+ assert.equal(e.heads[1].children.length,0);
+ assert.equal(resize.widths.length,2);
+ resize.dispose();
+});
 test('shared lightbox uses native close, skips editable keyboard navigation and restores opener focus',()=>{
  const e=geometryEnvironment(),dialog=e.element('dialog'),opener=e.element('button');opener.isConnected=true;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;fire(dialog,'close');};let navigated=0,closed=0;
  const box=module.exports.createLightbox(dialog,{onNavigate:direction=>navigated+=direction,onClose:()=>closed++});box.open(opener);assert.equal(dialog.open,true);

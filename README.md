@@ -384,6 +384,20 @@ Control fixture includes an empty From date, a populated To date and a time.
 
 ### Adjustable columns and stable lightboxes
 
+`SharedUI.createColumnManager(table, details, {order, hidden, pinFirst,
+onBeforeChange, onChange, sprite})` adds a native column chooser to a sheet.
+Give every header a unique `data-column` ID and provide a sibling
+`details.ui-disclosure` with a `summary` and an empty direct
+`.ui-disclosure-body`. Every table row needs one cell per header, without spans.
+The chooser uses native checkboxes to show or hide columns and shared actions to
+move them left or right. Its `state` returns `{order, hidden}`; the application
+may save and restore that state. `pinFirst` keeps the identifying column visible
+and first. The chooser moves existing cells, preserving their links and handlers.
+`reset()` restores the source order and all columns; `dispose()` restores the
+original table and releases listeners. Call `dispose()` on an active column
+resizer in `onBeforeChange`, then create a new resizer in `onChange` using the
+visible headers. The catalogue's Spreadsheet scan demonstrates both controls.
+
 `SharedUI.createColumnResize(table, {min:72, max:1200, widths, onChange})`
 enhances a native sheet with one header per column and no existing colgroup.
 The table fills its container. A quiet line at each internal column boundary has
@@ -392,7 +406,8 @@ moving the table edge. Use Left/Right (Shift for one pixel), Home/End or
 double-click to reset a boundary. Escape or pointer cancellation restores the
 starting widths. Narrow containers scroll when minimum column widths require it.
 Applications own saved proportions through `onChange(widths)`; validate them per
-view. `reset()` restores initial proportions; `dispose()` restores the native table.
+view. Hidden columns are excluded from the width budget. `reset()` restores
+initial proportions; `dispose()` restores the native table.
 
 `SharedUI.createLightbox(dialog, {onNavigate, onClose})` enhances a native dialog
 with a stable centered 900 × 760 frame, bounded by the viewport. Use three direct

@@ -10,7 +10,13 @@ $('sample-selection').addEventListener('change',sampleSelection);
 $('sample-selection').addEventListener('click',event=>{const open=event.target.closest('button');if(!open)return;if(event.shiftKey){const input=open.closest('article').querySelector('input');input.checked=!input.checked;sampleSelection();}else toast('Sample opened');});
 $('sample-clear').addEventListener('click',()=>{for(const input of $('sample-selection').querySelectorAll('input'))input.checked=false;sampleSelection();});
 UI.createBackToTop($('sample-top'),{scrollTarget:$('sample-scroll'),focusTarget:$('sample-scroll'),sprite:'./v1/icons.svg'});
-UI.createColumnResize($('resizable-sheet'));
+let sampleResize;
+UI.createColumnManager($('resizable-sheet'),$('sheet-columns'),{
+  pinFirst:true,sprite:'./v1/icons.svg',
+  onBeforeChange:()=>sampleResize?.dispose(),
+  onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
+});
+sampleResize=UI.createColumnResize($('resizable-sheet'));
 const pack=$('pack'),mode=$('mode'),density=$('density');
 const embedded=$('embedded-host').attachShadow({mode:'open'}),embeddedCSS=document.createElement('link');
 embeddedCSS.rel='stylesheet';embeddedCSS.href='./v1/styles.css';embedded.append(embeddedCSS,$('embedded-form').content.cloneNode(true));
