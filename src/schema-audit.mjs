@@ -40,6 +40,10 @@ export function collectSchemaSnapshot(scope, { appId, viewId } = {}) {
     const contracts = AUDIT_CONTRACTS.filter(contract => element.matches(contract.selector));
     const attributes = {}, counts = {};
     for (const contract of contracts) {
+      // Instance identity is private app state: retain its presence only, never its value.
+      for (const attribute of contract.requiredAttributes || [])
+        if (!Object.hasOwn(contract.attributes || {}, attribute) && element.hasAttribute(attribute))
+          attributes[attribute] = 'present';
       for (const attribute of Object.keys(contract.attributes || {})) {
         if (element.hasAttribute(attribute)) attributes[attribute] = element.getAttribute(attribute).slice(0, 128);
       }
