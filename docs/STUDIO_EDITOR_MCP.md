@@ -24,6 +24,29 @@ configuration. Keep this file private. The HTTP/browser credentials rotate at
 launch; a stopped session's links stop working. Stdio starts its own process and
 uses the same draft store.
 
+The launcher also atomically replaces `mcp.token` in that private draft directory
+with the **raw HTTP token** and a trailing newline, using mode `0600` (directory
+`0700`). `connection.json` advertises its absolute path as `http.token_file`.
+The path and MCP endpoint stay fixed across launches. A busy port fails before
+either credential file is replaced.
+
+### Connect Portal once
+
+In Portal's **Tools → MCP config**, add `shared-ui-studio`, endpoint
+`http://127.0.0.1:41914/mcp`, and token file
+`~/Library/Application Support/Shared UI Studio/drafts/mcp.token` expanded to
+your absolute home path. Or use the installed helper:
+
+```sh
+python3 "$HOME/Library/Application Support/Portal/mcp-services.py" register shared-ui-studio http://127.0.0.1:41914/mcp --description "Shared UI Studio: inspect and edit private interface drafts" --token-file "$HOME/Library/Application Support/Shared UI Studio/drafts/mcp.token"
+```
+
+Portal reads this raw file on each request. Restarting Studio refreshes the
+credential without re-registering or changing Portal's service revision. Keep
+the same `--store` directory for future launches; a custom store uses its own
+`mcp.token` path. An offline registration can be prepared before the first launch.
+Portal does not start Studio yet; launch `./studio` when needed.
+
 The default launcher uses the synthetic demo registration and grants draft editing.
 For explicit registrations or read-only use, pass the full options, for example:
 
