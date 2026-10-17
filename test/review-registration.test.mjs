@@ -144,7 +144,7 @@ test('two owned app children maximum despite six registered, with a separate Per
   assert.equal(ledger.seed,'7');
   assert.equal(ledger.pack,'postvisual');
   assert.equal(ledger.port,41924);
-  assert.equal(h.calls.record[2].seed,'7');
+  assert.equal(h.calls.record.find(r=>r.app==='ledger'&&r.kind==='start')?.seed,'7');
   await assert.rejects(m.start('ledger','candidate'),/BLOCKED|stop it explicitly/);
   await m.stop('portal');await m.stop('ledger');
   assert.deepEqual(await m.exit(),{closed:true});
