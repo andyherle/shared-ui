@@ -159,6 +159,14 @@ export class ReviewManager {
       session.child=child;
       const health=await this.host.health(session);
       const expectedVariant=selected.bundle.variant==='baseline'?'installed':selected.bundle.variant;
+      const candidateComposition=selected.bundle.variant!=='baseline';
+      const comp=health?.composition;
+      const validComposition=!candidateComposition||(
+        comp?.id==='review-workspace'&&String(comp.revision)==='1'&&
+        Array.isArray(comp.instances)&&comp.instances.length>=1&&comp.instances.length<=20&&
+        comp.instances.every(id=>typeof id==='string'&&/^[a-z][a-z0-9.-]{1,79}$/.test(id))
+      );
+      check(validComposition,'Candidate fixture did not prove a declared review-workspace@1 instance');
       check(health?.protocol==='shared-ui-review-health-v1'&&
         health.appSha===selected.app.sha&&health.uiSha===selected.bundle.uiSha&&
         health.bundleDigest===selected.bundle.bundleDigest&&health.seed===seed&&
@@ -169,9 +177,12 @@ export class ReviewManager {
         health.mockOnly===true&&health.productionWritesDisabled===true&&health.realAppCode===true,
         'Fixture did not confirm the exact real-code app, bundle and mock boundary');
       session.state='ready';
-      const saved=await this.host.record(receipt('start',session,{result:'health-verified/browser-unrun',healthPath:selected.app.healthPath}));
+      const saved=await this.host.record(receipt('start',session,{
+        result:'health-verified/browser-unrun',healthPath:selected.app.healthPath,
+        fixtureRoute:'/',composition:comp?{id:comp.id,revision:String(comp.revision),instances:[...comp.instances]}:null
+      }));
       return {app:appId,pid:child.pid,port:selected.app.port,variant,seed,reused:false,receipt:saved,
-        href:'http://127.0.0.1:'+selected.app.port+'/__fixture__/'};
+        href:'http://127.0.0.1:'+selected.app.port+'/'};
     }catch(error){
       // The manager knows only this child; never attempt to kill a PID recovered
       // from a port probe, saved receipt or an external running application.
