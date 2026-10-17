@@ -218,7 +218,7 @@
   &[data-ui-layout=bar] > * { flex-shrink:0; }
   & > :where(details.ui-disclosure) { inline-size:auto; flex:0 1 auto; }
   & > .ui-search { inline-size:12rem; }
-  &[data-ui-align=center] { justify-content:center; }
+  &[data-ui-align=center] { justify-content:safe center; }
   &[data-ui-align=start] { justify-content:flex-start; }
   &[data-ui-align=end] { justify-content:flex-end; }
   &[data-ui-layout=vertical] { flex-direction:column; align-items:stretch; }
