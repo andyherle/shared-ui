@@ -171,6 +171,24 @@
     card.style.setProperty('--ui-card-fill',`light-dark(${value.light},${value.dark})`);
     card.style.setProperty('--ui-card-ink',`light-dark(${value.lightInk},${value.darkInk})`);
   }
+  // Canvas/SVG output needs resolved CSS colours, never var() or light-dark() strings.
+  // One hidden native card per renderer; only distinct colours require style resolution.
+  function createCardColorResolver(root){
+    const doc=root.ownerDocument,view=doc.defaultView,probe=doc.createElement('article'),cache=new Map();
+    const scheme=view.matchMedia('(prefers-color-scheme: dark)');
+    let theme,disposed=false;
+    probe.className='ui-card';probe.hidden=true;probe.setAttribute('aria-hidden','true');root.append(probe);
+    function resolve(color=null){
+      if(disposed)throw new Error('Card colour resolver is disposed');
+      const key=[root.dataset.ui,root.dataset.theme,root.dataset.uiRevision,scheme.matches].join('/');
+      if(key!==theme){cache.clear();theme=key;}
+      if(cache.has(color))return cache.get(color);
+      setCardColor(probe,color);
+      const css=view.getComputedStyle(probe),paint=Object.freeze({fill:css.backgroundColor,ink:css.color,line:css.borderTopColor,font:css.fontFamily});
+      if(cache.size>=128)cache.delete(cache.keys().next().value);cache.set(color,paint);return paint;
+    }
+    return {resolve,invalidate(){theme=undefined;cache.clear();},dispose(){if(disposed)return;disposed=true;cache.clear();probe.remove();}};
+  }
   function setSelection(element,selected) {
     element.classList.add('ui-selectable');
     element.dataset.uiSelected=selected==='mixed'?'mixed':String(Boolean(selected));
@@ -366,7 +384,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.11.2',mount,release,adoptAction,reserveText,setText,setCardColor,resolveCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.11.2',mount,release,adoptAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

@@ -142,3 +142,17 @@ test('theme-adaptive authored colours preserve their value with readable light/d
   for(const mode of ['light','dark']){const a=luminance(value[mode]),b=luminance(value[mode+'Ink']);assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,hex+' '+mode);}
  }
 });
+
+
+test('output colour resolver caches actual native card paint and refreshes themes without CSS expressions',()=>{
+ const {doc}=control(),root=doc.createElement('html');root.dataset={ui:'postvisual',theme:'dark',uiRevision:'one'};
+ let reads=0;doc.defaultView={matchMedia:()=>({matches:false}),getComputedStyle:card=>{reads++;return {backgroundColor:card.dataset.uiColor==='#ffb3d2'?'rgb(255, 179, 210)':root.dataset.theme==='dark'?'rgb(20, 22, 26)':'rgb(255, 255, 255)',color:card.dataset.uiColor==='#ffb3d2'?'rgb(0, 0, 0)':root.dataset.theme==='dark'?'rgb(255, 255, 255)':'rgb(0, 0, 0)',borderTopColor:'rgb(80, 80, 80)',fontFamily:'sans-serif'};}};
+ const create=doc.createElement;doc.createElement=tag=>{const node=create(tag);node.style={setProperty(){},removeProperty(){}};return node;};
+ const resolver=module.exports.createCardColorResolver(root),dark=resolver.resolve();
+ assert.equal(dark.fill,'rgb(20, 22, 26)');assert.equal(resolver.resolve(),dark);assert.equal(reads,1);
+ const pink=resolver.resolve('#ffb3d2');assert.equal(pink.fill,'rgb(255, 179, 210)');assert.equal(pink.ink,'rgb(0, 0, 0)');
+ for(let i=0;i<200;i++)assert.equal(resolver.resolve('#ffb3d2'),pink);assert.equal(reads,2);
+ root.dataset.theme='light';assert.equal(resolver.resolve().fill,'rgb(255, 255, 255)');assert.equal(reads,3);
+ root.dataset.ui='personal';resolver.resolve();assert.equal(reads,4);
+ resolver.invalidate();resolver.resolve();assert.equal(reads,5);resolver.dispose();assert.equal(root.childNodes.length,0);assert.throws(()=>resolver.resolve(),/disposed/);
+});
