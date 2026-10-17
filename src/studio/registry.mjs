@@ -28,7 +28,7 @@ function component(id, name, family, selector, tags, fixture, options = {}) {
     props: {}, variants: ['default'], states: [], tokens: [], slots: {}, bindings: {},
     accessibility: {name: 'Use native semantics and an accessible name for interactive content.', keyboard: 'Preserve native focus order and keyboard behavior.'},
     renderer: {id: 'style-lab-native', status: 'catalogue-only'},
-    fixtures: [{file: fixture === 'control-fixture' ? 'src/fixture.html' : 'src/index.html', anchor: fixture}],
+    fixtures: [{file: ['control-fixture','floating-review'].includes(fixture) ? 'src/fixture.html' : 'src/index.html', anchor: fixture}],
     lifecycle: {status: 'stable', since: 1, replacement: null}, audit: null,
     ...options};
 }
@@ -76,6 +76,10 @@ export const COMPONENTS = freeze([
   component('pagination', 'Pagination', 'navigation', 'nav[aria-label="Pagination"]', ['nav'], 'data', {tokens: paint}),
   component('dialog', 'Native dialog', 'overlay', 'dialog', ['dialog'], 'sample-dialog', {variants: ['default', 'drawer', 'confirmation'], tokens: surfaceTokens, accessibility: {name: 'Name the dialog from its heading.', keyboard: 'Native modal focus, Escape dismissal, restore trigger focus.'}}),
   component('popout', 'Bounded review shell', 'overlay', '.ui-popout', ['dialog', 'article', 'form'], 'control-fixture', {tokens: [...surfaceTokens, '--ui-popout-width', '--ui-popout-height', '--ui-popout-space'], slots: {header: flow.children, body: flow.children, footer: flow.children}, audit: {selector: '.ui-popout', tags: ['dialog', 'article', 'form'], checks: checks.popout}}),
+  component('floating-panel', 'Viewport floating review panel', 'overlay', '.ui-floating-panel', ['aside', 'section', 'div'], 'floating-review', {
+    variants: ['bottom-right','bottom-left','top-right','top-left'], states: ['collapsed','expanded','dragging'],
+    tokens: surfaceTokens, accessibility: {name: 'Keep human source/deployment identity visible and use a separate labeled move handle.',
+      keyboard: 'Handle arrows move 16 px, Shift+arrows move 48 px, Home resets; native reset button also works by keyboard.'}}),
   component('popover', 'Native popover', 'overlay', '[popover]', ['div'], 'overlays', {tokens: surfaceTokens}),
   component('tooltip', 'Tooltip', 'feedback', '[role="tooltip"]', ['span'], 'overlays', {tokens: surfaceTokens, accessibility: {name: 'Connect descriptive text with aria-describedby.', keyboard: 'Visible on keyboard focus as well as hover.'}}),
   component('status', 'Reserved status text', 'feedback', '.ui-status', ['p', 'span', 'output'], 'control-fixture', {...editable, props: {label: text, state: choice('neutral', 'pending', 'success', 'error')}, states: ['neutral', 'pending', 'success', 'error'], tokens: ['--ui-text', '--ui-good', '--ui-bad', '--ui-muted']}),
@@ -114,6 +118,10 @@ export const ROLE_OWNERS = freeze({
   action: 'action', actions: 'actions', 'app-symbol': 'app-tile', 'app-tile': 'app-tile', back: 'toolbar',
   'back-to-top': 'back-to-top', button: 'button', card: 'card', check: 'checkbox', choice: 'checkbox',
   chrome: 'text', 'column-resize': 'table', combobox: 'combobox', container: 'actions', 'context-bar': 'context-bar',
+  'floating-panel':'floating-panel', 'floating-chrome':'floating-panel', 'floating-controls':'floating-panel',
+  'floating-handle':'floating-panel', 'floating-reset':'floating-panel', 'floating-name':'floating-panel',
+  'floating-variant':'floating-panel', 'floating-deployment':'floating-panel', 'floating-identity':'floating-panel',
+  'floating-provenance':'floating-panel', 'floating-source-list':'floating-panel',
   danger: 'action', disclosure: 'disclosure', 'disclosure-body': 'disclosure', 'drag-handle': 'drag-handle', dynamic: 'action',
   error: 'notice', field: 'field', fill: 'actions', form: 'form', 'graphic-action': 'drag-handle', grid: 'grid', group: 'group',
   guide: 'drag-handle', header: 'toolbar', icon: 'icon', 'icon-button': 'icon-action', 'icon-choice': 'checkbox', inline: 'actions',
