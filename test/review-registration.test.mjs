@@ -66,7 +66,7 @@ test('read-only operator registration report exposes six independent source/bloc
   const out=sourceRegistrationReport();
   assert.equal(out.protocol,'shared-ui-review-registration-v1');
   assert.equal(out.consumers,6);
-  assert.equal(out.execution,'NOT RUN');
+  assert.match(out.execution,/^BLOCKED:/);
   assert.equal(out.maxOwnedFixtureChildren,2);
   assert.deepEqual(out.owners.map(o=>o.app),REVIEW_IDS);
   for(const app of out.owners){
