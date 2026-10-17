@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {bundleFingerprint,ReviewManager,validateReviewPlan} from '../scripts/review-manager.mjs';
-import {verifyBundleFiles,verifySandboxAttestation,readReviewPlan} from '../scripts/review-host.mjs';
+import {bundleFingerprint,ReviewManager,validateReviewPlan,STATICREF_FIX31} from '../scripts/review-manager.mjs';
+import {verifyBundleFiles,verifySandboxAttestation,readReviewPlan,verifyStaticRefSourceReport} from '../scripts/review-host.mjs';
 import {dispatchLine} from '../scripts/review-launcher.mjs';
 
 const hex=(c,n)=>c.repeat(n);
@@ -29,14 +29,14 @@ function plan(){
     apps:[
       {id:'aura',repository:'andyherle/aura',root:'/private/aura',sha:hex('f',40),
         port:41888,manifest:'/private/aura/fixtures/ui-manifest.json',
-        healthPath:'/__fixture__/review-lock.json',
+        healthPath:'/__fixture__/review-lock.json',reviewRoute:'/studio?state=default',
         start:command('/private/node','scripts/ui-fixtures.mjs',['--port=41888']),
         tests:{http:command('/private/node','tests/ui-fixtures.test.mjs',['--test']),
           browser:command('/private/node','tests/ui-fixtures.browser.test.mjs',['--test'])}},
       {id:'staticref',repository:'andyherle/StaticRef',root:'/private/staticref',sha:hex('0',40),
         port:8769,manifest:'/private/staticref/tests/browser/ui-fixture-manifest.json',
-        healthPath:'/__fixture__/review-lock.json',
-        start:command('/private/python','tests/browser/serve_ui_fixture.py',['--port','8769']),
+        healthPath:'/__fixture__/review-lock.json',reviewRoute:'/reference/c/editorial/?fixture=normal',
+        start:command('/private/python','tests/browser/serve_ui_review.py',['--port=8769']),
         tests:{http:command('/private/node','tests/ui-fixture.test.mjs',['--test'])}}
     ]};
 }
@@ -57,6 +57,7 @@ function fakeHost(planInput=plan()){
       uiSha:s.bundle.uiSha,bundleDigest:s.bundle.bundleDigest,
       seed:s.seed,variant:s.bundle.variant==='baseline'?'installed':s.bundle.variant,
       pack:s.bundle.pack,files:{...s.bundle.digests},
+      fixture_route:s.app.reviewRoute,
       composition:{id:'review-workspace',revision:'1',instances:[s.app.id+'.review-workspace']},
       mockOnly:true,productionWritesDisabled:true,realAppCode:true};},
     async stop(child){calls.stop.push(child);if(host.shutdownUnknown)return false;child.exitCode=0;return true;},
@@ -88,6 +89,59 @@ test('review config requires two pinned clean-commit owners and separate baselin
     assert.throws(()=>validateReviewPlan(broken),Error);
   }
   assert.throws(()=>bundleFingerprint({'styles.css':hex('0',64)}),/pinned digest/);
+});
+
+test('StaticRef-FIRST accepts one owner without requiring Aura; routes are exact and bounded',async()=>{
+  const base=plan(),single={...base,apps:[structuredClone(base.apps[1])]};
+  assert.equal(validateReviewPlan(single).apps.length,1);
+  const m=new ReviewManager(single,fakeHost(single));
+  assert.equal(m.status().length,1);
+  const started=await m.start('staticref','baseline','seed-1');
+  assert.equal(started.href,'http://127.0.0.1:8769/reference/c/editorial/?fixture=normal');
+  await m.stop('staticref');
+  for(const mutation of [
+    c=>{c.apps=[];},
+    c=>{c.apps.push({...structuredClone(base.apps[0]),id:'staticref'});},
+    c=>{c.apps[0].reviewRoute='//foreign.example/';},
+    c=>{c.apps[0].reviewRoute='/%2e%2e/secret';},
+    c=>{c.apps[0].reviewRoute='/reference/#unbounded';},
+    c=>{delete c.apps[0].reviewRoute;}
+  ]){
+    const invalid=structuredClone(single);mutation(invalid);
+    assert.throws(()=>validateReviewPlan(invalid),Error);
+  }
+  const tooMany=structuredClone(base);
+  tooMany.apps.push({...structuredClone(base.apps[1]),id:'another'});
+  assert.throws(()=>validateReviewPlan(tooMany),/one or two/);
+});
+
+test('StaticRef source admission rejects old Canvas blobs and unreviewed extra changes',()=>{
+  const c=structuredClone(plan().apps[1]);
+  c.sha='e'.repeat(40);
+  c.sourceProof={fixtureSha:'8c00b29781340327174a6d3f08768b318c9079b9',
+    fixSha:STATICREF_FIX31.sha};
+  const paths=Object.keys(STATICREF_FIX31.blobs);
+  const report={fixtureAncestor:true,combinedSha:c.sha,
+    changedFiles:[...paths],headBlobs:{...STATICREF_FIX31.blobs},fixBlobs:{...STATICREF_FIX31.blobs}};
+  assert.equal(validateReviewPlan({...plan(),apps:[c]}).apps.length,1);
+  const proven=verifyStaticRefSourceReport(c,report);
+  assert.equal(proven.combinedAppSha,c.sha);
+  assert.equal(proven.headingFixPr31Sha,STATICREF_FIX31.sha);
+  assert.deepEqual(proven.gitBlobs,STATICREF_FIX31.blobs);
+  for(const mutate of [
+    r=>{r.changedFiles.push('staticref/web/gallery-aspect.js');},
+    r=>{r.changedFiles.pop();},
+    r=>{r.headBlobs['staticref/web/canvas.js']='06445a987cf2e21f1bfdea3a72c62b33b416ffc4';},
+    r=>{r.fixBlobs['staticref/web/canvas.css']='39a0c6429d3729d472afeb864495999dbbc976aa';},
+    r=>{r.fixtureAncestor=false;},
+    r=>{r.combinedSha='0'.repeat(40);}
+  ]){
+    const invalid=structuredClone(report);mutate(invalid);
+    assert.throws(()=>verifyStaticRefSourceReport(c,invalid),Error);
+  }
+  const invalid=structuredClone(c);invalid.sourceProof.fixSha='0'.repeat(40);
+  assert.throws(()=>validateReviewPlan({...plan(),apps:[invalid]}),/PR31|exact/);
+  assert.throws(()=>verifyStaticRefSourceReport({...c,sourceProof:null},report),Error);
 });
 
 test('OS sandbox attestation is a pinned challenge/probe result, never a mockOnly flag',()=>{
@@ -130,6 +184,8 @@ test('manual start, deduplication and exact immutable source/UI/seed receipt',as
   assert.equal(host.calls.record[0].seed,'seed-42');
   assert.equal(host.calls.record[0].kind,'start');
   assert.equal(host.calls.record[0].result,'health-verified/browser-unrun');
+  assert.equal(host.calls.record[0].fixtureRoute,'/studio?state=default');
+  assert.equal(first.href,'http://127.0.0.1:41888/studio?state=default');
   assert.equal(host.calls.record[0].composition.id,'review-workspace');
   assert.equal(host.calls.record[0].composition.instances[0],'aura.review-workspace');
   await assert.rejects(manager.start('aura','baseline','seed-42'),/stop it explicitly/);
