@@ -511,3 +511,19 @@ native editor. Toggle the native `hidden` attribute when entering or leaving
 editing; apps own edit events, data and board placement. Keep the preview and
 input in the same component so input alignment inherits the centred heading.
 Both states are demonstrated in the Control fixture for both packs.
+
+## Anchored colour palette
+
+`SharedUI.createColorPicker(trigger, {value, onChange, title})` creates a native
+nonmodal popout next to its trigger. Call its `open()` from the trigger's native
+click command, `setValue(value, {mixed})` when selection changes, and `dispose()`
+when removing the view. The top row is Neutral, muted red with white text, warm yellow, checkmark green and Translucent; saturated everyday pastels follow,
+then a native colour input and validated six-digit hex editor. Swatches retain accessible names without visible captions or arrows. It owns bounded positioning, Escape/outside
+dismissal and focus return; listeners for viewport movement exist only while open.
+`SharedUI.setCardColor` keeps the authored hex value while deriving readable
+light/dark fills and ink. White becomes near black in dark mode. Colour resolutions
+are cached with a bounded128-entry cache, and CSS changes theme without JS repaint.
+Use `.ui-board-grid` and toggle `data-ui-interacting=true` during a drag; apps own
+the grid's world-space size and offset. The catalogue demonstrates the picker.
+
+Pastel swatches and cards use the same resolved fill in both themes; only near-white neutral changes to off-black. Inline code and code blocks use the shared paired `--ui-prose-code-fill` / `--ui-prose-code-ink` tokens, so authored card text cannot turn code black-on-black.

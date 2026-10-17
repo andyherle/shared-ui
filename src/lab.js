@@ -17,6 +17,8 @@ UI.createColumnDrag($('resizable-sheet'),{
   onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
 });
 sampleResize=UI.createColumnResize($('resizable-sheet'));
+const colourPicker=UI.createColorPicker($('fixture-colour'),{onChange:value=>UI.setCardColor($('fixture-colour-card'),value)});
+$('fixture-colour').addEventListener('click',()=>colourPicker.open());
 const pack=$('pack'),mode=$('mode'),density=$('density');
 const embedded=$('embedded-host').attachShadow({mode:'open'}),embeddedCSS=document.createElement('link');
 embeddedCSS.rel='stylesheet';embeddedCSS.href='./v1/styles.css';embedded.append(embeddedCSS,$('embedded-form').content.cloneNode(true));

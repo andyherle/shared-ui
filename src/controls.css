@@ -279,7 +279,8 @@
     button[data-ui-surface=graphic][aria-pressed=true] { color:var(--ui-accent); }
     :where(.ui-card,.ui-notice) { color:var(--ui-text); background:var(--ui-surface); border:1px solid var(--ui-line); border-radius:var(--ui-radius); }
     /* Card colors are authored content. */
-    .ui-card[data-ui-color] { --ui-text:var(--ui-card-ink); --ui-muted:var(--ui-card-ink); background:var(--ui-card-fill); border-color:var(--ui-card-fill); }
+    .ui-card[data-ui-color]:not([data-ui-color=transparent],[data-ui-color="#ffffff"]) { --ui-text:var(--ui-card-ink); --ui-muted:var(--ui-card-ink); background:var(--ui-card-fill); border-color:var(--ui-card-fill); }
+    .ui-card[data-ui-color=transparent] { background:transparent; }
     .ui-card[data-ui-dragging=true] { opacity:.78; }
     .ui-drag-handle { touch-action:none; cursor:grab; }
 
@@ -292,6 +293,19 @@
   &::before { content:""; inline-size:18px; block-size:18px; border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius-small); background:var(--colour,var(--ui-swatch-value,currentColor)); }
   &[aria-pressed=true]::before { outline:2px solid var(--ui-accent); outline-offset:3px; }
 }
+    .ui-color-picker { position:fixed; inset:auto; margin:0; inline-size:min(320px,calc(100vw - 24px)); max-block-size:calc(100dvh - 24px); box-shadow:var(--shadow-raised); }
+    .ui-color-picker:popover-open { display:grid; }
+    .ui-color-picker > :is(header,footer,[data-ui-popout-body]) { padding:12px; }
+    .ui-color-picker section + section { border-top:1px solid var(--ui-line); padding-top:12px; }
+    .ui-color-palette { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+    .ui-color-palette[data-ui-labels] { grid-template-columns:repeat(5,minmax(0,1fr)); }
+    .ui-color-palette > .ui-swatch { flex-direction:column; min-inline-size:0; min-block-size:44px; padding:5px; }
+    .ui-color-palette > .ui-swatch::before { inline-size:100%; block-size:28px; }
+    .ui-swatch[data-ui-color-value=transparent]::before { background:repeating-conic-gradient(var(--ui-line-strong) 0 25%,transparent 0 50%) 50% / 10px 10px; }
+    .ui-color-palette .ui-label { display:none; }
+    .ui-color-picker input[type=color] { inline-size:44px; block-size:28px; flex:none; padding:0; border:0; background:#0000; cursor:pointer; }
+    .ui-board-grid { background-color:var(--ui-bg); background-image:radial-gradient(color-mix(in srgb,var(--ui-line-strong) 28%,transparent) 1px,transparent 1px); }
+    .ui-board-grid[data-ui-interacting=true] { background-image:radial-gradient(var(--ui-line-strong) 1px,transparent 1px); }
     .ui-resize-handle { --ui-resize-target:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); touch-action:none; min-inline-size:var(--ui-resize-target); min-block-size:var(--ui-resize-target); inline-size:var(--ui-resize-target); block-size:var(--ui-resize-target); max-inline-size:none; padding:0; border:0; border-radius:0; background:#0000; color:var(--ui-accent); }
     .ui-resize-handle::after { content:""; inline-size:calc(7px / var(--ui-graphic-scale,1)); block-size:calc(7px / var(--ui-graphic-scale,1)); background:currentColor; border:calc(1px / var(--ui-graphic-scale,1)) solid var(--ui-text); }
     .ui-column-resize::after { inline-size:1px; block-size:100%; border:0; background:var(--ui-line-strong); margin-inline-start:auto; }
@@ -354,8 +368,8 @@
   :where(p,ul,ol,blockquote,pre,table) { margin:.6em 0; }
   :where(ul,ol) { padding-inline-start:1.5em; }
   a { color:var(--ui-accent); text-decoration:underline; text-underline-offset:3px; }
-  code { font: .9em/1.5 var(--ui-font-mono); background:var(--ui-surface-soft); border-radius:4px; padding:2px 5px; }
-  pre { overflow-x:auto; padding:12px; background:var(--ui-surface-soft); border-radius:var(--ui-radius-small); }
+  code { font: .9em/1.5 var(--ui-font-mono); color:var(--ui-prose-code-ink); background:var(--ui-prose-code-fill); border-radius:4px; padding:2px 5px; }
+  pre { overflow-x:auto; padding:12px; color:var(--ui-prose-code-ink); background:var(--ui-prose-code-fill); border-radius:var(--ui-radius-small); }
   pre code { padding:0; background:#0000; white-space:pre; }
   blockquote { margin-inline:0; padding-inline-start:12px; border-inline-start:2px solid var(--ui-line-strong); color:var(--ui-muted); }
   table { display:block; max-inline-size:100%; overflow-x:auto; border-collapse:collapse; }

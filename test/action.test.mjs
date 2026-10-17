@@ -75,9 +75,10 @@ test('reserved standalone text supports empty values and literal strings without
 
 test('authored card colors choose readable ink, reject CSS injection and restore the theme',()=>{
  const values=new Map(),card={dataset:{},style:{setProperty:(key,value)=>values.set(key,value),removeProperty:key=>values.delete(key)}};
- module.exports.setCardColor(card,'#ff575c');assert.equal(values.get('--ui-card-fill'),'#ff575c');assert.equal(values.get('--ui-card-ink'),'#111111');
- module.exports.setCardColor(card,'#27313e');assert.equal(values.get('--ui-card-ink'),'#ffffff');
+ module.exports.setCardColor(card,'#ff575c');assert.equal(values.get('--ui-card-fill'),`light-dark(#ff575c,${module.exports.resolveCardColor('#ff575c').dark})`);assert.equal(values.get('--ui-card-ink'),'light-dark(#000000,#000000)');
+ module.exports.setCardColor(card,'#27313e');assert.equal(values.get('--ui-card-ink'),'light-dark(#ffffff,#ffffff)');
  assert.throws(()=>module.exports.setCardColor(card,'url(https://example.com)'),/six-digit/);assert.equal(card.dataset.uiColor,'#27313e');
+ module.exports.setCardColor(card,'transparent');assert.equal(card.dataset.uiColor,'transparent');assert.equal(values.size,0);
  module.exports.setCardColor(card,null);assert.equal(card.dataset.uiColor,undefined);assert.equal(values.size,0);
 });
 
@@ -125,4 +126,19 @@ test('panel back-to-top returns focus, pauses while hidden and releases its list
  view.emit('pagehide');assert.equal(panel.listeners.size,0);view.emit('pageshow');assert.equal(panel.listeners.size,1);
  helper.dispose();helper.dispose();
  assert.equal(panel.listeners.size,0);assert.equal(button.listeners.size,0);assert.equal(doc.listeners.size,0);assert.equal(view.listeners.size,0);
+});
+
+test('theme-adaptive authored colours preserve their value with readable light/dark ink and bounded reusable resolutions',()=>{
+ const resolve=module.exports.resolveCardColor;
+ assert.equal(resolve('#c44c53').lightInk,'#ffffff');assert.equal(resolve('#ff3b30').light,'#c44c53');
+ for(const colour of ['#c44c53','#f3d376','#22c55e'])assert.equal(resolve(colour).dark,colour,'Approval colours stay vivid in both themes');
+ assert.equal(resolve('#ffffff').dark,'var(--ui-surface)');
+ assert.equal(resolve('#f6c7a6'),resolve('#f6c7a6'),'Repeated card colours reuse their resolution');
+ const luminance=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+ for(let r=0;r<=255;r+=17)for(let g=0;g<=255;g+=17)for(let b=0;b<=255;b+=17){
+  const hex='#'+[r,g,b].map(c=>c.toString(16).padStart(2,'0')).join(''),value=resolve(hex);
+  if(hex==='#ffffff')continue;
+  assert.equal(value.light,hex==='#ffff00'?'#f3d376':hex);
+  for(const mode of ['light','dark']){const a=luminance(value[mode]),b=luminance(value[mode+'Ink']);assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,hex+' '+mode);}
+ }
 });
