@@ -71,9 +71,19 @@ private branches. The launcher never touches their generated installed
      },
      "mockOnly": true,
      "productionWritesDisabled": true,
-     "realAppCode": true
+     "realAppCode": true,
+     "composition": {
+       "id": "review-workspace",
+       "revision": "1",
+       "instances": ["aura.studio.library"]
+     }
    }
    ```
+   Candidate and saved variants must identify at least one real
+   `review-workspace@1` instance in the app's actual source. Baseline
+   may omit the composition object because v1.10.2 does not ship the factory.
+   The receipt records these instance identities but does not equate an
+   app-declared marker with runtime/browser acceptance.
    Health **must reflect the actual asset bytes currently served**, not
    merely echo unvalidated environment variables. The launcher checks
    all identities exactly and fails startup if the endpoint is missing.
