@@ -182,23 +182,49 @@ export class ReviewManager {
     this.plan=validateReviewPlan(input);this.host=host;this.owned=new Map();this.testActive=false;this.testChild=null;
   }
   status(){
-    return Object.freeze(this.plan.apps.map(app=>{
-      const s=this.owned.get(app.id);
-      const exited=!!s?.child&&(Number.isInteger(s.child.exitCode)||!!s.child.signalCode);
-      return {app:app.id,port:app.port,state:exited&&s.state==='ready'?'exited-unexpected':s?.state||'stopped',pid:s?.child?.pid||null,
-        variant:s?.bundle.variant||null,uiSha:s?.bundle.uiSha||null,seed:s?.seed||null,
-        owned:!!s,reviewId:this.plan.reviewId,
-        testPid:this.testChild?.appId===app.id?this.testChild.child.pid:null,
-        testState:this.testChild?.appId===app.id?'owned-running-or-unconfirmed':'idle'};
+    const configured=new Map(this.plan.apps.map(app=>[app.id,app]));
+    const ordered=[
+      ...this.plan.apps.map(app=>registrationFor(app.id)),
+      ...REVIEW_REGISTRY.owners.filter(reg=>!configured.has(reg.id))
+    ];
+    return Object.freeze(ordered.map(reg=>{
+      const app=configured.get(reg.id);
+      const profile=profileFor(reg,app?.profile);
+      const active=this.owned.get(reg.id);
+      const exited=!!active?.child&&
+        (Number.isInteger(active.child.exitCode)||!!active.child.signalCode);
+      const baseline=readinessFor(app,reg,'baseline');
+      const candidate=readinessFor(app,reg,'candidate');
+      const mount=checkMountCompatibility(app,reg,candidate);
+      const candidateStatus=mount.state==='blocked'?mount:candidate;
+      return {app:reg.id,repository:reg.repository,supported:true,configured:!!app,
+        profile:profile.name,pack:profile.pack,port:app?.port??profile.port,
+        baseline:{state:baseline.state,reason:baseline.reason},
+        candidate:{state:candidateStatus.state,reason:candidateStatus.reason??candidate.reason},
+        state:active?(exited&&active.state==='ready'?'exited-unexpected':active.state):
+          app?'stopped':'blocked',
+        blocker:app?null:'No exact private app SHA, bundle pins and fixture adapter selected; still registered',
+        pid:active?.child?.pid??null,variant:active?.bundle.variant??null,
+        uiSha:active?.bundle.uiSha??null,seed:active?.seed??null,
+        owned:!!active,reviewId:this.plan.reviewId,
+        testPid:this.testChild?.appId===reg.id?this.testChild.child.pid:null,
+        testState:this.testChild?.appId===reg.id?'owned-running-or-unconfirmed':'idle'};
     }));
   }
-  async start(appId,variant='candidate',seed='seed-1'){
+  async start(appId,variant='candidate',seed){
     const selected=selection(this.plan,appId,variant,seed),key=identity(selected);
+    const requested=variant==='baseline'?'baseline':'candidate';
+    const readiness=readinessFor(selected.app,selected.registration,requested);
+    const mount=checkMountCompatibility(selected.app,selected.registration,readiness);
+    check(readiness.state==='prepared'&&
+      (requested==='baseline'||mount.state==='prepared'),
+      'Consumer '+appId+' is registered, but '+requested.toUpperCase()+
+      ' BLOCKED: '+(readiness.state==='blocked'?readiness.reason:mount.reason));
     const previous=this.owned.get(appId);
     if(previous){
       const exited=Number.isInteger(previous.child?.exitCode)||!!previous.child?.signalCode;
       if(previous.state==='ready'&&!exited&&previous.key===key)
-        return {reused:true,pid:previous.child.pid,app:appId,variant,seed};
+        return {reused:true,pid:previous.child.pid,app:appId,variant,seed:selected.seed};
       throw new Error('An owned session already exists; stop it explicitly before changing revision or seed');
     }
     check(this.owned.size<2,'At most two owned fixture children');
@@ -242,21 +268,27 @@ export class ReviewManager {
       check(validComposition,'Candidate fixture did not prove a declared review-workspace@1 instance');
       check(health?.protocol==='shared-ui-review-health-v1'&&
         health.appSha===selected.app.sha&&health.uiSha===selected.bundle.uiSha&&
-        health.bundleDigest===selected.bundle.bundleDigest&&health.seed===seed&&
+        health.bundleDigest===selected.bundle.bundleDigest&&health.seed===selected.seed&&
         health.variant===expectedVariant&&health.pack===selected.bundle.pack&&
         health.files&&typeof health.files==='object'&&!Array.isArray(health.files)&&
         Object.keys(health.files).length===FILES.length&&
         FILES.every(name=>health.files[name]===selected.bundle.digests[name])&&
         health.mockOnly===true&&health.productionWritesDisabled===true&&health.realAppCode===true,
         'Fixture did not confirm the exact real-code app, bundle and mock boundary');
-      session.state='ready';
       check(health.fixture_route===undefined||health.fixture_route===appRoute(selected.app),
         'Fixture served a different synthetic review route');
+      if(selected.app.mountEvidence&&requested==='candidate'){
+        const needed=selected.app.mountEvidence.instanceIds;
+        check(needed.every(id=>comp.instances.includes(id)),
+          'Source-declared pre-mount/SSR instances are not present in actual candidate');
+      }
+      await this.host.validateRuntimeManifest?.(session);
+      session.state='ready';
       const saved=await this.host.record(receipt('start',session,{
         result:'health-verified/browser-unrun',healthPath:selected.app.healthPath,
         composition:comp?{id:comp.id,revision:String(comp.revision),instances:[...comp.instances]}:null
       }));
-      return {app:appId,pid:child.pid,port:selected.app.port,variant,seed,reused:false,receipt:saved,
+      return {app:appId,pid:child.pid,port:selected.app.port,pack:selected.bundle.pack,variant,seed:selected.seed,reused:false,receipt:saved,
         href:'http://127.0.0.1:'+selected.app.port+selected.app.reviewRoute};
     }catch(error){
       // The manager knows only this child; never attempt to kill a PID recovered
