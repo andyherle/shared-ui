@@ -255,6 +255,16 @@ export class LocalReviewHost {
       'Review bundle must be outside all app and shared-ui checkouts');
     this.verifyCommand(app.start,appRoot);
     for(const cmd of Object.values(app.tests))this.verifyCommand(cmd,appRoot);
+    if(app.mountEvidence){
+      // A server-rendered app cannot claim safe pre-hydration based on a
+      // string alone. The app-owned regression file must exist in its exact
+      // clean, pinned checkout. Browser verification remains separate.
+      const regression=sourceWithin(appRoot,app.mountEvidence.testFile);
+      requireThat(gitRead(appRoot,['ls-files','--error-unmatch','--',app.mountEvidence.testFile])===
+        app.mountEvidence.testFile,
+        'Untracked SSR/pre-mount compatibility test cannot count as source prepared');
+      requireThat(fs.statSync(regression).size>0,'Empty SSR/pre-mount source test');
+    }
     this.readOwnerManifest(app);
     const iso=this.verifyPrivatePlan();
     // No process is started until the owner explicitly issues "start" or "test".
