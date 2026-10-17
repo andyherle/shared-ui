@@ -5,6 +5,7 @@ import {REVIEW_REGISTRY,REVIEW_IDS,registrationFor,profileFor,readinessFor,
   checkMountCompatibility,reviewOriginRoute} from '../scripts/review-registration.mjs';
 import {ReviewManager,bundleFingerprint,validateReviewPlan} from '../scripts/review-manager.mjs';
 import {dispatchLine} from '../scripts/review-launcher.mjs';
+import {sourceRegistrationReport} from '../scripts/review-owners.mjs';
 
 const sha=c=>c.repeat(40);
 const hash=c=>c.repeat(64);
@@ -61,6 +62,23 @@ function fakeHost(plan){
     async cleanup(){}
   };
 }
+test('read-only operator registration report exposes six independent source/blocked states without a running fixture',()=>{
+  const out=sourceRegistrationReport();
+  assert.equal(out.protocol,'shared-ui-review-registration-v1');
+  assert.equal(out.consumers,6);
+  assert.equal(out.execution,'NOT RUN');
+  assert.equal(out.maxOwnedFixtureChildren,2);
+  assert.deepEqual(out.owners.map(o=>o.app),REVIEW_IDS);
+  for(const app of out.owners){
+    assert.ok(app.profiles.length>=1);
+    assert.ok(['prepared','blocked'].includes(app.baseline.state));
+    assert.ok(['prepared','blocked'].includes(app.candidate.state));
+    assert.ok(!('privatePath' in app));
+  }
+  for(const id of ['home','ledger','delivery','portal'])
+    assert.equal(out.owners.find(a=>a.app===id).candidate.state,'blocked');
+});
+
 test('one canonical versioned registry includes every required consumer and original app profile',()=>{
   assert.deepEqual(REVIEW_IDS,['staticref','aura','home','ledger','delivery','portal']);
   assert.deepEqual(REVIEW_REGISTRY.owners.map(o=>o.id),REVIEW_IDS);
