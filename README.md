@@ -470,6 +470,18 @@ repository. The public shared-ui repository contains only the versioned
 claim browser verification; a fixture is verified only with source-backed run
 evidence. A shared token's adoption is independent of the fixture harness.
 
+## Isolated candidate review (foreground, not a release)
+
+The [managed fixture review launcher](docs/MANAGED_REVIEW_LAUNCHER.md)
+adds **manual start/status/test/stop** around app-owned real-code synthetic
+fixture servers, reusing PR #3's strict offline fixture index. It pins
+clean application/shared-ui SHAs and immutable complete candidate/baseline
+bundle SHA256 digests. It **fails closed** unless a separate audited
+OS isolation broker proves the required network/filesystem prohibitions.
+It has no automatic browser runner, daemon, installer or promotion pathway;
+app integrations and runtime/browser acceptance are separate owner work.
+The source-only CLI is `npm run review:managed -- --config /absolute/private/review-plan.json`.
+
 ## Shared UI Studio
 
 Studio development tooling shares a versioned catalogue registry, typed token
