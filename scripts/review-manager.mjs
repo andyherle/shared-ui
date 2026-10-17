@@ -293,7 +293,8 @@ export class ReviewManager {
         check(needed.every(id=>comp.instances.includes(id)),
           'Source-declared pre-mount/SSR instances are not present in actual candidate');
       }
-      await this.host.validateRuntimeManifest?.(session);
+      if(selected.profile.manifestMode==='runtime-loopback')
+        await this.host.validateRuntimeManifest?.(session);
       session.state='ready';
       const saved=await this.host.record(receipt('start',session,{
         result:'health-verified/browser-unrun',healthPath:selected.app.healthPath,
