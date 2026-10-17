@@ -31,6 +31,30 @@ previewWidth.addEventListener('input',()=>resizePreview(previewWidth.value));
 for(const button of document.querySelectorAll('[data-preview-width]'))button.addEventListener('click',()=>resizePreview(button.dataset.previewWidth));
 let toastTimer=null,source=null,sourceAbort=null,lockWaiting=false,pageActive=true,layoutRevision=null,labChannel=null;
 const hostedStatic=location.hostname.endsWith('.github.io');
+
+/* Shared fixture: the same native controls stay in place; only fixture
+ * chrome/positioning comes from the single reusable SharedUI API. */
+const floatingDemo=$('floating-review-panel');
+const floatingProvenance=()=>({
+  appName:'Shared UI Style Lab',appVersion:'source-preview',
+  uiVersion:root.dataset.uiVersion,cssRevision:root.dataset.uiRevision,
+  variant:hostedStatic?'unverified':'candidate',
+  deploymentState:hostedStatic?'unverified':'not-deployed'
+});
+const floatingReview=UI.createFloatingPanel(floatingDemo,{
+  label:'Fixture review',placement:'bottom-right',provenance:floatingProvenance()
+});
+$('floating-demo-toggle').addEventListener('click',()=>{
+  floatingDemo.hidden=!floatingDemo.hidden;
+  const opened=!floatingDemo.hidden;
+  $('floating-demo-toggle').textContent=opened?'Hide review panel':'Show review panel';
+  $('floating-demo-toggle').setAttribute('aria-expanded',String(opened));
+  if(opened)floatingReview.reflow();
+});
+$('floating-demo-action').addEventListener('click',()=>{
+  $('floating-demo-result').textContent='Retained: '+$('floating-demo-input').value;
+});
+
 try{if(window.BroadcastChannel)labChannel=new BroadcastChannel('shared-ui-lab-events');}catch{}
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2800);}
 function tokens(){const style=getComputedStyle(root),items=[['Background','bg'],['Surface','surface'],['Text','text'],['Muted','muted'],['Border','line'],['Accent','accent'],['Primary','primary'],['Focus','accent']];$('tokens').replaceChildren();for(const [name,key] of items){const group=document.createElement('div'),swatch=document.createElement('span'),term=document.createElement('dt'),value=document.createElement('dd');swatch.className='lab-token-swatch';swatch.style.background=style.getPropertyValue('--ui-'+key);term.textContent=name;value.textContent=style.getPropertyValue('--ui-'+key).trim();group.append(swatch,term,value);$('tokens').append(group);}$('revision').textContent='Style revision · '+(root.dataset.uiRevision||'bundled').slice(0,12);}
@@ -136,8 +160,8 @@ async function openSource(){
 }
 async function refreshLayout(){const old=document.querySelector('link[href*="lab.css"]'),next=document.createElement('link');next.rel='stylesheet';next.href='./lab.css?refresh='+Date.now();next.media='not all';next.onload=()=>{next.media='all';old?.remove();};next.onerror=()=>next.remove();document.head.append(next);}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){closeSource();stopAnimation();for(const media of document.querySelectorAll('audio,video'))media.pause();}else{void openSource();if(playing)raf=requestAnimationFrame(animate);requestAnimationFrame(tokens);}});
-window.addEventListener('pagehide',event=>{pageActive=false;closeSource();stopAnimation();clearTimeout(toastTimer);if(!event.persisted){UI.releaseActions(embeddedRoot);combo.dispose();simpleTagInput.dispose();fixtureTagInput.dispose();labChannel?.close();}});window.addEventListener('pageshow',event=>{pageActive=true;if(event.persisted){void openSource();if(playing)raf=requestAnimationFrame(animate);requestAnimationFrame(tokens);}});
-document.addEventListener('ui:styles',()=>requestAnimationFrame(tokens));
+window.addEventListener('pagehide',event=>{pageActive=false;closeSource();stopAnimation();clearTimeout(toastTimer);if(!event.persisted){floatingReview.dispose();UI.releaseActions(embeddedRoot);combo.dispose();simpleTagInput.dispose();fixtureTagInput.dispose();labChannel?.close();}});window.addEventListener('pageshow',event=>{pageActive=true;if(event.persisted){void openSource();if(playing)raf=requestAnimationFrame(animate);requestAnimationFrame(tokens);}});
+document.addEventListener('ui:styles',()=>{floatingReview.setProvenance(floatingProvenance());requestAnimationFrame(tokens);});
 window.addEventListener('storage',event=>{if(event.key?.startsWith('shared-ui:v1:'))requestAnimationFrame(tokens);});
 for(const action of document.querySelectorAll('[data-copy-field]'))action.addEventListener('click',async()=>{const input=action.parentElement.querySelector('input');try{await navigator.clipboard.writeText(input.value);toast('Link copied');}catch{input.focus();input.select();toast('Select and copy the link');}});
 void openSource();timeline();
