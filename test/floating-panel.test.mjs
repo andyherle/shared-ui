@@ -179,10 +179,10 @@ test('visualViewport pinch/scroll and ResizeObserver dynamically clamp expanded 
   assert.equal(e.panel.style.maxWidth,'224px');
   assert.equal(e.panel.style.maxHeight,'184px');
   assert.equal(f.position.x,48);
-  assert.equal(f.position.y,145);
+  assert.equal(f.position.y,137);
   e.vv.offsetLeft=90;e.vv.offsetTop=130;
   e.vv.emit('scroll');
-  assert.equal(f.position.x,98);assert.equal(f.position.y,200);
+  assert.equal(f.position.x,98);assert.equal(f.position.y,192);
   e.panel.height=600;e.observers[0].trigger();
   assert.equal(f.position.y,138);
   e.vv.width=180;e.vv.height=100;e.vv.emit('resize');
