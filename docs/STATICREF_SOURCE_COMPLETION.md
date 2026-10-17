@@ -1,7 +1,11 @@
 # Source-complete coordinator handoff — StaticRef first, Aura second
 
-**Purpose:** Finish coordinator-owned source work and supply one reproducible handoff
-for a **separately user-initiated Codex local setup**. This is NOT authorization
+**Purpose:** Finish the **StaticRef-FIRST testing lane** and supply one reproducible
+handoff for a **separately user-initiated Codex local setup**.
+**This is NOT a two-app registration whitelist**: the shared launcher
+registers all six consumers with candidate/baseline pins and explicit
+BLOCKED source states. See [six-consumer registration and readiness]
+(SIX_CONSUMER_REVIEW_HANDOFF.md). This is NOT authorization
 to run a process, start Codex, disable confinement, merge, publish, migrate or
 deploy. Source checks and browser acceptance are different outcomes.
 
