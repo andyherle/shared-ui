@@ -144,6 +144,32 @@ test('StaticRef source admission rejects old Canvas blobs and unreviewed extra c
   assert.throws(()=>verifyStaticRefSourceReport({...c,sourceProof:null},report),Error);
 });
 
+test('StaticRef candidate is never admitted without independently returned PR31 blob provenance',async()=>{
+  const p=plan();p.apps=[p.apps[1]];
+  const host=fakeHost(p),manager=new ReviewManager(p,host);
+  await assert.rejects(manager.start('staticref','candidate','seed-1'),/sourceProof/);
+  assert.equal(host.calls.spawn.length,0);
+  const proof={fixtureSha:'2e6d2bbb31fb5e2010c87cce79b4065dc5ed1a3d',
+    fixSha:STATICREF_FIX31.sha};
+  p.apps[0].sourceProof=proof;
+  const host2=fakeHost(p);
+  const manager2=new ReviewManager(p,host2);
+  await assert.rejects(manager2.start('staticref','candidate','seed-1'),/committed PR31 source proof/);
+  assert.equal(host2.calls.spawn.length,0);
+  host2.preflight=async selected=>({
+    verified:true,profileSha256:p.isolation.policySha256,
+    executableSha256:p.isolation.binarySha256,evidenceDigest:hex('a',64),
+    sourceProof:{
+      fixturePr32Sha:proof.fixtureSha,headingFixPr31Sha:STATICREF_FIX31.sha,
+      combinedAppSha:p.apps[0].sha,gitBlobs:{...STATICREF_FIX31.blobs}
+    }
+  });
+  const result=await manager2.start('staticref','candidate','seed-1');
+  assert.equal(result.port,8769);
+  assert.equal(host2.calls.record[0].fixtureRoute,'/reference/c/editorial/?fixture=normal');
+  await manager2.stop('staticref');
+});
+
 test('OS sandbox attestation is a pinned challenge/probe result, never a mockOnly flag',()=>{
   const config=plan(),challenge='nonce-0123';
   const valid={
