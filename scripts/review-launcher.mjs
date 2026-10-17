@@ -19,7 +19,7 @@ export async function dispatchLine(manager,host,line,{output=()=>{}}={}){
   const [cmd,a,b,c]=commandWords(line);
   if(!cmd)return {continue:true};
   if(cmd==='help'){
-    output('status | start aura|staticref candidate|baseline|saved:<id> [seed] | test <app> <named-test> | stop <app> | index | exit');
+    output('status (ALL SIX) | start staticref|aura|home|ledger|delivery|portal baseline|candidate [seed] | test <app> <named-test> | stop <app> | index | exit');
     output('Manual shutdown required; no idle timeout, background launch, foreign port reuse, auto-stop, auto-install or auto-promotion.');
     return {continue:true};
   }
@@ -27,7 +27,7 @@ export async function dispatchLine(manager,host,line,{output=()=>{}}={}){
   if(cmd==='start'){
     if(!a||![undefined,'candidate','baseline'].includes(b)&&!b?.startsWith('saved:'))
       throw new Error('start <aura|staticref> <candidate|baseline|saved:id> [seed]');
-    const result=await manager.start(a,b||'candidate',c||'seed-1');
+    const result=await manager.start(a,b||'candidate',c);
     output(JSON.stringify(result));return {continue:true};
   }
   if(cmd==='stop'){
@@ -40,7 +40,15 @@ export async function dispatchLine(manager,host,line,{output=()=>{}}={}){
   }
   if(cmd==='index'){
     if(a)throw new Error('index takes no arguments');
-    const documents=manager.plan.apps.map(app=>({source:app.id,document:JSON.parse(fs.readFileSync(app.manifest,'utf8'))}));
+    const documents=[];
+    for(const app of manager.plan.apps){
+      if(!app.manifest||!fs.existsSync(app.manifest)){
+        output('BLOCKED '+app.id+': original runtime-generated fixture manifest not materialized; still registered');
+        continue;
+      }
+      documents.push({source:app.id,document:JSON.parse(fs.readFileSync(app.manifest,'utf8'))});
+    }
+    if(!documents.length)throw new Error('No app-owned fixture manifest is materialized; all remain BLOCKED, not unsupported');
     const entries=collectManifests(documents);
     const outputPath=path.join(host.prepareRoot(),manager.plan.reviewId+'-index.html');
     const generated=writeIndex(outputPath,renderIndex(entries));
