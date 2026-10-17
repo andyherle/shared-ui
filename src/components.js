@@ -181,7 +181,7 @@
       if(!group.isConnected){untrack(group);return;}
       // Overflow contents are governed by their outer group, including while closed.
       if(group.closest(overflowSelector))return;
-      const css=style(group),nodes=children(group),actions=descendants(nodes).filter(eligible);
+      const css=style(group),nodes=children(group).filter(node=>!['absolute','fixed'].includes(style(node).position)),actions=descendants(nodes).filter(eligible);
       const overflows=priorities(nodes);
       const vertical=group.dataset.uiLayout==='vertical'||css.flexDirection==='column';
       const targetCSS=style(item.target),box=item.target.getBoundingClientRect();

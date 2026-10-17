@@ -200,10 +200,10 @@
     .ui-toolbar { padding:var(--ui-gap); border:1px solid var(--ui-line); border-radius:var(--ui-radius); background:var(--ui-surface); }
     .ui-header { position:sticky; inset-block-start:0; z-index:50; align-items:center; justify-content:flex-end; border-radius:0; border-inline:0; border-block-start:0; }
     .ui-header > .ui-back,.ui-header > :has(>.ui-back) { order:-1; margin-inline-end:auto; }
-    .ui-header[data-ui-layout=workspace] { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); padding-inline:8px; }
-    [data-ui-header-status] { display:flex; justify-content:center; gap:var(--ui-gap); }
-    [data-ui-header-actions] { inline-size:100%; flex-wrap:nowrap; justify-self:end; justify-content:flex-end; }
-    @media(max-width:48rem) { .ui-header[data-ui-layout=workspace] { grid-template-columns:minmax(0,1fr); } [data-ui-header-status] { grid-row:3; } }
+    .ui-header[data-ui-layout=workspace] { flex-wrap:nowrap; padding-inline:8px; }
+    [data-ui-header-status] { position:absolute; inset-inline:0; display:flex; justify-content:center; gap:var(--ui-gap); pointer-events:none; }
+    [data-ui-header-actions] { margin-inline-start:auto; flex-wrap:nowrap; justify-content:flex-end; }
+    @media(max-width:72rem) { .ui-header[data-ui-layout=workspace] { flex-wrap:wrap; } [data-ui-header-status] { position:static; flex:1 0 100%; order:1; } }
     .ui-context-bar[data-ui-position=floating] { position:fixed; inset-block-end:max(var(--ui-gap),env(safe-area-inset-bottom)); inset-inline:var(--ui-gap); margin:auto; inline-size:auto; max-inline-size:56rem; z-index:130; }
     .ui-context-bar > [role=status] { flex:none; white-space:nowrap; }
     .ui-back-to-top[data-ui-position=viewport] { position:fixed; inset-inline-end:var(--ui-gap); inset-block-end:calc(3 * var(--ui-control-height) + env(safe-area-inset-bottom)); z-index:120; }
@@ -224,7 +224,7 @@
   &[data-ui-align=start] { justify-content:flex-start; }
   &[data-ui-align=end] { justify-content:flex-end; }
   &[data-ui-layout=vertical] { flex-direction:column; align-items:stretch; }
-  &:where(.ui-inline,[data-ui-layout=inline]) { inline-size:auto; flex:0 1 auto; container-type:normal; }
+  &:where(.ui-inline,[data-ui-layout=inline]) { inline-size:auto; flex:0 1 auto; flex-wrap:nowrap; container-type:normal; }
   &[data-ui-layout=vertical] > * { flex:none; }
   &[data-ui-layout=vertical] > .ui-search { inline-size:100%; }
 }
