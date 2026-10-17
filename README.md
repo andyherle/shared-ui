@@ -2,7 +2,7 @@
 
 One native HTML control language for Aura, StaticRef and Portal. Postvisual follows StaticRef's neutral media-first interface; Personal follows Portal. Theme, control density and application layout are separate choices.
 
-The package has no runtime dependencies. Shared CSS has a 32 KiB raw budget. Build and validation use Node's standard library:
+The package has no runtime dependencies. The earlier 32 KiB raw shared-CSS target is optional; the floating-review source candidate uses a measured 40 KiB safety cap with separately reported gzip size. Build and source validation use Node's standard library:
 
 ```sh
 npm run check
@@ -490,6 +490,13 @@ pins the intended PR #31 Canvas blobs, prescribes one clean disposable
 combined commit, and treats existing Canvas **and** gallery/lightbox behavior
 as release-blocking. Physical native IME and user hands-on approval remain
 mandatory; this work does not authorize promotion.
+
+The [shared floating review panel](docs/FLOATING_REVIEW_PANEL.md) has
+one native touch/keyboard-repositionable implementation for all app-owned
+fixture bars, truthful installed-code versus local-candidate labels, and
+a separately pinned fixture-only stylesheet companion for an unchanged
+installed 1.10.2 baseline. This work does not make a local fixture live
+production or change the canonical complete four-file bundle selection.
 
 ## Shared UI Studio
 
