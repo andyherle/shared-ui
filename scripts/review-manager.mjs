@@ -1,13 +1,15 @@
 // Foreground, app-agnostic lifecycle. Execution and OS confinement belong to a
 // separately audited Host adapter; source tests inject an inert fake Host.
 import {createHash} from 'node:crypto';
+import {REVIEW_IDS,REVIEW_REGISTRY,registrationFor,profileFor,readinessFor,checkMountCompatibility,reviewOriginRoute} from './review-registration.mjs';
 
 const HEX40=/^[0-9a-f]{40}$/;
 const HEX64=/^[0-9a-f]{64}$/;
 const SEED=/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
 const VARIANT=/^(candidate|baseline|saved:[a-z0-9][a-z0-9-]{1,63})$/;
 const FILES=['styles.css','runtime.js','icons.svg','manifest.json'];
-const APPS=Object.freeze({aura:'andyherle/aura',staticref:'andyherle/StaticRef'});
+// A registration is not an app runner. Each of the six apps is source-known
+// even when its fixture or candidate mode is explicitly BLOCKED.
 // Exact app-owned PR31 source blobs; Git SHA-1, NOT UI bundle SHA256.
 export const STATICREF_FIX31=Object.freeze({
   sha:'d0139bd231b3cb5b1bf02df6b7380d975d992f5e',
@@ -70,12 +72,15 @@ export function validateReviewPlan(input){
   const iso=object(plan.isolation,['binary','binarySha256','policy','policySha256'],'isolation');
   absolute(iso.binary,'isolation.binary');absolute(iso.policy,'isolation.policy');
   check(HEX64.test(iso.binarySha256)&&HEX64.test(iso.policySha256),'Isolation executable/policy must be pinned by digest');
-  check(Array.isArray(plan.bundles)&&plan.bundles.length>=2&&plan.bundles.length<=8,'Need bounded baseline and candidate bundles');
+  check(Array.isArray(plan.bundles)&&plan.bundles.length>=2&&plan.bundles.length<=24,'Need bounded pinned baseline and candidate bundles');
   const bundles=new Set();
   for(const bundle of plan.bundles){
-    object(bundle,['variant','root','sourceRoot','uiSha','pack','digests','bundleDigest','savedVersion'],'bundle');
-    check(VARIANT.test(bundle.variant)&&!bundles.has(bundle.variant),'Unknown or repeated bundle variant');
-    bundles.add(bundle.variant);
+    object(bundle,['id','variant','root','sourceRoot','uiSha','pack','digests','bundleDigest','savedVersion'],'bundle');
+    check(VARIANT.test(bundle.variant),'Unknown bundle variant');
+    if(bundle.id!==undefined)check(/^[a-z][a-z0-9-]{2,63}$/.test(bundle.id),'Invalid immutable bundle selection id');
+    const identity=bundle.id??bundle.pack+'-'+bundle.variant;
+    check(!bundles.has(identity),'Repeated bundle id; assign distinct names for app-specific baseline');
+    bundles.add(identity);
     absolute(bundle.root,'bundle.root');absolute(bundle.sourceRoot,'bundle.sourceRoot');
     check(HEX40.test(bundle.uiSha),'Bundle needs exact shared-ui source SHA');
     check(['postvisual','personal'].includes(bundle.pack),'Bundle pack invalid');
@@ -83,28 +88,48 @@ export function validateReviewPlan(input){
     if(bundle.variant.startsWith('saved:')) nonempty(bundle.savedVersion,'savedVersion',128);
     else check(bundle.savedVersion===undefined,'Only a saved variant can carry a savedVersion');
   }
-  check(bundles.has('candidate')&&bundles.has('baseline'),'Both candidate and baseline must be pinned');
-  // StaticRef-first review must be possible without an unused Aura checkout.
-  check(Array.isArray(plan.apps)&&plan.apps.length>=1&&plan.apps.length<=2,
-    'Initial review accepts one or two owned application profiles');
+  check(plan.bundles.some(b=>b.variant==='baseline')&&plan.bundles.some(b=>b.variant==='candidate'),
+    'Both candidate and baseline must be represented in the immutable bundle catalogue');
+  // Six registered consumers is not the same as two simultaneously running
+  // child processes. Registration and source readiness are independent of RAM.
+  check(Array.isArray(plan.apps)&&plan.apps.length>=1&&plan.apps.length<=REVIEW_IDS.length,
+    'One to six registered application profiles may be configured');
   const ids=new Set(),ports=new Set();
   for(const app of plan.apps){
-    object(app,['id','repository','root','sha','port','manifest','start','tests','healthPath','reviewRoute','sourceProof'],'application');
-    check(APPS[app.id]===app.repository&&!ids.has(app.id),'Initial app must be uniquely owned Aura or StaticRef');
+    object(app,['id','repository','root','sha','port','profile','pack','manifest','bundleRefs','readiness','mountEvidence',
+      'start','tests','healthPath','reviewRoute','sourceProof'],'application');
+    const registration=registrationFor(app.id);
+    check(registration&&registration.repository===app.repository&&!ids.has(app.id),
+      'Unknown app ID, repository mismatch or duplicate registered consumer');
     ids.add(app.id);
-    absolute(app.root,'app.root');absolute(app.manifest,'app.manifest');
+    const profile=profileFor(registration,app.profile);
+    check(profile&&app.port===profile.port,'App must select one exact registered fixture profile and reserved port');
+    if(app.pack!==undefined)check(app.pack===profile.pack,'App pack disagrees with its registered profile');
+    if(profile.manifestMode==='checkout')check(typeof app.manifest==='string',
+      'Checked-in app fixture manifest required for this profile');
+    else if(app.manifest!==undefined)absolute(app.manifest,'app.manifest');
+    absolute(app.root,'app.root');
+    if(profile.manifestMode==='checkout')absolute(app.manifest,'app.manifest');
     check(HEX40.test(app.sha),'Application requires exact clean commit SHA');
     check(Number.isInteger(app.port)&&app.port>=1024&&app.port<=65535&&!ports.has(app.port),'Distinct reserved high-numbered ports required');
     ports.add(app.port);
-    check(app.port===(app.id==='aura'?41888:8769),'Fixture ports must match existing owner manifests');
-    const route=nonempty(app.reviewRoute,'app.reviewRoute',512);
-    check(route.startsWith('/')&&!route.startsWith('//')&&!route.includes('\\')&&!route.includes('#'),
-      'Review route must be a same-origin path and query');
-    let decoded;
-    try{decoded=decodeURIComponent(route.split('?',1)[0]);}
-    catch{throw new Error('Invalid percent encoding in review route');}
-    check(!decoded.split('/').includes('..')&&!/[\u0000-\u001f\u007f]/.test(decoded),
-      'Unsafe review route');
+    reviewOriginRoute(nonempty(app.reviewRoute,'app.reviewRoute',512));
+    if(app.readiness!==undefined)object(app.readiness,['baseline','candidate'],'app readiness');
+    for(const variant of ['baseline','candidate'])readinessFor(app,registration,variant);
+    if(app.mountEvidence!==undefined){
+      // App adapters must prove original native ownership before changing
+      // server-rendered/hydrated forms; this only validates source claims.
+      checkMountCompatibility(app,registration,{state:'prepared',reason:'Source integration declared'});
+    }
+    if(app.bundleRefs!==undefined){
+      object(app.bundleRefs,['baseline','candidate'],'app bundle references');
+      for(const variant of ['baseline','candidate']){
+        const ref=nonempty(app.bundleRefs[variant],'bundleRefs.'+variant,64);
+        check(plan.bundles.some(b=>(b.id??b.pack+'-'+b.variant)===ref&&
+          b.variant===variant&&b.pack===profile.pack),
+          'App bundle reference does not pin its correct pack and variant');
+      }
+    }
     if(app.sourceProof!==undefined){
       check(app.id==='staticref','Only StaticRef owns the first combined Canvas source proof');
       object(app.sourceProof,['fixtureSha','fixSha'],'StaticRef sourceProof');
@@ -122,12 +147,19 @@ export function validateReviewPlan(input){
   }
   return structuredClone(plan);
 }
-function selection(plan, appId, variant, seed){
-  check(SEED.test(seed),'Invalid deterministic seed');
+function selection(plan,appId,variant,seed){
+  const registration=registrationFor(appId);
+  check(registration,'Unknown consumer: not in six-app registry');
   const app=plan.apps.find(item=>item.id===appId);
-  const bundle=plan.bundles.find(item=>item.variant===variant);
-  check(app&&bundle,'Unknown app or UI variant');
-  return {app,bundle,seed};
+  check(app,'Consumer '+appId+' is registered but BLOCKED: no pinned application source profile in this review plan');
+  const profile=profileFor(registration,app.profile);
+  const actualSeed=seed??profile.seed;
+  check(SEED.test(actualSeed),'Invalid deterministic seed');
+  const requested=app.bundleRefs?.[variant];
+  const candidates=plan.bundles.filter(item=>item.variant===variant&&item.pack===profile.pack&&
+    (!requested||(item.id??item.pack+'-'+item.variant)===requested));
+  check(candidates.length===1,'Consumer '+appId+' is registered but BLOCKED: no unique pinned '+variant+'/'+profile.pack+' complete bundle');
+  return {app,bundle:candidates[0],seed:actualSeed,registration,profile};
 }
 const appRoute=app=>app.reviewRoute;
 function identity({app,bundle,seed}){
@@ -139,7 +171,7 @@ function receipt(kind, session, extra={}){
     schemaVersion:1,kind,reviewId:session.reviewId,app:app.id,repository:app.repository,
     appSha:app.sha,uiSha:bundle.uiSha,bundleDigest:bundle.bundleDigest,
     files:{...bundle.digests},variant:bundle.variant,pack:bundle.pack,seed,
-    port:app.port,ownedPid:session.child?.pid??null,fixtureSource:'real-app',
+    port:app.port,appProfile:session.profile.name,ownedPid:session.child?.pid??null,fixtureSource:'real-app',
     fixtureRoute:app.reviewRoute,sourceProof:attestation.sourceProof??null,
     isolationProfile:attestation.profileSha256,isolatorDigest:attestation.executableSha256,
     result:'source-prepared/runtime-unverified',...extra
