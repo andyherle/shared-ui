@@ -42,6 +42,11 @@ export async function dispatchLine(manager,host,line,{output=()=>{}}={}){
     if(a)throw new Error('index takes no arguments');
     const documents=[];
     for(const app of manager.plan.apps){
+      const inMemory=host.runtimeManifest?.(app.id);
+      if(inMemory){
+        documents.push({source:app.id,document:inMemory});
+        continue;
+      }
       if(!app.manifest||!fs.existsSync(app.manifest)){
         output('BLOCKED '+app.id+': original runtime-generated fixture manifest not materialized; still registered');
         continue;
