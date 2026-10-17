@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "protocol": "shared-ui-review-registration-v1",
+  "maxOwnedFixtureChildren": 2,
+  "owners": [
+    {
+      "id": "staticref",
+      "repository": "andyherle/StaticRef",
+      "priority": 1,
+      "profiles": [
+        {"name": "default", "port": 8769, "pack": "postvisual", "manifestMode": "checkout",
+         "manifestPath": "tests/browser/ui-fixture-manifest.json", "reviewRoute": "/reference/c/editorial/?fixture=normal", "seed": "seed-1"}
+      ],
+      "mount": "native-detached",
+      "readiness": {
+        "baseline": {"state": "prepared", "reason": "Source-only complete v1.10.2 fixture; runtime unrun"},
+        "candidate": {"state": "prepared", "reason": "Owner has original detached form composition; exact PR31 combined source proof and real browser acceptance mandatory"}
+      }
+    },
+    {
+      "id": "aura",
+      "repository": "andyherle/aura",
+      "priority": 2,
+      "profiles": [
+        {"name": "default", "port": 41888, "pack": "postvisual", "manifestMode": "checkout",
+         "manifestPath": "fixtures/ui-manifest.json", "reviewRoute": "/studio?state=default", "seed": "seed-1"}
+      ],
+      "mount": "native-detached",
+      "readiness": {
+        "baseline": {"state": "prepared", "reason": "Existing real Studio/Workshop synthetic source; browser acceptance unrun"},
+        "candidate": {"state": "prepared", "reason": "App-owned detached library integration prepared; real pinned 1.11.0 bundle and cross-consumer browser proof unrun"}
+      }
+    },
+    {
+      "id": "home",
+      "repository": "andyherle/postvisual-home",
+      "priority": 3,
+      "profiles": [
+        {"name": "default", "port": 18795, "pack": "postvisual", "manifestMode": "checkout",
+         "manifestPath": "fixtures/manifest.json", "reviewRoute": "/?view=apps&fixture=default", "seed": "seed-1"}
+      ],
+      "mount": "deferred",
+      "readiness": {
+        "baseline": {"state": "prepared", "reason": "App-owned pinned baseline fixture adapter prepared; source/runtime tests not yet executed"},
+        "candidate": {"state": "blocked", "reason": "Native pre-mount review-workspace adapter for the real Home view not yet completed or tested"}
+      }
+    },
+    {
+      "id": "ledger",
+      "repository": "andyherle/pv-ledger",
+      "priority": 4,
+      "profiles": [
+        {"name": "pv", "port": 41924, "pack": "postvisual", "manifestMode": "checkout",
+         "manifestPath": "fixtures/ui-manifest.json", "reviewRoute": "/?fixture=sample&seed=7&view=invoices", "seed": "7"},
+        {"name": "personal", "port": 41925, "pack": "personal", "manifestMode": "checkout",
+         "manifestPath": "fixtures/ui-manifest.json", "reviewRoute": "/?fixture=many&seed=7&view=reconcile&layout=phone", "seed": "7"}
+      ],
+      "mount": "deferred",
+      "readiness": {
+        "baseline": {"state": "prepared", "reason": "Exact installed four-file fixture seam prepared for PV and Personal; execution unrun"},
+        "candidate": {"state": "blocked", "reason": "Original invoice/posting/inspector review-workspace pre-mount candidate integration not yet present"}
+      }
+    },
+    {
+      "id": "delivery",
+      "repository": "andyherle/vault-store",
+      "priority": 5,
+      "profiles": [
+        {"name": "pv", "port": 41927, "pack": "postvisual", "manifestMode": "checkout",
+         "manifestPath": "web/fixture-manifest.json", "reviewRoute": "/?fixture=default&frame=desktop#Documents", "seed": "seed-1"},
+        {"name": "personal", "port": 41928, "pack": "personal", "manifestMode": "checkout",
+         "manifestPath": "web/fixture-manifest.json", "reviewRoute": "/?fixture=default&frame=desktop#Documents", "seed": "seed-1"}
+      ],
+      "mount": "deferred",
+      "readiness": {
+        "baseline": {"state": "prepared", "reason": "Original browser/SendModal pinned installed fixture source prepared; any personal manifest mismatch stays blocked at preflight"},
+        "candidate": {"state": "blocked", "reason": "Real document browser/SendModal detached-node review-workspace assembly not yet demonstrated"}
+      }
+    },
+    {
+      "id": "portal",
+      "repository": "andyherle/portal",
+      "priority": 6,
+      "profiles": [
+        {"name": "default", "port": 41915, "pack": "personal", "manifestMode": "runtime-loopback",
+         "manifestPath": "/fixture/manifest.json", "reviewRoute": "/fixture", "seed": "seed-1"}
+      ],
+      "mount": "ssr-deferred",
+      "readiness": {
+        "baseline": {"state": "prepared", "reason": "Opt-in pinned Go test fixture with exact reserved UI_REVIEW_PORT; private manifest emitted only after start"},
+        "candidate": {"state": "blocked", "reason": "Real server-rendered forms lack an independently tested original-node pre-mount/hydration adapter"}
+      }
+    }
+  ]
+}
