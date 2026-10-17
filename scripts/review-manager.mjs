@@ -196,11 +196,22 @@ export class ReviewManager {
       const baseline=readinessFor(app,reg,'baseline');
       const candidate=readinessFor(app,reg,'candidate');
       const mount=checkMountCompatibility(app,reg,candidate);
-      const candidateStatus=mount.state==='blocked'?mount:candidate;
+      const report=(variant,source)=>{
+        if(!app)return {source:source.state,state:'blocked',reason:'Registered; no exact pinned private app source/complete UI bundle profile'};
+        if(source.state==='blocked')return {source:source.state,state:'blocked',reason:source.reason};
+        if(variant==='candidate'&&mount.state==='blocked')
+          return {source:source.state,state:'blocked',reason:mount.reason};
+        try{
+          selection(this.plan,app.id,variant);
+          return {source:source.state,state:'prepared',reason:source.reason};
+        }catch(error){
+          return {source:source.state,state:'blocked',reason:error.message};
+        }
+      };
       return {app:reg.id,repository:reg.repository,supported:true,configured:!!app,
         profile:profile.name,pack:profile.pack,port:app?.port??profile.port,
-        baseline:{state:baseline.state,reason:baseline.reason},
-        candidate:{state:candidateStatus.state,reason:candidateStatus.reason??candidate.reason},
+        baseline:report('baseline',baseline),
+        candidate:report('candidate',candidate),
         state:active?(exited&&active.state==='ready'?'exited-unexpected':active.state):
           app?'stopped':'blocked',
         blocker:app?null:'No exact private app SHA, bundle pins and fixture adapter selected; still registered',
