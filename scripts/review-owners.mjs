@@ -3,7 +3,7 @@
 // inspect the six-owner SOURCE registration and honest candidate blockers.
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {REVIEW_REGISTRY} from './review-registration.mjs';
+import {REVIEW_REGISTRY,checkMountCompatibility} from './review-registration.mjs';
 
 export function sourceRegistrationReport(){
   return {
@@ -18,7 +18,10 @@ export function sourceRegistrationReport(){
         manifestMode:profile.manifestMode,reviewRoute:profile.reviewRoute
       })),
       baseline:{...owner.readiness.baseline},
-      candidate:{...owner.readiness.candidate},
+      candidate:{...owner.readiness.candidate,
+        admission:checkMountCompatibility(null,owner,owner.readiness.candidate).state,
+        admissionReason:checkMountCompatibility(null,owner,owner.readiness.candidate).reason??
+          'Source-ready native path only; no real app/browser/OS execution'},
       mount:owner.mount
     }))
   };
