@@ -46,7 +46,10 @@ function executable(cmd,label){
 export function bundleFingerprint(digests){
   object(digests,FILES,'UI file digests');
   for(const file of FILES)check(HEX64.test(digests[file]),'Missing pinned digest '+file);
-  return createHash('sha256').update(FILES.map(name=>name+':'+digests[name]).join('\n')).digest('hex');
+  // Canonical cross-language digest: ASCII UTF-8 JSON, sorted file keys,
+  // no spaces. Python: json.dumps({"files": sorted_map},separators=(",",":"),sort_keys=True).
+  const files=Object.fromEntries([...FILES].sort().map(name=>[name,digests[name]]));
+  return createHash('sha256').update(JSON.stringify({files})).digest('hex');
 }
 export function validateReviewPlan(input){
   const plan=object(input,['schemaVersion','reviewId','receiptDir','isolation','bundles','apps'],'review plan');
@@ -83,7 +86,7 @@ export function validateReviewPlan(input){
     ports.add(app.port);
     check(app.port===(app.id==='aura'?41888:8769),'Fixture ports must match existing owner manifests');
     executable(app.start,'app.start');
-    check(app.healthPath==='/__fixture__/health','App must implement the dedicated review health endpoint');
+    check(app.healthPath==='/__fixture__/review-lock.json','App must implement the dedicated exact review-lock endpoint');
     check(app.tests&&typeof app.tests==='object'&&!Array.isArray(app.tests)&&
       Object.keys(app.tests).length<=6,'Tests must be a bounded named command map');
     for(const [name,cmd]of Object.entries(app.tests)){
@@ -155,9 +158,12 @@ export class ReviewManager {
       check(Number.isSafeInteger(child?.pid)&&child.pid>0,'Isolator did not return an owned child handle');
       session.child=child;
       const health=await this.host.health(session);
+      const expectedVariant=selected.bundle.variant==='baseline'?'installed':selected.bundle.variant;
       check(health?.protocol==='shared-ui-review-health-v1'&&
         health.appSha===selected.app.sha&&health.uiSha===selected.bundle.uiSha&&
         health.bundleDigest===selected.bundle.bundleDigest&&health.seed===seed&&
+        health.variant===expectedVariant&&health.pack===selected.bundle.pack&&
+        JSON.stringify(health.files)===JSON.stringify(selected.bundle.digests)&&
         health.mockOnly===true&&health.productionWritesDisabled===true&&health.realAppCode===true,
         'Fixture did not confirm the exact real-code app, bundle and mock boundary');
       session.state='ready';
