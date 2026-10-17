@@ -176,3 +176,10 @@ test('Command arrows change content only, preserve native editors and IME, and d
  listeners.get('compositionstart')();assert.equal(key('ArrowUp'),false);listeners.get('compositionend')();assert.equal(key('ArrowUp',{keyCode:229}),false);
  allowed=false;assert.equal(key('ArrowUp'),false);assert.equal(value,100);zoom.dispose();assert.equal(listeners.has('keydown'),false);
 });
+
+test('quick value easing accumulates target steps, completes exactly, and respects reduced motion',()=>{
+ let queued,time=0,reduced=false;const changes=[],view={requestAnimationFrame(fn){queued=fn;return 1;},cancelAnimationFrame(){queued=null;},matchMedia(){return {matches:reduced};},addEventListener(){},removeEventListener(){}};
+ const motion=module.exports.createValueTransition({value:100,duration:100,view,onChange:(value,options)=>changes.push([value,options.final])});
+ const advance=now=>{const fn=queued;queued=null;fn(now);};motion.to(120);advance(0);advance(50);assert.ok(motion.value>100&&motion.value<120);motion.to(motion.target+20);advance(50);advance(150);assert.equal(motion.value,140);assert.equal(motion.active,false);assert.deepEqual(changes.at(-1),[140,true]);
+ reduced=true;motion.to(160);assert.equal(motion.value,160);assert.equal(queued,null);motion.dispose();
+});
