@@ -75,8 +75,12 @@ test('read-only operator registration report exposes six independent source/bloc
     assert.ok(['prepared','blocked'].includes(app.candidate.state));
     assert.ok(!('privatePath' in app));
   }
-  for(const id of ['home','ledger','delivery','portal'])
-    assert.equal(out.owners.find(a=>a.app===id).candidate.state,'blocked');
+  for(const id of ['home','ledger','delivery','portal']){
+    const candidate=out.owners.find(a=>a.app===id).candidate;
+    assert.equal(candidate.state,'prepared','App-owned candidate source was committed');
+    assert.equal(candidate.admission,'blocked','SSR/pre-mount evidence and execution are not established');
+    assert.match(candidate.admissionReason,/pre-mount/);
+  }
 });
 
 test('one canonical versioned registry includes every required consumer and original app profile',()=>{
@@ -93,8 +97,10 @@ test('one canonical versioned registry includes every required consumer and orig
   assert.equal(profileFor(registrationFor('aura')).seed,'seed-1');
   assert.deepEqual([...new Set(allProfiles.map(row=>row[3]))].length,allProfiles.length);
   assert.equal(registrationFor('unknown'),null);
-  assert.equal(readinessFor({},registrationFor('portal'),'candidate').state,'blocked');
-  assert.equal(readinessFor({},registrationFor('home'),'candidate').state,'blocked');
+  assert.equal(readinessFor({},registrationFor('portal'),'candidate').state,'prepared');
+  assert.equal(readinessFor({},registrationFor('home'),'candidate').state,'prepared');
+  assert.equal(checkMountCompatibility(null,registrationFor('portal'),
+    readinessFor({},registrationFor('portal'),'candidate')).state,'blocked');
   assert.throws(()=>{REVIEW_REGISTRY.owners[0].id='not-staticref';},TypeError);
 });
 
