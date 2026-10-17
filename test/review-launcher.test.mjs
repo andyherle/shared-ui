@@ -159,6 +159,20 @@ test('absence of external isolation proof, blocked port and wrong app/UI health 
   await assert.rejects(m.exit(),/Stop all owned/);
 });
 
+test('unexpected owned app exit remains visible, cannot be deduplicated, and is cleaned only by explicit stop',async()=>{
+  const p=plan(),host=fakeHost(p),m=new ReviewManager(p,host);
+  await m.start('aura','candidate','seed-12');
+  const child=m.owned.get('aura').child;
+  child.exitCode=1;
+  assert.equal(m.status()[0].state,'exited-unexpected');
+  assert.equal(m.status()[0].owned,true);
+  await assert.rejects(m.start('aura','candidate','seed-12'),/stop it explicitly/);
+  assert.equal(host.calls.spawn.length,1);
+  await m.stop('aura');
+  assert.equal(host.calls.stop[0],child);
+  assert.equal(m.status()[0].state,'stopped');
+});
+
 test('test execution is a separate explicitly requested sandbox process and receipt',async()=>{
   const p=plan(),host=fakeHost(p),m=new ReviewManager(p,host);
   await assert.rejects(m.test('aura','http'),/Start the exact app/);
