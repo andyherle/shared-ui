@@ -15,6 +15,15 @@ const within=(child,parent)=>child===parent||!path.relative(parent,child).starts
   path.relative(parent,child)!=='..'&&!path.isAbsolute(path.relative(parent,child));
 const digest=data=>createHash('sha256').update(data).digest('hex');
 const readDigest=file=>digest(fs.readFileSync(file));
+// Future user-started tests must be observable in their Mac terminal.
+// Keep the long-lived fixture supervisor quiet; a test child alone inherits
+// stdout/stderr so its progress and assertion failures can be watched live.
+// Never inherit stdin or forward arbitrary host environment/credentials.
+export function reviewChildStdio(mode){
+  if(mode==='test')return ['ignore','inherit','inherit'];
+  if(mode==='fixture')return 'ignore';
+  throw new Error('Unknown review child mode');
+}
 function requireThat(ok,message){if(!ok)throw new Error(message);}
 function exactFile(file,{readonly=false,privateFile=false,max=2<<20}={}){
   const absolute=path.resolve(file),real=fs.realpathSync(absolute);
@@ -270,7 +279,7 @@ export class LocalReviewHost {
     };
     return await new Promise((resolve,reject)=>{
       let settled=false;
-      const child=spawn(iso.binary,args,{cwd:app.root,env,detached:false,stdio:'ignore'});
+      const child=spawn(iso.binary,args,{cwd:app.root,env,detached:false,stdio:reviewChildStdio(mode)});
       child.once('error',error=>{
         if(!settled){settled=true;reject(new Error('Reviewed sandbox process did not launch: '+error.code));}
       });
