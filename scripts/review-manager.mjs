@@ -127,7 +127,9 @@ export class ReviewManager {
       const exited=!!s?.child&&(Number.isInteger(s.child.exitCode)||!!s.child.signalCode);
       return {app:app.id,port:app.port,state:exited&&s.state==='ready'?'exited-unexpected':s?.state||'stopped',pid:s?.child?.pid||null,
         variant:s?.bundle.variant||null,uiSha:s?.bundle.uiSha||null,seed:s?.seed||null,
-        owned:!!s,reviewId:this.plan.reviewId};
+        owned:!!s,reviewId:this.plan.reviewId,
+        testPid:this.testChild?.appId===app.id?this.testChild.child.pid:null,
+        testState:this.testChild?.appId===app.id?'owned-running-or-unconfirmed':'idle'};
     }));
   }
   async start(appId,variant='candidate',seed='seed-1'){
