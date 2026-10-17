@@ -115,6 +115,26 @@ test('StaticRef-FIRST accepts one owner without requiring Aura; routes are exact
   assert.throws(()=>validateReviewPlan(tooMany),/one or two/);
 });
 
+test('independent PR31 GitHub canvas blob literal is complete 40hex, never truncated',()=>{
+  // Independent observed source identity: GitHub PR31 exact
+  // staticref/web/canvas.js blob, NOT derived from STATICREF_FIX31.
+  const verifiedPr31CanvasBlob='dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6e';
+  assert.equal(verifiedPr31CanvasBlob.length,40);
+  assert.match(verifiedPr31CanvasBlob,/^[0-9a-f]{40}$/);
+  assert.equal(STATICREF_FIX31.blobs['staticref/web/canvas.js'],verifiedPr31CanvasBlob);
+  for(const [file,blob] of Object.entries(STATICREF_FIX31.blobs)){
+    assert.match(blob,/^[0-9a-f]{40}$/,file+' must be a complete Git blob SHA-1');
+  }
+  // A fixture that echoes the previous 39hex typo must fail source proof.
+  const app={...plan().apps[1],sha:'e'.repeat(40),
+    sourceProof:{fixtureSha:'2e6d2bbb31fb5e2010c87cce79b4065dc5ed1a3d',fixSha:STATICREF_FIX31.sha}};
+  const bad={fixtureAncestor:true,combinedSha:app.sha,
+    changedFiles:Object.keys(STATICREF_FIX31.blobs),
+    headBlobs:{...STATICREF_FIX31.blobs,'staticref/web/canvas.js':verifiedPr31CanvasBlob.slice(0,-1)},
+    fixBlobs:{...STATICREF_FIX31.blobs}};
+  assert.throws(()=>verifyStaticRefSourceReport(app,bad),/PR31 blob/);
+});
+
 test('StaticRef source admission rejects old Canvas blobs and unreviewed extra changes',()=>{
   const c=structuredClone(plan().apps[1]);
   c.sha='e'.repeat(40);
