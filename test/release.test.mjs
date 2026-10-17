@@ -29,8 +29,8 @@ test('standalone baseline fixture CSS comes from one original shared floating bl
  assert.ok(floating.includes('.ui-floating-panel'));
  assert.ok(floating.includes('.ui-floating-handle'));
  assert.ok(floating.includes('touch-action:none'));
- assert.doesNotMatch(floating,/\\.ui-header(?:[.:{\\s]|$)/);
- assert.doesNotMatch(floating,/@import|url\\s*\\(/i);
+ assert.doesNotMatch(floating,/\.ui-header(?:[.:{\s]|$)/);
+ assert.doesNotMatch(floating,/@import|url\s*\(/i);
  assert.ok(Buffer.byteLength(floating)<4096,'A fixture-only companion should remain compact');
  assert.throws(()=>floatingPanelFixtureCSS('.ui-floating-panel{color:blue}'),/markers/);
  assert.throws(()=>floatingPanelFixtureCSS(source+source),/markers/);
