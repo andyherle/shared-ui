@@ -106,7 +106,7 @@ test('StaticRef-FIRST accepts one owner without requiring Aura; routes are exact
     c=>{c.apps.push({...structuredClone(base.apps[0]),id:'staticref'});},
     c=>{c.apps[0].reviewRoute='//foreign.example/';},
     c=>{c.apps[0].reviewRoute='/%2e%2e/secret';},
-    c=>{c.apps[0].reviewRoute='/reference/#unbounded';},
+    c=>{c.apps[0].reviewRoute='/reference/%00invalid';},
     c=>{delete c.apps[0].reviewRoute;}
   ]){
     const invalid=structuredClone(single);mutation(invalid);
