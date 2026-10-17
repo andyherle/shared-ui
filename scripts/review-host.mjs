@@ -8,7 +8,7 @@ import http from 'node:http';
 import {execFileSync,spawn} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import {validateManifest} from './fixture-index.mjs';
-import {bundleFingerprint,validateReviewPlan} from './review-manager.mjs';
+import {bundleFingerprint,validateReviewPlan,STATICREF_FIX31} from './review-manager.mjs';
 
 const HEX64=/^[0-9a-f]{64}$/;
 const within=(child,parent)=>child===parent||!path.relative(parent,child).startsWith('..'+path.sep)&&
@@ -33,10 +33,35 @@ function exactDir(dir,{privateDir=false,readonly=false}={}){
   if(readonly)requireThat((mode & 0o222)===0,'Bundle directory must be immutable');
   return real;
 }
+function gitRead(root,args){
+  return execFileSync('/usr/bin/git',['-C',root,...args],
+    {encoding:'utf8',timeout:5000,maxBuffer:32768,
+      env:{PATH:'/usr/bin:/bin',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',LC_ALL:'C'}}).trim();
+}
 function gitAt(root){
-  const run=args=>execFileSync('/usr/bin/git',['-C',root,...args],
-    {encoding:'utf8',timeout:5000,maxBuffer:32768,env:{PATH:'/usr/bin:/bin',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',LC_ALL:'C'}}).trim();
-  return {sha:run(['rev-parse','HEAD']),dirty:run(['status','--porcelain','--untracked-files=all'])};
+  return {sha:gitRead(root,['rev-parse','HEAD']),
+    dirty:gitRead(root,['status','--porcelain','--untracked-files=all'])};
+}
+// Source provenance is an independent admission gate, not a flag echoed by
+// StaticRef's in-memory fixture lock or a claim of native browser acceptance.
+export function verifyStaticRefSourceReport(app,report){
+  const proof=app.sourceProof;
+  requireThat(!!proof&&app.id==='staticref'&&proof.fixSha===STATICREF_FIX31.sha,
+    'StaticRef candidate needs the exact combined PR32+PR31 source provenance');
+  const expected=STATICREF_FIX31.blobs,paths=Object.keys(expected).sort();
+  requireThat(report?.fixtureAncestor===true&&
+    report.combinedSha===app.sha&&
+    Array.isArray(report.changedFiles)&&
+    JSON.stringify([...report.changedFiles].sort())===JSON.stringify(paths),
+    'Combined StaticRef review commit contains missing or extra changes');
+  for(const [file,sha]of Object.entries(expected)){
+    requireThat(report.headBlobs?.[file]===sha&&report.fixBlobs?.[file]===sha,
+      'Combined StaticRef Canvas must match the exact PR31 blob: '+file);
+  }
+  return Object.freeze({
+    fixturePr32Sha:proof.fixtureSha,headingFixPr31Sha:proof.fixSha,
+    combinedAppSha:app.sha,gitBlobs:{...expected}
+  });
 }
 function sourceWithin(root,relative){
   const resolved=path.resolve(root,relative);
@@ -109,6 +134,31 @@ export class LocalReviewHost {
       'Clean source commit mismatch; an app or shared-ui checkout must not be changed for review');
     return dir;
   }
+  verifyAppSourceProof(app,bundle){
+    if(app.id!=='staticref')return null;
+    if(!app.sourceProof){
+      requireThat(bundle.variant==='baseline',
+        'StaticRef candidate requires the separately committed PR32+PR31 source proof');
+      return null; // Intentional old-production Canvas baseline.
+    }
+    const proof=app.sourceProof,root=app.root,expected=STATICREF_FIX31.blobs;
+    const paths=Object.keys(expected);
+    let report;
+    try{
+      gitRead(root,['merge-base','--is-ancestor',proof.fixtureSha,'HEAD']);
+      const changed=gitRead(root,['diff','--name-only',proof.fixtureSha,'HEAD'])
+        .split('\n').filter(Boolean);
+      const headBlobs={},fixBlobs={};
+      for(const file of paths){
+        headBlobs[file]=gitRead(root,['rev-parse','HEAD:'+file]);
+        fixBlobs[file]=gitRead(root,['rev-parse',proof.fixSha+':'+file]);
+      }
+      report={fixtureAncestor:true,combinedSha:app.sha,changedFiles:changed,headBlobs,fixBlobs};
+    }catch{
+      throw new Error('Combined StaticRef commit or PR31 source objects unavailable in clean checkout');
+    }
+    return verifyStaticRefSourceReport(app,report);
+  }
   verifyCommand(cmd,appRoot){
     const binary=exactFile(cmd.binary,{max:256<<20});
     requireThat(readDigest(binary)===cmd.binarySha256,'Interpreter/executable digest changed');
@@ -139,6 +189,7 @@ export class LocalReviewHost {
     const {app,bundle,seed,mode}=session;
     const receipts=this.prepareRoot();
     const appRoot=this.verifyRepo(app.root,app.sha);
+    const sourceProof=this.verifyAppSourceProof(app,bundle);
     const uiRoot=this.verifyRepo(bundle.sourceRoot,bundle.uiSha);
     const checked=verifyBundleFiles(bundle);
     requireThat(!within(checked.root,appRoot)&&!within(checked.root,uiRoot),
@@ -174,7 +225,7 @@ export class LocalReviewHost {
     try{value=JSON.parse(output);}catch{
       this.releaseScratch(key);throw new Error('Invalid OS sandbox attestation');
     }
-    try{return verifySandboxAttestation(value,challenge,this.plan.isolation);}
+    try{return {...verifySandboxAttestation(value,challenge,this.plan.isolation),sourceProof};}
     catch(error){this.releaseScratch(key);throw error;}
   }
   async portFree(port){
@@ -198,7 +249,11 @@ export class LocalReviewHost {
     const ownerArgs=mode==='fixture'?[
       '--ui-variant='+appVariant,'--ui-source-sha='+bundle.uiSha,
       '--ui-bundle-dir='+bundle.root,'--ui-bundle-sha256='+bundle.bundleDigest,
-      '--app-sha='+app.sha,'--seed='+seed,'--review-root='+scratch
+      '--app-sha='+app.sha,'--seed='+seed,'--review-root='+scratch,
+      ...(app.id==='staticref'?['--fixture-route='+app.reviewRoute,
+        ...(app.sourceProof?[
+          '--fixture-source-sha='+app.sourceProof.fixtureSha,
+          '--require-heading-fix-sha='+app.sourceProof.fixSha]:[])]:[])
     ]:[];
     const args=['run','--protocol','shared-ui-review-os-isolation-v1','--policy',iso.policy,
       '--app-root',app.root,'--bundle-root',bundle.root,'--scratch',scratch,'--port',String(app.port),
