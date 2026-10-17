@@ -170,6 +170,19 @@ test('StaticRef candidate is never admitted without independently returned PR31 
   await manager2.stop('staticref');
 });
 
+test('checked-in StaticRef v1.10.2 metadata maps to the frozen compact JSON bundle digest',()=>{
+  // These values are metadata from StaticRef bundle.json, NOT a staged-byte
+  // attestation. Host preflight still rehashes all four immutable files.
+  const source={
+    'icons.svg':'459743407f6c933a8c8d8d625e73c5bc1a4312e890d9699d533e2e71d5daef1e',
+    'manifest.json':'35014eb9ac42ed0365026bbf21bbba4ff64636426051aa42132b6daa01f6a635',
+    'runtime.js':'1223678ae0662a7655f407a91b653757ea0f051ca0d012fe9355a2b2cb993908',
+    'styles.css':'188be7615bc18d1c6cc28c599d1a69966f24d854f96e69f340373db90621cf0c'
+  };
+  assert.equal(bundleFingerprint(source),
+    'ca7f341e4ffa0fe656eb6f23297af1716802439bc1d48708f5f29d4e092db835');
+});
+
 test('OS sandbox attestation is a pinned challenge/probe result, never a mockOnly flag',()=>{
   const config=plan(),challenge='nonce-0123';
   const valid={
