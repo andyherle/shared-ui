@@ -191,6 +191,7 @@
 
     /* Explicitly opted-in floating review chrome; original app controls remain native. */
     .ui-floating-panel { position:fixed; inset:auto; z-index:10000; display:flex; flex-direction:column; gap:var(--ui-gap); inline-size:min(22rem,100%); min-inline-size:0; max-inline-size:100%; max-block-size:calc(100dvh - 16px); margin:0; padding:8px; overflow:auto; overscroll-behavior:contain; overflow-wrap:anywhere; border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); box-shadow:0 6px 22px var(--ui-shadow-color); font-size:var(--ui-control-size); }
+    .ui-floating-panel[hidden] { display:none!important; }
     .ui-floating-panel > .ui-floating-chrome { position:sticky; inset-block-start:-8px; z-index:1; display:grid; gap:2px; padding-block:2px 6px; background:var(--ui-surface); border-block-end:1px solid var(--ui-line); }
     .ui-floating-controls { display:flex; align-items:center; gap:var(--ui-gap); }
     .ui-floating-handle { flex:1; min-inline-size:0; min-block-size:var(--ui-control-height); text-align:start; touch-action:none; cursor:grab; }
