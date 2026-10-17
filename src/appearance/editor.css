@@ -14,7 +14,7 @@
   .appearance-tools { flex-wrap: wrap; }
   .appearance-studio { max-width: 76rem; margin: 0 auto; }
   .appearance-studio-grid { display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 24px; }
-  .appearance-demo-panel { width: var(--demo-panel-width, 320px); max-width: 100%; border-radius: var(--demo-panel-radius, 8px); padding: var(--demo-panel-padding, 16px); }
+  .appearance-demo-panel { box-sizing: border-box; width: var(--demo-panel-width, 320px); max-width: 100%; border-radius: var(--demo-panel-radius, 8px); padding: var(--demo-panel-padding, 16px); }
   .appearance-demo-grip { display: block; width: var(--demo-grip-width, 32px); height: var(--demo-grip-height, 4px); opacity: var(--demo-grip-opacity, .5); background: currentColor; border-radius: 2px; margin: 12px auto; pointer-events: none; }
   @media(max-width: 700px) { .appearance-studio-grid { grid-template-columns: minmax(0, 1fr); } }
 }

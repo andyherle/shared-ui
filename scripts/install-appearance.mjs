@@ -53,7 +53,10 @@ export function installAppearance(target, {check = false, sourceRevision} = {}) 
   const changed = [];
   for (const [name, bytes] of files) {
     const destination = path.join(target, name);
-    if (!fs.existsSync(destination) || !readRegular(destination).equals(bytes)) changed.push(name);
+    let exists = true;
+    try {const info = fs.lstatSync(destination); if (info.isSymbolicLink()) throw new Error('Appearance asset destinations cannot be symbolic links.');}
+    catch (error) {if (error.code === 'ENOENT') exists = false; else throw error;}
+    if (!exists || !readRegular(destination).equals(bytes)) changed.push(name);
   }
   if (check && changed.length) throw new Error('Appearance assets differ: ' + changed.join(', '));
   if (!check && changed.length) {
