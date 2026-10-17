@@ -19,8 +19,10 @@ export function reviewOriginRoute(route){
     throw new Error('Unsafe fixture review route');
   let u,decoded;
   try{
+    // Inspect raw encoded segments BEFORE URL canonicalization silently folds
+    // %2e%2e into a different path.
+    decoded=decodeURIComponent(route.split(/[?#]/,1)[0]);
     u=new URL(route,'http://127.0.0.1:8769');
-    decoded=decodeURIComponent(u.pathname);
   }catch{throw new Error('Malformed fixture review route');}
   if(u.origin!=='http://127.0.0.1:8769'||decoded.split('/').includes('..')||
     decoded.includes('\\')||/[\u0000-\u001f\u007f]/.test(decoded))
