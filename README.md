@@ -481,7 +481,10 @@ OS isolation broker proves the required network/filesystem prohibitions.
 It has no automatic browser runner, daemon, installer or promotion pathway;
 app integrations and runtime/browser acceptance are separate owner work.
 The source-only CLI is `npm run review:managed -- --config /absolute/private/review-plan.json`.
-For the user's later Codex execution, the
+All six consumer owners are discoverable with `npm run review:owners`;
+the [six-consumer managed registry and candidate handoff](docs/SIX_CONSUMER_REVIEW_HANDOFF.md)
+separates individual source readiness and BLOCKED candidates from the
+unchanged two-child runtime limit. For the user's later Codex execution, the
 [StaticRef-first source-completion handoff](docs/STATICREF_SOURCE_COMPLETION.md)
 pins the intended PR #31 Canvas blobs, prescribes one clean disposable
 combined commit, and treats existing Canvas **and** gallery/lightbox behavior
