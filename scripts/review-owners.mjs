@@ -10,7 +10,7 @@ export function sourceRegistrationReport(){
     protocol:REVIEW_REGISTRY.protocol,
     consumers:REVIEW_REGISTRY.owners.length,
     maxOwnedFixtureChildren:REVIEW_REGISTRY.maxOwnedFixtureChildren,
-    execution:'NOT RUN',
+    execution:'BLOCKED: no verified OS isolation or browser execution evidence',
     owners:REVIEW_REGISTRY.owners.map(owner=>({
       app:owner.id,repository:owner.repository,priority:owner.priority,
       profiles:owner.profiles.map(profile=>({
