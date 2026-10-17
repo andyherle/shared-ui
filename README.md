@@ -531,3 +531,5 @@ Pastel swatches and cards use the same resolved fill in both themes; only near-w
 Use `.ui-header[data-ui-layout=workspace]` with navigation, status and actions slots (`data-ui-header-nav`, `data-ui-header-status`, `data-ui-header-actions`) for a balanced header: back/home left, commands right, status centred independently of side widths. Narrow layouts keep status centred on its own row.
 
 Output renderers use `SharedUI.createCardColorResolver(root)`: `resolve(color)` returns the actual native card fill, ink, border and font after theme resolution. Its bounded cache avoids resolving styles per card or frame; theme/pack/revision changes invalidate it. Call `invalidate()` after other appearance changes and `dispose()` when removing the renderer. Never pass unresolved CSS variables or `light-dark()` strings to Canvas paint.
+
+Shared selectable media/cards use one thin outline. `.ui-resize-handle` keeps its physical hit target while painting only a diagonal corner grip on selected-card hover or keyboard focus; no dot or duplicate selection border is drawn.
