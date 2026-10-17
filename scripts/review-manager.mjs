@@ -8,6 +8,16 @@ const SEED=/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
 const VARIANT=/^(candidate|baseline|saved:[a-z0-9][a-z0-9-]{1,63})$/;
 const FILES=['styles.css','runtime.js','icons.svg','manifest.json'];
 const APPS=Object.freeze({aura:'andyherle/aura',staticref:'andyherle/StaticRef'});
+// Exact app-owned PR31 source blobs; Git SHA-1, NOT UI bundle SHA256.
+export const STATICREF_FIX31=Object.freeze({
+  sha:'d0139bd231b3cb5b1bf02df6b7380d975d992f5e',
+  blobs:Object.freeze({
+    'staticref/web/canvas.js':'dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6',
+    'staticref/web/canvas.css':'8c3736db9476f74d718ebf46a97a14e26d573673',
+    'tests/canvas-client.test.mjs':'83337e0d10233b9d786a0592aa5a37915e3a417f',
+    'docs/CANVAS.md':'d99842c18066fb3f27ab94fb52391b0ff0ccd33d'
+  })
+});
 function check(condition, message){if(!condition)throw new Error(message);}
 function object(value, keys, label){
   check(value && typeof value==='object' && !Array.isArray(value),label+' must be an object');
@@ -74,10 +84,12 @@ export function validateReviewPlan(input){
     else check(bundle.savedVersion===undefined,'Only a saved variant can carry a savedVersion');
   }
   check(bundles.has('candidate')&&bundles.has('baseline'),'Both candidate and baseline must be pinned');
-  check(Array.isArray(plan.apps)&&plan.apps.length===2,'Initial review accepts precisely two application profiles');
+  // StaticRef-first review must be possible without an unused Aura checkout.
+  check(Array.isArray(plan.apps)&&plan.apps.length>=1&&plan.apps.length<=2,
+    'Initial review accepts one or two owned application profiles');
   const ids=new Set(),ports=new Set();
   for(const app of plan.apps){
-    object(app,['id','repository','root','sha','port','manifest','start','tests','healthPath'],'application');
+    object(app,['id','repository','root','sha','port','manifest','start','tests','healthPath','reviewRoute','sourceProof'],'application');
     check(APPS[app.id]===app.repository&&!ids.has(app.id),'Initial app must be uniquely owned Aura or StaticRef');
     ids.add(app.id);
     absolute(app.root,'app.root');absolute(app.manifest,'app.manifest');
@@ -85,6 +97,20 @@ export function validateReviewPlan(input){
     check(Number.isInteger(app.port)&&app.port>=1024&&app.port<=65535&&!ports.has(app.port),'Distinct reserved high-numbered ports required');
     ports.add(app.port);
     check(app.port===(app.id==='aura'?41888:8769),'Fixture ports must match existing owner manifests');
+    const route=nonempty(app.reviewRoute,'app.reviewRoute',512);
+    check(route.startsWith('/')&&!route.startsWith('//')&&!route.includes('\\')&&!route.includes('#'),
+      'Review route must be a same-origin path and query');
+    let decoded;
+    try{decoded=decodeURIComponent(route.split('?',1)[0]);}
+    catch{throw new Error('Invalid percent encoding in review route');}
+    check(!decoded.split('/').includes('..')&&!/[\u0000-\u001f\u007f]/.test(decoded),
+      'Unsafe review route');
+    if(app.sourceProof!==undefined){
+      check(app.id==='staticref','Only StaticRef owns the first combined Canvas source proof');
+      object(app.sourceProof,['fixtureSha','fixSha'],'StaticRef sourceProof');
+      check(HEX40.test(app.sourceProof.fixtureSha)&&app.sourceProof.fixSha===STATICREF_FIX31.sha,
+        'Source proof must identify the exact StaticRef fixture and PR31 fix commits');
+    }
     executable(app.start,'app.start');
     check(app.healthPath==='/__fixture__/review-lock.json','App must implement the dedicated exact review-lock endpoint');
     check(app.tests&&typeof app.tests==='object'&&!Array.isArray(app.tests)&&
@@ -103,6 +129,7 @@ function selection(plan, appId, variant, seed){
   check(app&&bundle,'Unknown app or UI variant');
   return {app,bundle,seed};
 }
+const appRoute=app=>app.reviewRoute;
 function identity({app,bundle,seed}){
   return [app.repository,app.sha,bundle.uiSha,bundle.bundleDigest,bundle.variant,bundle.pack,seed].join('|');
 }
@@ -113,6 +140,7 @@ function receipt(kind, session, extra={}){
     appSha:app.sha,uiSha:bundle.uiSha,bundleDigest:bundle.bundleDigest,
     files:{...bundle.digests},variant:bundle.variant,pack:bundle.pack,seed,
     port:app.port,ownedPid:session.child?.pid??null,fixtureSource:'real-app',
+    fixtureRoute:app.reviewRoute,sourceProof:attestation.sourceProof??null,
     isolationProfile:attestation.profileSha256,isolatorDigest:attestation.executableSha256,
     result:'source-prepared/runtime-unverified',...extra
   };
@@ -179,12 +207,14 @@ export class ReviewManager {
         health.mockOnly===true&&health.productionWritesDisabled===true&&health.realAppCode===true,
         'Fixture did not confirm the exact real-code app, bundle and mock boundary');
       session.state='ready';
+      check(health.fixture_route===undefined||health.fixture_route===appRoute(selected.app),
+        'Fixture served a different synthetic review route');
       const saved=await this.host.record(receipt('start',session,{
         result:'health-verified/browser-unrun',healthPath:selected.app.healthPath,
-        fixtureRoute:'/',composition:comp?{id:comp.id,revision:String(comp.revision),instances:[...comp.instances]}:null
+        composition:comp?{id:comp.id,revision:String(comp.revision),instances:[...comp.instances]}:null
       }));
       return {app:appId,pid:child.pid,port:selected.app.port,variant,seed,reused:false,receipt:saved,
-        href:'http://127.0.0.1:'+selected.app.port+'/'};
+        href:'http://127.0.0.1:'+selected.app.port+selected.app.reviewRoute};
     }catch(error){
       // The manager knows only this child; never attempt to kill a PID recovered
       // from a port probe, saved receipt or an external running application.
