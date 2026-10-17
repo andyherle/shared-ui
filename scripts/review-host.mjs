@@ -182,6 +182,9 @@ export class LocalReviewHost {
       new URL(item.baseUrl).hostname==='127.0.0.1'&&
       +new URL(item.baseUrl).port===app.port),
       'App manifest is not an explicitly mock-only, real-code, exact-port fixture');
+    const exactRoute='http://127.0.0.1:'+app.port+app.reviewRoute;
+    requireThat(cases.some(item=>item.href===exactRoute),
+      'Pinned review route must be one of the actual app-owned fixture manifest routes');
     return cases;
   }
   key(session){return [session.app.id,session.bundle.bundleDigest,session.seed,session.mode].join('|');}
