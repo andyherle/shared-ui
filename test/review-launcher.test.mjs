@@ -29,13 +29,13 @@ function plan(){
     apps:[
       {id:'aura',repository:'andyherle/aura',root:'/private/aura',sha:hex('f',40),
         port:41888,manifest:'/private/aura/fixtures/ui-manifest.json',
-        healthPath:'/__fixture__/health',
+        healthPath:'/__fixture__/review-lock.json',
         start:command('/private/node','scripts/ui-fixtures.mjs',['--port=41888']),
         tests:{http:command('/private/node','tests/ui-fixtures.test.mjs',['--test']),
           browser:command('/private/node','tests/ui-fixtures.browser.test.mjs',['--test'])}},
       {id:'staticref',repository:'andyherle/StaticRef',root:'/private/staticref',sha:hex('0',40),
         port:8769,manifest:'/private/staticref/tests/browser/ui-fixture-manifest.json',
-        healthPath:'/__fixture__/health',
+        healthPath:'/__fixture__/review-lock.json',
         start:command('/private/python','tests/browser/serve_ui_fixture.py',['--port','8769']),
         tests:{http:command('/private/node','tests/ui-fixture.test.mjs',['--test'])}}
     ]};
@@ -55,7 +55,9 @@ function fakeHost(planInput=plan()){
     async health(s){return host.failHealth?{}:{
       protocol:'shared-ui-review-health-v1',appSha:s.app.sha,
       uiSha:s.bundle.uiSha,bundleDigest:s.bundle.bundleDigest,
-      seed:s.seed,mockOnly:true,productionWritesDisabled:true,realAppCode:true};},
+      seed:s.seed,variant:s.bundle.variant==='baseline'?'installed':s.bundle.variant,
+      pack:s.bundle.pack,files:{...s.bundle.digests},
+      mockOnly:true,productionWritesDisabled:true,realAppCode:true};},
     async stop(child){calls.stop.push(child);if(host.shutdownUnknown)return false;child.exitCode=0;return true;},
     async waitTest(child){child.exitCode=0;return {code:0};},
     async record(r){calls.record.push(structuredClone(r));return '/private/review-receipts/receipt-'+calls.record.length+'.json';},
@@ -68,6 +70,8 @@ test('review config requires two pinned clean-commit owners and separate baselin
   const config=plan();
   assert.equal(validateReviewPlan(config).apps.length,2);
   assert.notEqual(config.bundles[0].bundleDigest,config.bundles[1].bundleDigest);
+  const ordered=Object.fromEntries(Object.entries(config.bundles[0].digests).sort(([a],[b])=>a.localeCompare(b)));
+  assert.equal(config.bundles[0].bundleDigest,sha256(JSON.stringify({files:ordered})));
   for(const mutation of [
     c=>{c.isolation={};},c=>{delete c.bundles[1];},
     c=>{c.apps[0].sha='main';},c=>{c.apps[0].root='/private/../live';},
