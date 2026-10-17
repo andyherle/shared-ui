@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" data-ui="postvisual" data-theme="dark" data-ui-density="compact">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appearance · Shared UI Studio</title>
+<link rel="stylesheet" href="/v1/styles.css"><link rel="stylesheet" href="/appearance/editor.css">
+<script src="/v1/runtime.js" defer></script><script type="module" src="/appearance/studio-page.mjs"></script>
+<body class="ui-stack ui-pad appearance-studio">
+<header class="ui-header ui-toolbar">
+  <h1>Appearance</h1>
+  <nav class="ui-actions"><a href="/">Documents</a><a href="/appearance-demo.html">Try the live editor</a></nav>
+</header>
+<p class="ui-meta">Edit a saved module profile. Open Appearance inside a connected application to see changes on its actual controls.</p>
+<section class="ui-actions" aria-label="Appearance profiles">
+  <label class="ui-field"><span class="ui-label">View</span><select id="appearance-view" aria-label="Registered appearance view"></select></label>
+  <label class="ui-field"><span class="ui-label">Profile</span><select id="appearance-profile" aria-label="Saved appearance profile"></select></label>
+  <button id="appearance-new" type="button">New profile</button>
+</section>
+<p id="appearance-page-status" class="ui-status" role="status" aria-live="polite"></p>
+<section id="appearance-host" class="ui-card ui-pad"></section>
+</body></html>
