@@ -48,10 +48,10 @@ function checkRecord(doc){
         local.has(p.name)||!Number.isInteger(p.port)||p.port<1024||p.port>65535||
         ports.has(p.port)||!packs.has(p.pack)||!modes.has(p.manifestMode)||
         typeof p.manifestPath!=='string'||!p.manifestPath.trim()||
-        !/^[A-Za-z0-9][A-Za-z0-9._/-]{1,180}$/.test(p.manifestPath)||
+        !(p.manifestMode==='checkout'
+          ? /^[A-Za-z0-9][A-Za-z0-9._/-]{1,180}$/.test(p.manifestPath)&&!p.manifestPath.startsWith('/')
+          : /^\/[A-Za-z0-9][A-Za-z0-9._/-]{1,180}$/.test(p.manifestPath))||
         p.manifestPath.split('/').includes('..')||
-        (p.manifestMode==='checkout'&&p.manifestPath.startsWith('/'))||
-        (p.manifestMode==='runtime-loopback'&&!p.manifestPath.startsWith('/'))||
         typeof p.seed!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(p.seed))
         throw new Error('Unsafe or overlapping app-owned fixture profile');
       reviewOriginRoute(p.reviewRoute);local.add(p.name);ports.add(p.port);
