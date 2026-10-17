@@ -210,7 +210,9 @@ export class LocalReviewHost {
       });
       // spawn event confirms an owned process handle, never its app readiness.
       child.once('spawn',()=>{if(!settled){settled=true;this.children.add(child);
-        child.once('exit',()=>this.children.delete(child));resolve(child);}});
+        // Retain the owned handle even after an unexpected exit. Only an
+        // explicit stop or completed test releases ownership and scratch.
+        resolve(child);}});
     });
   }
   async health(session){
@@ -239,14 +241,18 @@ export class LocalReviewHost {
   }
   async stop(child){
     requireThat(this.children.has(child),'Stop refused: process was not created by this review manager');
-    if(child.exitCode!==null||child.signalCode!==null)return true;
+    if(child.exitCode!==null||child.signalCode!==null){
+      this.children.delete(child);return true;
+    }
     child.kill('SIGTERM'); // No PID lookup, broad signal, process-group or force kill.
-    return await new Promise(resolve=>{
+    const closed=await new Promise(resolve=>{
       let done=false;
       const timeout=setTimeout(()=>finish(false),5000);
       function finish(ok){if(done)return;done=true;clearTimeout(timeout);resolve(ok);}
       child.once('exit',()=>finish(true));
     });
+    if(closed)this.children.delete(child);
+    return closed;
   }
   async waitTest(child){
     requireThat(this.children.has(child),'Test is not an owned sandbox child');
@@ -259,7 +265,8 @@ export class LocalReviewHost {
         child.kill('SIGTERM');
         reject(new Error('Test timed out; owned child termination requires verification'));
       },180000);
-      child.once('exit',(code,signal)=>{if(done)return;done=true;clearTimeout(timeout);resolve({code,signal});});
+      child.once('exit',(code,signal)=>{if(done)return;done=true;clearTimeout(timeout);
+        this.children.delete(child);resolve({code,signal});});
       child.once('error',error=>{if(done)return;done=true;clearTimeout(timeout);reject(error);});
     });
   }
