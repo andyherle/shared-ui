@@ -262,6 +262,10 @@
     view?.document?.addEventListener('visibilitychange',hide);view?.addEventListener('pagehide',dispose);
     return {get value(){return current;},get target(){return target;},get active(){return frame!==null;},to,cancel,dispose};
   }
+  function createZoomSteps({now=()=>performance.now(),interval=240}={}){
+    let last=-Infinity,previous=0,burst=0;
+    return {next(direction){if(!direction){last=-Infinity;previous=burst=0;return 1;}const time=now();burst=direction===previous&&time-last<=interval?Math.min(2,burst+1):0;last=time;previous=direction;const factor=1+[.1,.15,.2][burst];return direction>0?factor:1/factor;}};
+  }
   const zoomDocks=new WeakMap();
   function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
     if(zoomDocks.has(doc))return zoomDocks.get(doc);
@@ -274,8 +278,11 @@
       button.addEventListener('click',()=>doc.dispatchEvent(new view.CustomEvent('ui:zoom',{detail:{direction}})));buttons.push(button);node.append(button);
     }
     doc.body.append(node);
-    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){node.hidden=!value;},dispose(){node.remove();zoomDocks.delete(doc);view.removeEventListener('pagehide',api.dispose);}};
-    view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);return api;
+    let visible=true;
+    const sync=()=>{node.hidden=!visible||Boolean(doc.querySelector('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open'));};
+    doc.addEventListener('toggle',sync,true);doc.addEventListener('close',sync,true);
+    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
+    view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);sync();return api;
   }
   function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
     if(![min,max,step,value].every(Number.isFinite)||max<min||step<=0)throw new TypeError('Zoom requires finite bounds, a positive step and a finite value');
@@ -441,7 +448,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.11.2',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.11.2',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

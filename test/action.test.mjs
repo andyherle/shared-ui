@@ -171,7 +171,7 @@ test('Command arrows change content only, preserve native editors and IME, and d
  const listeners=new Map(),view={addEventListener(){},removeEventListener(){}},doc={activeElement:null,defaultView:view,addEventListener(type,fn){listeners.set(type,fn);},removeEventListener(type){listeners.delete(type);}};
  let value=100,allowed=true;const zoom=module.exports.installZoomShortcuts(doc,{canZoom:()=>allowed,onZoom:direction=>value+=direction*10});
  const key=(name,extra={})=>{let prevented=false;listeners.get('keydown')?.({key:name,metaKey:true,target:{closest:()=>null},preventDefault(){prevented=true;},...extra});return prevented;};
- assert.equal(key('ArrowUp'),true);assert.equal(value,110);key('ArrowRight');key('ArrowDown');key('ArrowLeft');assert.equal(value,100);
+ assert.equal(key('+',{code:'Equal'}),true);assert.equal(value,110);assert.equal(key('-',{code:'Minus'}),true);assert.equal(value,100);assert.equal(key('ArrowUp'),true);assert.equal(value,110);key('ArrowRight');key('ArrowDown');key('ArrowLeft');assert.equal(value,100);
  assert.equal(key('ArrowUp',{metaKey:false}),false);assert.equal(key('ArrowUp',{ctrlKey:true}),false);assert.equal(key('ArrowUp',{target:{closest:()=>({})}}),false);
  listeners.get('compositionstart')();assert.equal(key('ArrowUp'),false);listeners.get('compositionend')();assert.equal(key('ArrowUp',{keyCode:229}),false);
  allowed=false;assert.equal(key('ArrowUp'),false);assert.equal(value,100);zoom.dispose();assert.equal(listeners.has('keydown'),false);
@@ -182,4 +182,11 @@ test('quick value easing accumulates target steps, completes exactly, and respec
  const motion=module.exports.createValueTransition({value:100,duration:100,view,onChange:(value,options)=>changes.push([value,options.final])});
  const advance=now=>{const fn=queued;queued=null;fn(now);};motion.to(120);advance(0);advance(50);assert.ok(motion.value>100&&motion.value<120);motion.to(motion.target+20);advance(50);advance(150);assert.equal(motion.value,140);assert.equal(motion.active,false);assert.deepEqual(changes.at(-1),[140,true]);
  reduced=true;motion.to(160);assert.equal(motion.value,160);assert.equal(queued,null);motion.dispose();
+});
+
+
+test('content zoom starts gently and accelerates only rapid same-direction presses',()=>{
+ let time=0;const steps=module.exports.createZoomSteps({now:()=>time});
+ assert.equal(steps.next(1),1.1);time=100;assert.equal(steps.next(1),1.15);time=180;assert.equal(steps.next(1),1.2);time=220;assert.equal(steps.next(1),1.2);
+ assert.equal(steps.next(-1),1/1.1);time=600;assert.equal(steps.next(-1),1/1.1);steps.next(0);assert.equal(steps.next(-1),1/1.1);
 });
