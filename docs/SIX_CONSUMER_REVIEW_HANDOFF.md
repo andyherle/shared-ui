@@ -37,10 +37,10 @@ Do not silently drop unavailable candidates.
 | --- | --- | --- | --- |
 | **StaticRef** ([draft #32](https://github.com/andyherle/StaticRef/pull/32); fix [#31](https://github.com/andyherle/StaticRef/pull/31) separate) | `python3 tests/browser/serve_ui_review.py --port=8769`; `/reference/c/editorial/?fixture=normal` | postvisual/default/**8769** | baseline prepared; candidate source prepared with **separate exact clean four-file PR31 proof** |
 | **Aura** ([draft #36](https://github.com/andyherle/aura/pull/36)) | `node scripts/ui-fixtures.mjs --port=41888`; `/studio?state=default` | postvisual/default/**41888** | baseline prepared; candidate pre-mount real Studio library source prepared |
-| **Home** ([draft #1](https://github.com/andyherle/postvisual-home/pull/1)) | `python3 fixture_home.py --port=18795`; `/?view=apps&fixture=default` | postvisual/default/**18795** | baseline prepared; candidate **BLOCKED** pending original Home view composition |
-| **Ledger** ([draft #3](https://github.com/andyherle/pv-ledger/pull/3)) | `python3 -m pvledger.server --config config/invoices.demo.json --port=41924`; `/?fixture=sample&seed=7&view=invoices` | postvisual/pv/**41924**, personal/personal/**41925** | baseline prepared; candidate **BLOCKED** pending original native invoice/posting/inspector pre-mount |
-| **Delivery** ([draft #2](https://github.com/andyherle/vault-store/pull/2)) | `python3 tests/test_ui_fixture.py --scope pv --port 41927`; `/?fixture=default&frame=desktop#Documents` | postvisual/pv/**41927**, personal/personal/**41928** | baseline prepared; candidate **BLOCKED** pending real document browser/SendModal pre-mount |
-| **Portal** ([draft #38](https://github.com/andyherle/portal/pull/38)) | `go test ./internal/web -run '^TestPortalUIFixtureGallery$' -count=1 -timeout 60m -v -args` followed by manager's startup pins; `/fixture` | personal/default/**41915** | baseline prepared; candidate **BLOCKED** pending original SSR/native-form assembly |
+| **Home** ([draft #1](https://github.com/andyherle/postvisual-home/pull/1)) | `python3 fixture_home.py --port=18795`; `/?view=apps&fixture=default` | postvisual/default/**18795** | baseline prepared; original Home pre-mount candidate SOURCE prepared; admission **BLOCKED** pending exact source test/mountEvidence + browser |
+| **Ledger** ([draft #3](https://github.com/andyherle/pv-ledger/pull/3)) | `python3 -m pvledger.server --config config/invoices.demo.json --port=41924`; `/?fixture=sample&seed=7&view=invoices` | postvisual/pv/**41924**, personal/personal/**41925** | baseline prepared; original Ledger detached review-editor candidate SOURCE prepared; admission **BLOCKED** pending tracked test/mountEvidence + browser |
+| **Delivery** ([draft #2](https://github.com/andyherle/vault-store/pull/2)) | `python3 tests/test_ui_fixture.py --scope pv --port 41927`; `/?fixture=default&frame=desktop#Documents` | postvisual/pv/**41927**, personal/personal/**41928** | baseline prepared; original Delivery browser/SendModal candidate SOURCE prepared; admission **BLOCKED** pending tracked test/mountEvidence + browser |
+| **Portal** ([draft #38](https://github.com/andyherle/portal/pull/38)) | `go test ./internal/web -run '^TestPortalUIFixtureGallery$' -count=1 -timeout 60m -v -args` followed by manager's startup pins; `/fixture` | personal/default/**41915** | baseline prepared; Portal real Go SSR candidate SOURCE prepared; admission **BLOCKED** pending independently tested SSR mountEvidence + browser |
 
 *All "prepared" states are source-only and are not passing application
 unit tests, live sandbox checks, current URLs, or promises of runtime behavior.*
@@ -132,10 +132,15 @@ SSR consumers must construct the canonical shell **before first mount/
 hydration** in their own app source, or separately test an explicit
 SSR-in-place adapter; no silent connected-node reparenting.
 
-Once an owner finishes its missing candidate source slice, an exact
-private plan can update that app's `readiness.candidate` to
+Home, Ledger, Delivery and Portal have now **committed candidate adapter
+source**, but have NOT executed clean-head source tests or browser acceptance.
+The registry records `candidate.source=prepared` for all six. The four
+SSR/native source adapters remain **candidate admission BLOCKED** until
+their owners prove the exact committed original-node integration and provide
+a pinned `mountEvidence` contract. A private plan may restate
+`readiness.candidate` with
 `{state:"prepared",reason:"...source test...",sourceSha:<exact app HEAD>}`
-and declare `mountEvidence`:
+and MUST also declare `mountEvidence` for these four owners:
 ```json
 {
   "strategy": "detached-before-first-mount",
@@ -279,15 +284,22 @@ transfer. Existing installed bundles/variants remain unchanged.
 - **Aura:** exact current branch candidate/browser regression checks and
   complete four-file bundle source pin need owner evidence; remains
   SECOND hands-on cross-consumer proof.
-- **Home:** real pre-mount canonical composition around original Home
-  native content, and app-owned source test before candidate is prepared.
-- **Ledger:** native invoice/posting/inspector pre-mount candidate; PV/
-  Personal review route and source behavior/regression verification.
-- **Delivery:** original browser/SendModal pre-mount candidate, native
-  upload/verified-copy/cleanup state and Personal profile manifest route.
-- **Portal:** test-proven native SSR form assembly before hydration;
-  preserve session/CSRF/ledger/accounting safety. Its runtime manifest
-  requires the original Go fixture, not a fabricated static snapshot.
+- **Home:** native original Home pre-mount candidate code is committed;
+  exact clean-head `tests/test_fixture_review.py` source regression remains
+  unexecuted, and coordinator `mountEvidence` admission + headed browser
+  are still BLOCKED.
+- **Ledger:** detached original Ledger fixture review-editor candidate
+  code is committed; the clean-head regression/mountEvidence and both PV/
+  Personal native behavior/IME acceptance remain unexecuted.
+- **Delivery:** native original browser/SendModal pre-mount candidate
+  code is committed; the exact source regression/mountEvidence and native
+  verified-copy/cleanup checks remain unexecuted; Personal profile
+  manifest entry at 41928 must be checked/extended by the owner.
+- **Portal:** real original Go SSR before-hydration candidate source is
+  committed. Exact clean-head `ui_fixture_candidate_ssr_test.go` tests and
+  coordinator `ssr-pre-hydration-tested` mountEvidence remain unexecuted.
+  Preserve CSRF/ledger/accounting safety and the actual runtime-generated
+  Go fixture manifest, never a fabricated static snapshot.
 
 The coordinator already registered all six; no consumer is silently
 unsupported. No optional missing runner is substituted with Aura's dirty
