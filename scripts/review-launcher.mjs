@@ -12,7 +12,7 @@ import {collectManifests,renderIndex,writeIndex} from './fixture-index.mjs';
 const own=fileURLToPath(import.meta.url);
 function commandWords(value){
   const words=value.trim().split(/\s+/).filter(Boolean);
-  if(words.length>5)throw new Error('Use one bounded review command at a time');
+  if(words.length>4)throw new Error('Use one bounded review command at a time');
   return words;
 }
 export async function dispatchLine(manager,host,line,{output=()=>{}}={}){
@@ -20,7 +20,7 @@ export async function dispatchLine(manager,host,line,{output=()=>{}}={}){
   if(!cmd)return {continue:true};
   if(cmd==='help'){
     output('status | start aura|staticref candidate|baseline|saved:<id> [seed] | test <app> <named-test> | stop <app> | index | exit');
-    output('No idle timeout, background launch, foreign port reuse, auto-stop, auto-install or auto-promotion.');
+    output('Manual shutdown required; no idle timeout, background launch, foreign port reuse, auto-stop, auto-install or auto-promotion.');
     return {continue:true};
   }
   if(cmd==='status'){for(const item of manager.status())output(JSON.stringify(item));return {continue:true};}
