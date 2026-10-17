@@ -86,12 +86,15 @@
     if(typeof label!=='string'||!label.trim()||label.length>80||
       !placements.has(placement)||!Number.isFinite(margin)||margin<0||margin>24)
       throw new TypeError('Floating panel needs a readable label, safe placement and margin');
+    // Reject malformed/unverified source claims before adding any native chrome.
+    formatReviewProvenance(provenance);
     const doc=panel.ownerDocument,view=doc.defaultView;
     if(!view)throw new TypeError('Floating panel needs its own window');
     let stopped=false,drag=null,moved=false,current={x:0,y:0},lastProvenance=null;
     const old={
       style:panel.getAttribute('style'),aria:panel.getAttribute('aria-label'),
       marker:panel.getAttribute('data-ui-floating-panel'),
+      variant:panel.getAttribute('data-ui-floating-variant'),
       hadClass:panel.classList.contains('ui-floating-panel')
     };
     const node=(tag,css,text)=>{
@@ -110,7 +113,7 @@
     handle.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight Home');
     handle.title='Drag here with mouse/touch · Arrow keys to move · Home to reset';
     const reset=node('button','ui-floating-reset','Reset position');
-    reset.type='button';reset.title='Restore panel to its lower corner';
+    reset.type='button';reset.title='Restore panel to '+placement.replace('-',' ')+' corner';
     reset.setAttribute('aria-label','Reset position of '+label);
     controls.append(handle,reset);
     const name=node('strong','ui-floating-name',label);
@@ -248,7 +251,8 @@
       if(old.aria===null)panel.removeAttribute('aria-label');else panel.setAttribute('aria-label',old.aria);
       if(old.marker===null)panel.removeAttribute('data-ui-floating-panel');
       else panel.setAttribute('data-ui-floating-panel',old.marker);
-      delete panel.dataset.uiFloatingVariant;
+      if(old.variant===null)delete panel.dataset.uiFloatingVariant;
+      else panel.setAttribute('data-ui-floating-variant',old.variant);
       instances.delete(panel);
     }
     const controller=Object.freeze({
