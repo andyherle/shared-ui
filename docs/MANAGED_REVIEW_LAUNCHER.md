@@ -29,11 +29,16 @@ The **app owners** implement the pre-mount/fixture-only integration in their
 private branches. The launcher never touches their generated installed
 `shared-ui` assets, production HTML or services. The owner must:
 
-1. Only in an isolated synthetic fixture process, accept
-   `UI_REVIEW_FIXTURE=1`, `UI_REVIEW_ASSET_ROOT` (immutable directory),
-   `UI_REVIEW_BUNDLE_DIGEST` (64-char aggregate SHA256),
-   `UI_REVIEW_SOURCE_SHA`, `UI_REVIEW_APP_SHA`,
-   `UI_REVIEW_VARIANT`, `UI_REVIEW_SEED` and `UI_REVIEW_PORT`.
+1. Only in an isolated synthetic fixture process, accept the same
+   **startup-only CLI fields in both real-code servers** (app owners requested
+   these, not URL-selected styles): `--ui-variant=candidate|installed`
+   (`baseline` selects `installed`), `--ui-source-sha=<40hex>`,
+   `--ui-bundle-dir=<absolute immutable review root>`,
+   `--ui-bundle-sha256=<64hex>`, `--app-sha=<40hex>`,
+   `--seed=<fixed value>`, `--review-root=<private 0700 scratch>`.
+   The coordinator appends them to each app's already pinned fixture argv.
+   It also provides matching scrubbed `UI_REVIEW_*` environment variables
+   for app-owned test commands, but CLI flags are the **startup contract**.
    Reject an unknown/missing candidate directory and all fallback to the
    app's live installed or hosted stylesheet when a candidate was selected.
    Serve only the **whole compatible bundle** from this directory:
@@ -45,7 +50,10 @@ private branches. The launcher never touches their generated installed
    hosts; overlay controls are not moved into inline inspectors. Preserve
    original form IDs, submit ownership, handlers, focus, IME and undo.
    Existing real app renderers/Canvas controllers remain authoritative.
-3. Return read-only exact health at **`GET /__fixture__/health`**:
+3. Return read-only exact selected-bundle lock at
+   **`GET /__fixture__/review-lock.json`** in **both** applications.
+   This resolves Aura's proposed double-underscore path and StaticRef's
+   earlier single-underscore alternative. The response is:
    ```json
    {
      "protocol": "shared-ui-review-health-v1",
@@ -53,6 +61,14 @@ private branches. The launcher never touches their generated installed
      "uiSha": "<full 40-hex shared-ui source SHA>",
      "bundleDigest": "<full 64-hex aggregate bundle SHA256>",
      "seed": "seed-1",
+     "variant": "candidate",
+     "pack": "postvisual",
+     "files": {
+       "icons.svg": "<64hex>",
+       "manifest.json": "<64hex>",
+       "runtime.js": "<64hex>",
+       "styles.css": "<64hex>"
+     },
      "mockOnly": true,
      "productionWritesDisabled": true,
      "realAppCode": true
@@ -81,9 +97,15 @@ the exact shared-ui checkout SHA and these four file SHA256 digests:
 
 `styles.css`, `runtime.js`, `icons.svg`, `manifest.json`.
 
-`bundleDigest` is SHA256 of four newline-separated entries in that
-exact order, each formatted `filename:64hexsha256` without a trailing
-newline. Call the exported `bundleFingerprint(digests)` to compute it.
+ `bundleDigest` is SHA256 of **UTF-8 canonical compact JSON** with sorted
+file keys and no whitespace:
+`{"files":{"icons.svg":"<sha256>","manifest.json":"<sha256>","runtime.js":"<sha256>","styles.css":"<sha256>"}}`.
+This matches the StaticRef owner's cross-language proposal. Node uses
+`JSON.stringify({files:Object.fromEntries(Object.entries(digests).sort())})`;
+Python uses `json.dumps({"files": digest_map}, sort_keys=True,
+separators=(",",":"))`. No trailing newline. The actual expected values
+are cryptographic hashes, not the bracketed placeholders shown here. Call
+the coordinator's `bundleFingerprint(digests)` to compute and check it.
 The launcher recomputes each file SHA256 and the aggregate, verifies
 `manifest.json` CSS revision/filename/SHA384 integrity, checks the
 associated shared-ui source checkout's **exact clean Git HEAD**, and
@@ -147,7 +169,7 @@ sample is **not executable** until populated from an approved clean checkout):
       "sha": "3bd271005b0176e846cfda6f97e5bff4a50d31ca",
       "port": 41888,
       "manifest": "/absolute/clean/aura-pr36/fixtures/ui-manifest.json",
-      "healthPath": "/__fixture__/health",
+      "healthPath": "/__fixture__/review-lock.json",
       "start": {
         "binary": "/absolute/pinned/node",
         "binarySha256": "<64hex>",
@@ -176,7 +198,7 @@ sample is **not executable** until populated from an approved clean checkout):
       "sha": "5b693554c59f2451c33b3909cb1722c684bd7745",
       "port": 8769,
       "manifest": "/absolute/clean/staticref-pr32/tests/browser/ui-fixture-manifest.json",
-      "healthPath": "/__fixture__/health",
+      "healthPath": "/__fixture__/review-lock.json",
       "start": {
         "binary": "/absolute/pinned/python3",
         "binarySha256": "<64hex>",
@@ -313,3 +335,19 @@ overflow, native dialogs/forms, stale conflict/retry and Canvas input.
 The active Studio MCP listener/relay repair is owned by the existing
 Editor Builder and Portal Architecture agents and is **not** part of
 this launcher.
+
+### App owner integration synchronization (current fixture branches)
+
+The original SHA table describes the **initial fixture handoff**, not an
+authorization to use outdated source after the owners append candidate
+adapter changes. On any actual review run, both fixture application `sha`
+fields must be updated to their **latest explicitly reviewed complete
+40-hex commit** and match a clean checkout. A changed owner HEAD invalidates
+the prior private plan. Coordinator cannot claim new owner code was tested
+because an app branch advanced.
+
+Both owners proposed the same startup fields but initially different lock
+paths and aggregate digest formats. This source contract resolves those
+differences to `/__fixture__/review-lock.json` and sorted compact JSON.
+Existing `/__fixture__/health` can remain a backwards-compatible fixture
+health route, but it cannot replace exact candidate-lock verification.
