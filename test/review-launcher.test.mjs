@@ -147,7 +147,7 @@ test('manual start, deduplication and exact immutable source/UI/seed receipt',as
 
 test('absence of external isolation proof, blocked port and wrong app/UI health all fail closed',async()=>{
   for(const [key,message] of [
-    ['block',/OS isolation/],['busy',/occupied/],['failHealth',/exact real-code/]
+    ['block',/OS isolation/],['busy',/occupied/],['failHealth',/Candidate fixture/]
   ]){
     const p=plan(),host=fakeHost(p),manager=new ReviewManager(p,host);
     host[key]=true;
