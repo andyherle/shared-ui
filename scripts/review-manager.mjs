@@ -170,12 +170,23 @@ export class ReviewManager {
       throw new Error('An owned session already exists; stop it explicitly before changing revision or seed');
     }
     check(this.owned.size<2,'At most two owned fixture children');
+    const requiresFix=selected.app.id==='staticref'&&
+      (selected.bundle.variant!=='baseline'||!!selected.app.sourceProof);
+    if(requiresFix)check(!!selected.app.sourceProof,
+      'StaticRef candidate requires a clean combined PR32+PR31 sourceProof');
     // Preflight must hash exact source, app, bundle and isolation policy and
     // execute bounded OS confinement probes. No default or mock-only fallback.
     const attestation=await this.host.preflight({...selected,plan:this.plan,mode:'fixture'});
     check(attestation?.verified===true&&attestation?.profileSha256===this.plan.isolation.policySha256&&
       attestation.executableSha256===this.plan.isolation.binarySha256&&/^[0-9a-f]{64}$/.test(attestation.evidenceDigest),
       'OS isolation has not been independently verified; refusing fixture start');
+    if(requiresFix)check(
+      attestation.sourceProof?.fixturePr32Sha===selected.app.sourceProof.fixtureSha&&
+      attestation.sourceProof?.headingFixPr31Sha===STATICREF_FIX31.sha&&
+      attestation.sourceProof?.combinedAppSha===selected.app.sha&&
+      Object.entries(STATICREF_FIX31.blobs).every(([file,sha])=>
+        attestation.sourceProof?.gitBlobs?.[file]===sha),
+      'StaticRef OS host did not return exact committed PR31 source proof');
     if(!await this.host.portFree(selected.app.port)){
       await this.host.cleanup?.({...selected,mode:'fixture'});
       throw new Error('Fixture port occupied or cannot be checked; foreign process reuse refused');
