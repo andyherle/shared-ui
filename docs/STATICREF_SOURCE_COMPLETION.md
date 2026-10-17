@@ -99,7 +99,7 @@ match exactly, in addition to the path-only diff above:
 
 | File | Git blob in intended PR #31 |
 | --- | --- |
-| `staticref/web/canvas.js` | `dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6` |
+| `staticref/web/canvas.js` | `dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6e` |
 | `staticref/web/canvas.css` | `8c3736db9476f74d718ebf46a97a14e26d573673` |
 | `tests/canvas-client.test.mjs` | `83337e0d10233b9d786a0592aa5a37915e3a417f` |
 | `docs/CANVAS.md` | `d99842c18066fb3f27ab94fb52391b0ff0ccd33d` |
@@ -198,8 +198,12 @@ status
 start staticref candidate seed-1
 test staticref review-source
 test staticref canvas
+# Run only after app-owned Playwright harness genuinely opens a HEADED Mac browser:
 test staticref browser
+status
 index
+# KEEP THE review> TERMINAL AND OWNED FIXTURE RUNNING for your hands-on check.
+# After you have reviewed Canvas + gallery/lightbox and explicitly finished:
 stop staticref
 exit
 ```
@@ -214,6 +218,76 @@ The app serves actual synthetic real UI at
 approved foreground server running**. No new browser executor was
 launched here. The existing fixture-index script is offline and can
 generate additional links without accepting a runtime health assertion.
+
+## LIVE WATCHABLE later Codex pass — required user-visible acceptance
+
+**Your later Codex pass is explicitly interactive and watchable on your Mac.**
+This authoring pass has not invoked Codex, a fixture server, Playwright or an
+executor. During any future isolated review, keep a readable foreground
+Terminal showing **which exact source/app/UI SHA, seed, route, check and
+PASS/FAIL status is being tested**. PR #5 forwards supervised **test-child
+stdout/stderr to the foreground Mac terminal**; it never inherits stdin and
+does not auto-stop your running app fixture at test completion. App-owned
+tests must print check-by-check progress, not just one silent final summary.
+
+**Known source prerequisite, do not conceal it:** At the currently verified
+StaticRef PR #32, `tests/browser/verify_ui_review.mjs` still explicitly uses
+`chromium.launch({headless:true})` and queues `keep(...)` results for its
+final report. Therefore **`test staticref browser` as currently written
+is headless-only** and does NOT satisfy your headed/watchable acceptance.
+Before that browser command is counted, the existing StaticRef owner or
+your later Codex pass must prepare an **app-owned fixture-only opt-in** in
+that same script (not a new editor/launcher) that runs
+`chromium.launch({headless:false, slowMo:<human-readable delay>})` in a
+visible Mac desktop session and prints each assertion/check's progress
+live. The option and exact invocation must be documented/committed and
+re-pinned as a **new clean StaticRef PR #32-derived combined review SHA**;
+do not claim the earlier SHA still represents a changed browser test.
+Do not use a `--headed` flag with today's standalone Node script: it
+does not implement one. If the app owner cannot make the browser visibly
+headed in the approved isolation environment, report the **headed review
+gate BLOCKED**, not a success from headless CI or synthetic events.
+
+**Exact future operator flow using the existing PR #5 interface** once
+the app-owned headed script is ready and vetted by source tests:
+
+```text
+# Visible Mac Terminal, launched by the USER/Codex in the approved OS sandbox.
+npm run review:managed -- --config /absolute/private/review-plan.json
+review> status
+review> start staticref candidate seed-1
+review> test staticref review-source
+review> test staticref canvas
+review> test staticref browser    # MUST open a visible HEADED Chromium window
+review> status
+review> index
+# Codex keeps a visible browser and readable test output for you to follow.
+# Keep managed StaticRef listening on http://127.0.0.1:8769.
+# Hands-on in a fresh headed context: use the actual Canvas/gallery URLs below.
+# Do NOT issue stop, Ctrl-C, Ctrl-D or exit automatically after passing tests.
+# Only AFTER YOU explicitly finish review:
+review> stop staticref
+review> exit
+```
+
+`review>` is the actual interactive CLI prompt; the `npm` line is a
+separate Terminal command, **not** input at `review>`. The source harness
+may close its automated test browser when assertions finish; Codex must
+retain/open a **separate visible clean browser window** at the same owned
+fixture origin for your hands-on checks before any manual stop. A normal
+logged-in Chrome profile, existing credentials or production web session
+must never be substituted for a fresh isolated context. Codex should
+stream progress and show the browser on the **Mac display you can see**,
+not a hidden cloud/headless worker or screenshots alone.
+
+A genuine Japanese/Chinese native IME must be exercised visibly by the
+user. Dispatched `CompositionEvent`, even in a headed browser, is not
+native IME evidence. Both Canvas **and** gallery/mosaic/lightbox parity,
+including the separately intended PR31 differences, remain release
+blocking. Keep the baseline/fix-only/candidate receipts and browser
+console/test logs separately. No automatic transition from review to
+merge, deployment, migration or publication occurs; preserve the original
+baseline and ask for explicit release approval later.
 
 ## RELEASE-BLOCKING: equivalent three-lane comparison
 
