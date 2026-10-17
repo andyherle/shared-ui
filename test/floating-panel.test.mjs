@@ -211,6 +211,28 @@ test('human-provenance updates never inject HTML or replace a focused app contro
   assert.equal(e.panel.dataset.uiFloatingVariant,undefined);
   assert.throws(()=>createFloatingPanel(new Element('aside',e.doc)),/already mounted/);
 });
+test('untrusted invalid provenance fails before mutating any connected native panel, and dispose restores pre-existing markers',()=>{
+  const e=environment(),before=e.panel.children[0],panel=e.panel;
+  panel.setAttribute('data-ui-floating-variant','original-source-label');
+  panel.setAttribute('style','position:relative;overflow:visible');
+  assert.throws(()=>createFloatingPanel(panel,{provenance:{
+    variant:'candidate',deploymentState:'deployed'}}),/claim is invalid/);
+  assert.equal(panel.children.length,1);
+  assert.equal(panel.children[0],before);
+  assert.equal(panel.classList.contains('ui-floating-panel'),false);
+  assert.equal(panel.getAttribute('style'),'position:relative;overflow:visible');
+  assert.equal(panel.getAttribute('data-ui-floating-variant'),'original-source-label');
+  const f=createFloatingPanel(panel,{provenance:{
+    variant:'candidate',uiVersion:'1.11.0',deploymentState:'not-deployed'}});
+  assert.equal(f.position.moved,false);
+  assert.equal(panel.getAttribute('data-ui-floating-panel'),'true');
+  f.dispose();
+  assert.equal(panel.children.length,1);
+  assert.equal(panel.children[0],before);
+  assert.equal(panel.getAttribute('style'),'position:relative;overflow:visible');
+  assert.equal(panel.getAttribute('data-ui-floating-variant'),'original-source-label');
+});
+
 test('pure geometry helpers clamp zero/oversized visual viewports without negative widths',()=>{
   const e=environment(280,100);
   assert.equal(viewportBox(e.view).width,280);
