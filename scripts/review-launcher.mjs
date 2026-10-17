@@ -58,7 +58,7 @@ export async function foreground(args=process.argv.slice(2)){
   if(!process.stdin.isTTY||!process.stdout.isTTY)
     throw new Error('Foreground manual review requires a terminal; unattended or piped startup is forbidden');
   const plan=readReviewPlan(args[1]),host=new LocalReviewHost(plan),manager=new ReviewManager(plan,host);
-  const rl=createInterface({input:process.stdin,output:process.stdout,terminal:true});
+  let rl;
   console.log('Shared UI candidate review · '+plan.reviewId+' · manually owned; source/fixture safety unverified until preflight');
   console.log('Enter help, status, start, test, stop, index or exit. No idle shutdown.');
   const write=value=>console.log(value);
@@ -73,16 +73,29 @@ export async function foreground(args=process.argv.slice(2)){
       if(!closing)rl.prompt();
     });
   }
-  rl.setPrompt('review> ');rl.on('line',queue);
-  rl.on('SIGINT',()=>{
-    console.error('Review owns child processes only while explicitly supervised. Use status and stop <app>; Ctrl-C is not an authorized child shutdown.');
+  function armTerminal(){
+    rl=createInterface({input:process.stdin,output:process.stdout,terminal:true});
+    rl.setPrompt('review> ');rl.on('line',queue);
+    rl.on('SIGINT',()=>{
+      console.error('Use status and stop <app>; Ctrl-C is not an authorized child shutdown.');
+      rl.prompt();
+    });
+    rl.on('close',()=>{
+      const stillOwned=manager.status().some(item=>item.owned);
+      if(!closing&&stillOwned){
+        console.error('Owned child processes remain. Shutdown requires explicit stop; no port-wide/PID guessing or force kill.');
+        // Ctrl-D closes readline but not the actual TTY: restore the same
+        // manager control instead of silently abandoning owned children.
+        if(process.stdin.isTTY&&!process.stdin.destroyed&&!process.stdin.readableEnded){
+          process.stdin.resume();setImmediate(armTerminal);
+        }else{
+          console.error('Control TTY was lost: lifecycle unknown. OS sandbox supervisor must clean up on parent death.');
+        }
+      }
+    });
     rl.prompt();
-  });
-  rl.on('close',()=>{
-    if(!closing&&manager.status().some(item=>item.owned))
-      console.error('Terminal closed unexpectedly with owned children: process survival unknown; do not kill by PID or port. Reconcile with owning session.');
-  });
-  rl.prompt();
+  }
+  armTerminal();
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===own){
   foreground().catch(error=>{console.error('Review launcher refused: '+error.message);process.exitCode=2;});
