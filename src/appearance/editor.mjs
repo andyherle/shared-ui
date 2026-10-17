@@ -183,6 +183,7 @@ export function mountAppearanceEditor({host, registry, document: doc = host?.own
     saving = true; refresh();
     // A failed Studio transport may have committed. Keep the exact old request
     // available for retry even when the user continues working on the preview.
+    controller.endGesture?.();
     pendingSave ??= {overrides: structuredClone(controller.getState().overrides), expectedRevision: revision};
     say('Saving profile…', 'pending');
     try {
@@ -237,6 +238,7 @@ export function mountAppearanceEditor({host, registry, document: doc = host?.own
       if (file.size > 131072) throw new Error('Appearance patch is too large.');
       const patch = parseAppearancePatch(registry, await file.text());
       if (disposed) return;
+      if (cssDirty) throw new Error('Apply or revert the CSS text before importing a patch.');
       controller.replace(patch.overrides); cssDirty = false; renderModule(); say('Patch imported into the preview. Save to keep it.');
     } catch (error) {say(error.message, 'error');}
     finally {importInput.value = '';}

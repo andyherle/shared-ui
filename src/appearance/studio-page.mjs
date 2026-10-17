@@ -42,7 +42,7 @@ async function openProfile(documentId) {
       load: () => persistence.load(),
       async save(overrides, options) {
         const result = await persistence.save(overrides, {...options, name: view.appId + ' / ' + view.viewId + ' appearance'});
-        if (!stopped) await listProfiles();
+        if (!stopped) {try {await listProfiles();} catch {say('The profile was saved. Refresh this page later to update the profile list.');}}
         return result;
       }
     }});
