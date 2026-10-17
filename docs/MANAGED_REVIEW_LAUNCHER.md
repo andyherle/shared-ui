@@ -257,7 +257,7 @@ the following immutable intended values:
 
 | Intended PR #31 changed file | Required Git blob SHA-1 |
 | --- | --- |
-| `staticref/web/canvas.js` | `dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6` |
+| `staticref/web/canvas.js` | `dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6e` |
 | `staticref/web/canvas.css` | `8c3736db9476f74d718ebf46a97a14e26d573673` |
 | `tests/canvas-client.test.mjs` | `83337e0d10233b9d786a0592aa5a37915e3a417f` |
 | `docs/CANVAS.md` | `d99842c18066fb3f27ab94fb52391b0ff0ccd33d` |
@@ -359,9 +359,12 @@ node scripts/review-launcher.mjs --config /absolute/private/review-plan.json
 ```
 
 Only an interactive TTY is accepted. Use `help`, `status`,
-`start aura candidate seed-1`, `start staticref baseline seed-1`,
-`test aura http`, `test aura browser`, `stop aura`,
-`stop staticref`, `index`, then `exit`. The index command uses
+`start staticref candidate seed-1` FIRST, `test staticref <named-test>`,
+`status`, `index`; leave the fixture running for the user's local
+hands-on review, then `stop staticref` and `exit` **only by explicit
+human action**. Aura's later cross-consumer proof uses the same protocol
+and the existing `start aura candidate seed-1`, `test aura <named-test>`
+and `stop aura` controls, never a second manager. The index command uses
 PR #3's offline HTML writer within private receipts; it **does not**
 start a fixture server. The manager restricts itself to **two** owned
 app children, reuses identical app/UI/seed configurations, refuses a
@@ -384,6 +387,38 @@ modifies an existing receipt. Initial health proof is
 `health-verified/browser-unrun`, not browser acceptance.
 A test returning 0 is separately recorded as executed, with full
 browser/viewport/IME/network/OS evidence requiring app owner reports.
+
+## Mac headed/watchable acceptance — explicit later requirement
+
+The user will **start Codex separately**. This coordinator source change does
+not launch Codex, an OS verifier, a fixture, a Mac browser or new executor.
+Later `test staticref browser` must open a **visible headed window on the
+user's Mac**, keep readable step-by-step test output on the foreground
+Terminal, and leave the managed StaticRef fixture listening on its
+original owned port until the human explicitly issues `stop staticref`.
+The manager now forwards **test-child stdout/stderr** to that same
+foreground terminal. It never auto-stops a successfully started fixture
+after a test. The user should be able to watch both browser changes and
+assertion/PASS/FAIL progress; a headless-only run is **not acceptance**.
+
+At the verified current StaticRef PR #32, the existing
+`tests/browser/verify_ui_review.mjs` uses
+`chromium.launch({headless:true})`. That **app-owned** script must
+gain and actually use a documented opt-in `headless:false` and
+per-assertion progress output before the operator treats any
+`test staticref browser` result as watchable. A standalone Node script
+does not accept Playwright's test-runner `--headed` switch merely
+because Playwright is imported. Do not claim it does, bypass the pinned
+isolation policy, or mark a hidden browser as passed. Re-pin an exact
+clean app SHA if the fixture test source changes.
+
+See [StaticRef source completion / future Codex operator steps](STATICREF_SOURCE_COMPLETION.md#live-watchable-later-codex-pass--required-user-visible-acceptance)
+for the **literal foreground manager commands**, separate real browser
+window, fresh isolated profile, native IME/pointer checks, and the
+mandatory manual-stop point after user review. Canvas AND gallery
+behavior remain independent release-blocking parity requirements.
+No source CI result substitutes for runtime evidence or the user's
+hands-on acceptance, and no review success automatically deploys.
 
 ## Delivery boundary and remaining gates
 
