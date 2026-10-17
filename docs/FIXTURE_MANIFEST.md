@@ -183,3 +183,14 @@ DOM semantics, interaction lifecycle, failing app surface, and a synthetic
 reproducer; agents should reread coordinator comments before adopting a
 changed shared contract. Do not alter generated shared CSS/runtime/icons,
 and do not merge/deploy/publish through the fixture workflow.
+
+## Optional managed candidate review (source-only)
+
+The standalone offline generator above remains unchanged and can be used without
+starting any process. A **separate**, foreground-only coordinator helper is
+specified in [Managed candidate review launcher](MANAGED_REVIEW_LAUNCHER.md).
+It reuses this index and manifest validation, pins exact app/UI source and
+separate candidate/baseline bundle digests, and refuses to start without
+an independently audited OS confinement broker. The helper does not install,
+promote, migrate, publish or alter consumer assets. No local OS isolation or
+app/browser runtime has been verified by this documentation.
