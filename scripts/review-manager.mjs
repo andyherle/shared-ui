@@ -116,7 +116,7 @@ function receipt(kind, session, extra={}){
 }
 export class ReviewManager {
   constructor(input,host){
-    this.plan=validateReviewPlan(input);this.host=host;this.owned=new Map();this.testActive=false;
+    this.plan=validateReviewPlan(input);this.host=host;this.owned=new Map();this.testActive=false;this.testChild=null;
   }
   status(){
     return Object.freeze(this.plan.apps.map(app=>{
@@ -138,11 +138,14 @@ export class ReviewManager {
     // execute bounded OS confinement probes. No default or mock-only fallback.
     const attestation=await this.host.preflight({...selected,plan:this.plan,mode:'fixture'});
     check(attestation?.verified===true&&attestation?.profileSha256===this.plan.isolation.policySha256&&
-      attestation.executableSha256===this.plan.isolation.binarySha256,
+      attestation.executableSha256===this.plan.isolation.binarySha256&&/^[0-9a-f]{64}$/.test(attestation.evidenceDigest),
       'OS isolation has not been independently verified; refusing fixture start');
-    check(await this.host.portFree(selected.app.port),'Fixture port is occupied or cannot be checked; refusing foreign process reuse');
+    if(!await this.host.portFree(selected.app.port)){
+      await this.host.cleanup?.({...selected,mode:'fixture'});
+      throw new Error('Fixture port occupied or cannot be checked; foreign process reuse refused');
+    }
     let child;
-    const session={...selected,reviewId:this.plan.reviewId,attestation,key,state:'starting'};
+    const session={...selected,reviewId:this.plan.reviewId,attestation,key,mode:'fixture',state:'starting'};
     this.owned.set(appId,session);
     try{
       child=await this.host.spawn({...session,mode:'fixture',plan:this.plan});
@@ -167,6 +170,7 @@ export class ReviewManager {
         if(!closed)throw new Error('Isolated child shutdown unconfirmed; retained owned handle for explicit stop: '+error.message);
       }
       this.owned.delete(appId);
+      await this.host.cleanup?.(session);
       throw error;
     }
   }
@@ -174,9 +178,15 @@ export class ReviewManager {
     const session=this.owned.get(appId);
     if(!session)return {app:appId,stopped:true,alreadyStopped:true};
     session.state='stopping';
+    if(this.testChild?.appId===appId){
+      if(!await this.host.stop(this.testChild.child))throw new Error('Owned test child remains active; stop remains pending');
+      await this.host.cleanup?.({...session,mode:'test'});
+      this.testChild=null;this.testActive=false;
+    }
     const closed=await this.host.stop(session.child); // SIGTERM, bounded wait; NEVER force kill.
     if(!closed)throw new Error('Graceful stop is pending; do not force kill or infer shutdown');
     this.owned.delete(appId);
+    await this.host.cleanup?.(session);
     const saved=await this.host.record(receipt('stop',session,{result:'owned-child-exited'}));
     return {app:appId,stopped:true,pid:session.child.pid,receipt:saved};
   }
@@ -187,6 +197,7 @@ export class ReviewManager {
     const test=session.app.tests[name];
     check(test,'Unknown app-owned test command');
     this.testActive=true;
+    let completed=false;
     try{
       // The test uses the SAME verified isolation profile, immutable source,
       // candidate bundle and seed. It may not run with host shell access.
@@ -196,12 +207,21 @@ export class ReviewManager {
         'Test sandbox isolation could not be reverified');
       const child=await this.host.spawn({...session,mode:'test',test,plan:this.plan});
       check(Number.isSafeInteger(child?.pid)&&child.pid>0,'Test needs its own owned child handle');
+      this.testChild={appId,child};
       const outcome=await this.host.waitTest(child);
+      completed=true;
       const result=outcome?.code===0?'source-test-executed/browser-evidence-separate':'test-failed';
       const saved=await this.host.record(receipt('test',session,{test:name,testPid:child.pid,
         testArgv:[...test.args],exitCode:outcome?.code??null,result}));
       return {app:appId,test:name,result,exitCode:outcome?.code??null,receipt:saved};
-    }finally{this.testActive=false;}
+    }finally{
+      if(completed||!this.testChild){
+        this.testActive=false;this.testChild=null;
+        await this.host.cleanup?.({...session,mode:'test'});
+      }
+      // An indeterminate timed-out child remains explicitly owned and must be
+      // stopped by the human before starting another test or exiting.
+    }
   }
   async exit(){
     check(this.owned.size===0&&!this.testActive,'Stop all owned fixture children explicitly before exiting; no idle auto-shutdown');
