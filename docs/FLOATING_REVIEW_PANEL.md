@@ -19,7 +19,19 @@ can obscure the real application header. No screenshot pixels were inspected.
 `runtime.js` via `scripts/build.mjs`; the SAME shared helper can also augment
 an independently verified installed-baseline runtime in a local fixture.
 Loading the factory twice is idempotent. No app-specific copy, no
-reimplementation of existing handlers.
+reimplementation of existing handlers. The single bounded floating CSS
+source block is also extracted **from the same shared file**, by
+`scripts/build.mjs:floatingPanelFixtureCSS`, into the optional
+`public/v1/floating-panel.fixture.css` file. It supplies floating
+chrome styles to an **installed baseline fixture** without changing
+that baseline's original complete four-file v1.10.2 bundle. The helper
+CSS file and `src/floating-panel.js` are **additional, separately pinned,
+fixture-only companions**, never replacements for pinned
+`styles.css/runtime.js/icons.svg/manifest.json`; this change does not
+add a fifth entry to the canonical bundle digest. Build source output
+records `floatingFixtureCssSha256` and `floatingHelperSha256` for
+the reviewed commit. The local Style Lab server only exposes the
+exact CSS companion via its explicit allowlist.
 
 `src/controls.css` supplies the only `ui-floating-*` paint, both Postvisual
 and Personal packs. The stable role `floating-panel` and placements
@@ -76,11 +88,16 @@ Only in a Codex-owned disposable fixture integration:
    `<details>`, links, Reset/Retry buttons, and candidate controls.
    Remove only obsolete inline top-left geometry in the fixture adapter.
    Load the **one reviewed shared** `src/floating-panel.js` after
-   the selected SharedUI runtime (baseline 1.10.2 needs this as a
-   separate pinned fixture-only helper; a newly rebuilt candidate
-   runtime already contains it). Any supplemental helper must be
-   staged from the exact reviewed shared source and independently pinned;
-   no query-selected, remote or invented helper.
+   the selected SharedUI runtime. For the original 1.10.2 baseline, also
+   load the companion stylesheet `v1/floating-panel.fixture.css`
+   **after** the unchanged installed baseline stylesheet in the
+   **disposable fixture response only**; both helper JS and companion CSS
+   are independently SHA-pinned from this reviewed PR #6 source.
+   A newly rebuilt candidate runtime/styles bundle already contains
+   the same shared code/CSS, so do not load a second copy there.
+   Keep both companions separate from the *canonical selected quartet*,
+   and never install them into tracked v1.10.2 assets or switch them
+   through browser URL/query parameters.
 2. When that existing panel is attached to `document.body`,
    invoke:
 
