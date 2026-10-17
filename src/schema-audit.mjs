@@ -47,7 +47,7 @@ export function collectSchemaSnapshot(scope, { appId, viewId } = {}) {
       for (const attribute of Object.keys(contract.attributes || {})) {
         if (element.hasAttribute(attribute)) attributes[attribute] = element.getAttribute(attribute).slice(0, 128);
       }
-      for (const check of contract.checks) counts[check.id] = element.querySelectorAll(check.selector).length;
+      for (const check of contract.checks) counts[check.id] = check.ancestor ? Number(Boolean(element.closest?.(check.ancestor))) : element.querySelectorAll(check.selector).length;
     }
     return { id: locator(element, scope), tag: element.localName,
       roles: contracts.map(contract => contract.id), attributes, counts };

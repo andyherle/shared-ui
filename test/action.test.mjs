@@ -9,13 +9,14 @@ class Node {
  addEventListener(type,handler){if(!this.listeners.has(type))this.listeners.set(type,new Set());this.listeners.get(type).add(handler);}
  removeEventListener(type,handler){this.listeners.get(type)?.delete(handler);}
  fire(type){for(const handler of this.listeners.get(type)||[])handler({});}
- classList={contains:(name)=>(this.className||'').split(/\s+/).includes(name),add:(name)=>{this.className=[...new Set((this.className||'').split(/\s+/).filter(Boolean).concat(name))].join(' ');}};
+ classList={remove:(...names)=>{this.className=(this.className||'').split(/\s+/).filter(name=>!names.includes(name)).join(' ');},contains:(name)=>(this.className||'').split(/\s+/).includes(name),add:(name)=>{this.className=[...new Set((this.className||'').split(/\s+/).filter(Boolean).concat(name))].join(' ');}};
  matches(selector){return selector.split(',').includes(this.name);}
  append(...nodes){for(const node of nodes){if(node.parent)node.parent.childNodes=node.parent.childNodes.filter(n=>n!==node);node.parent=this;this.childNodes.push(node);}}
  prepend(node){this.append(node);this.childNodes=[node,...this.childNodes.filter(n=>n!==node)];}
  replaceChildren(...nodes){for(const n of this.childNodes)n.parent=null;this.childNodes=[];this.append(...nodes);}
  querySelectorAll(selector){if(selector===':scope > [data-ui-text]')return this.childNodes.filter(n=>n.hasAttribute('data-ui-text'));return [];}
- querySelector(selector){if(selector.startsWith('[data-ui-zoom='))return this.childNodes.find(n=>n.getAttribute('data-ui-zoom')===selector.slice(14,-1));if(selector===':scope > [data-ui-current]')return this.childNodes.find(n=>n.hasAttribute('data-ui-current'));if(selector===':scope > .ui-label'||selector===':scope > .ui-dynamic')return this.childNodes.find(n=>(n.className||'').split(' ').includes(selector.slice(10)));if(selector===':scope > svg')return this.childNodes.find(n=>n.name==='svg');return this.childNodes.find(n=>n.name===selector);}
+ removeAttribute(k){this.attrs.delete(k);}
+ querySelector(selector){if(selector==='[data-ui-feedback]')return this.childNodes.find(n=>n.dataset.uiFeedback); if(selector.startsWith('[data-ui-zoom='))return this.childNodes.find(n=>n.getAttribute('data-ui-zoom')===selector.slice(14,-1));if(selector===':scope > [data-ui-current]')return this.childNodes.find(n=>n.hasAttribute('data-ui-current'));if(selector===':scope > .ui-label'||selector===':scope > .ui-dynamic')return this.childNodes.find(n=>(n.className||'').split(' ').includes(selector.slice(10)));if(selector===':scope > svg')return this.childNodes.find(n=>n.name==='svg');return this.childNodes.find(n=>n.name===selector);}
  remove(){if(this.parent)this.parent.childNodes=this.parent.childNodes.filter(n=>n!==this);this.parent=null;}
  setAttribute(k,v){this.ownerDocument.writes=(this.ownerDocument.writes||0)+1;this.attrs.set(k,String(v));}getAttribute(k){return this.attrs.get(k)??null;}hasAttribute(k){return this.attrs.has(k);}
  get textContent(){return this.name==='#text'?this.value||'':this.childNodes.map(n=>n.textContent).join('');}
@@ -155,4 +156,23 @@ test('output colour resolver caches actual native card paint and refreshes theme
  root.dataset.theme='light';assert.equal(resolver.resolve().fill,'rgb(255, 255, 255)');assert.equal(reads,3);
  root.dataset.ui='personal';resolver.resolve();assert.equal(reads,4);
  resolver.invalidate();resolver.resolve();assert.equal(reads,5);resolver.dispose();assert.equal(root.childNodes.length,0);assert.throws(()=>resolver.resolve(),/disposed/);
+});
+
+test('button feedback preserves its handler and icon contract through pending, success, error and reset',async()=>{
+ const {button}=control(),UI=module.exports;UI.adoptAction(button,{icon:'save',label:'Save'});const handler=button.onclick;
+ UI.setActionState(button,{state:'pending',message:'Saving'});assert.equal(button.getAttribute('aria-busy'),'true');assert.ok(button.classList.contains('ui-warning'));assert.equal(button.onclick,handler);
+ UI.setActionState(button,{state:'success',message:'Saved'});assert.ok(button.classList.contains('ui-success'));assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-check$/);
+ UI.adoptAction(button,{icon:'save',label:'Save'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-check$/,'ordinary decoration cannot replace a success glyph');
+ UI.setActionState(button,{state:'idle'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);assert.ok(button.classList.contains('primary'));
+ await assert.rejects(UI.runAction(button,async()=>{throw new Error('Offline')}),/Offline/);assert.equal(button.dataset.uiActionState,'error');assert.equal(button.onclick,handler);
+});
+
+test('Command arrows change content only, preserve native editors and IME, and dispose',()=>{
+ const listeners=new Map(),view={addEventListener(){},removeEventListener(){}},doc={activeElement:null,defaultView:view,addEventListener(type,fn){listeners.set(type,fn);},removeEventListener(type){listeners.delete(type);}};
+ let value=100,allowed=true;const zoom=module.exports.installZoomShortcuts(doc,{canZoom:()=>allowed,onZoom:direction=>value+=direction*10});
+ const key=(name,extra={})=>{let prevented=false;listeners.get('keydown')?.({key:name,metaKey:true,target:{closest:()=>null},preventDefault(){prevented=true;},...extra});return prevented;};
+ assert.equal(key('ArrowUp'),true);assert.equal(value,110);key('ArrowRight');key('ArrowDown');key('ArrowLeft');assert.equal(value,100);
+ assert.equal(key('ArrowUp',{metaKey:false}),false);assert.equal(key('ArrowUp',{ctrlKey:true}),false);assert.equal(key('ArrowUp',{target:{closest:()=>({})}}),false);
+ listeners.get('compositionstart')();assert.equal(key('ArrowUp'),false);listeners.get('compositionend')();assert.equal(key('ArrowUp',{keyCode:229}),false);
+ allowed=false;assert.equal(key('ArrowUp'),false);assert.equal(value,100);zoom.dispose();assert.equal(listeners.has('keydown'),false);
 });

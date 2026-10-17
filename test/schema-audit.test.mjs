@@ -46,7 +46,7 @@ test('an explicit empty covered scope is distinct from complete catalogue covera
   const input = snapshot(); input.elements = []; input.coverage = { matched: 0, captured: 0, truncated: false };
   const result = auditSchemaSnapshot(input);
   assert.equal(result.findings.length, 0); assert.ok(result.coverage.notChecked.includes('unregistered controls'));
-  assert.deepEqual(result.coverage.contracts, ['action', 'field', 'review-workspace', 'popout']);
+  assert.deepEqual(result.coverage.contracts, ['action', 'field', 'review-workspace', 'popout', 'action-feedback']);
 });
 test('malformed snapshots are rejected rather than reported clean', () => {
   const invalid = [null, {}, { ...snapshot(), schemaVersion: 2 }];
@@ -119,4 +119,10 @@ test('suppressed warnings can pass the opt-in gate', () => {
   const result = cli(['--snapshot', 'first', '--exceptions', 'exceptions', '--fail-on-warning'], {
     first: snapshot({ bad: true }), exceptions: [exception()]
   }); assert.equal(result.code, 0); assert.equal(result.output[0].results[0].summary.suppressed, 1);
+});
+
+test('action states outside their native button are flagged while button-owned feedback passes',()=>{
+ const shot={schemaVersion:1,appId:'demo',viewId:'save',elements:[{id:'feedback',tag:'span',roles:['action-feedback'],attributes:{},counts:{'action-feedback-owner':0}}],coverage:{matched:1,captured:1,truncated:false}};
+ assert.ok(auditSchemaSnapshot(shot).findings.some(item=>item.rule==='action-feedback-owner'));
+ shot.elements[0].counts['action-feedback-owner']=1;assert.deepEqual(auditSchemaSnapshot(shot).findings,[]);
 });
