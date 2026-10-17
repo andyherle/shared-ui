@@ -95,7 +95,9 @@ test('StaticRef-FIRST accepts one owner without requiring Aura; routes are exact
   const base=plan(),single={...base,apps:[structuredClone(base.apps[1])]};
   assert.equal(validateReviewPlan(single).apps.length,1);
   const m=new ReviewManager(single,fakeHost(single));
-  assert.equal(m.status().length,1);
+  assert.equal(m.status().length,6);
+  assert.equal(m.status().filter(v=>v.configured).length,1);
+  assert.ok(m.status().some(v=>v.app==='portal'&&!v.configured&&v.state==='blocked'));
   const started=await m.start('staticref','baseline','seed-1');
   assert.equal(started.href,'http://127.0.0.1:8769/reference/c/editorial/?fixture=normal');
   await m.stop('staticref');
@@ -111,8 +113,8 @@ test('StaticRef-FIRST accepts one owner without requiring Aura; routes are exact
     assert.throws(()=>validateReviewPlan(invalid),Error);
   }
   const tooMany=structuredClone(base);
-  tooMany.apps.push({...structuredClone(base.apps[1]),id:'another'});
-  assert.throws(()=>validateReviewPlan(tooMany),/one or two/);
+  for(let i=0;i<5;i++)tooMany.apps.push({...structuredClone(base.apps[1]),id:'extra-'+i});
+  assert.throws(()=>validateReviewPlan(tooMany),/One to six/);
 });
 
 test('later headed test output stays live-watchable without inheriting stdin or changing fixture mode',()=>{
