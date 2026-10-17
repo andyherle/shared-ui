@@ -501,3 +501,57 @@ Start with [the editor and MCP setup](docs/STUDIO_EDITOR_MCP.md) and
 [the foundation API](docs/STUDIO_FOUNDATION.md) and
 [the Studio implementation direction](docs/STUDIO.md). Run `npm run studio -- --describe` for generated contract discovery, `npm run check` for validation, and
 `npm run studio:browser` for the isolated browser fixture.
+
+## Centred editable headings
+
+Use `.ui-editable-heading.ui-section-title` with either a direct `.ui-prose` preview
+or native `.ui-inline-field` input and an optional `.ui-meta` count. The shared
+component owns the 8 px top inset, centred text in both states and transparent
+native editor. Toggle the native `hidden` attribute when entering or leaving
+editing; apps own edit events, data and board placement. Keep the preview and
+input in the same component so input alignment inherits the centred heading.
+Both states are demonstrated in the Control fixture for both packs.
+
+## Anchored colour palette
+
+`SharedUI.createColorPicker(trigger, {value, onChange, title})` creates a native
+nonmodal popout next to its trigger. Call its `open()` from the trigger's native
+click command, `setValue(value, {mixed})` when selection changes, and `dispose()`
+when removing the view. The top row is Neutral, muted red with white text, warm yellow, checkmark green and Translucent; saturated everyday pastels follow,
+then a native colour input and validated six-digit hex editor. Swatches retain accessible names without visible captions or arrows. It owns bounded positioning, Escape/outside
+dismissal and focus return; listeners for viewport movement exist only while open.
+`SharedUI.setCardColor` keeps the authored hex value while deriving readable
+light/dark fills and ink. White becomes near black in dark mode. Colour resolutions
+are cached with a bounded128-entry cache, and CSS changes theme without JS repaint.
+Use `.ui-board-grid` and toggle `data-ui-interacting=true` during a drag; apps own
+the grid's world-space size and offset. The catalogue demonstrates the picker.
+
+Pastel swatches and cards use the same resolved fill in both themes; only near-white neutral changes to off-black. Inline code and code blocks use the shared paired `--ui-prose-code-fill` / `--ui-prose-code-ink` tokens, so authored card text cannot turn code black-on-black.
+
+Use `.ui-header[data-ui-layout=workspace]` with navigation, status and actions slots (`data-ui-header-nav`, `data-ui-header-status`, `data-ui-header-actions`) for a balanced header: back/home left, commands right, status centred independently of side widths. Narrow layouts keep status centred on its own row.
+
+Output renderers use `SharedUI.createCardColorResolver(root)`: `resolve(color)` returns the actual native card fill, ink, border and font after theme resolution. Its bounded cache avoids resolving styles per card or frame; theme/pack/revision changes invalidate it. Call `invalidate()` after other appearance changes and `dispose()` when removing the renderer. Never pass unresolved CSS variables or `light-dark()` strings to Canvas paint.
+
+Shared selectable media/cards use one thin outline. `.ui-resize-handle` keeps its physical hit target while painting only a diagonal corner grip on selected-card hover or keyboard focus; no dot or duplicate selection border is drawn.
+
+Compose movable media with `ui-card ui-selectable ui-draggable`, `data-ui-resize="aspect"`, a named `ui-resize-handle` button and `ui-fit-media` on the image/video. The shared sheet owns selection, hover grip and native grab/resize cursors. The owning application keeps geometry, aspect-preserving pointer/keyboard resizing, persistence and pointer capture. Never add a separate drag strip. `ui-fit-media` fills a bounded stage using `object-fit:contain`, including upscaling low-resolution video without stretching or cropping.
+
+For a lightbox, call `SharedUI.fitMedia(media, stage)` after inserting its native image/video and dispose the returned controller before replacement/closure. It observes the bounded stage and loaded metadata, and sizes the element itself to the aspect-preserving contain rectangle, including upscaling. Native video controls therefore stay over the picture rather than a letterboxed full-stage element. It performs no playback or application-state changes.
+
+Tag entry uses the same native field font and border as other controls. `.ui-tag` defaults to padded neutral grey; selected tags explicitly set `aria-pressed="true"`. `createTagInput` reserves a bounded two-row suggestion slot to prevent layout movement on focus/filtering. Use `.ui-review-dock.ui-panel.ui-stack` for centered lower media controls with safe-area-aware bottom clearance; the application supplies contents and a positioned stage.
+
+`fitMedia(media, stage, {controlsOnIntent:true})` keeps a native video’s controls hidden when inserted, then reveals them on actual pointer movement, touch or keyboard focus. Disposal restores native attributes. Center review command/tag rows using the common `data-ui-align="center"` modifier on `ui-actions`/`ui-tags`.
+
+The shared `ui-card-container ui-card ui-stack` composition separates a primary `button[data-ui-surface="graphic"]` from a native footer (`ui-actions ui-pad`, `data-ui-align="end"`) containing `details.ui-menu`. Use `ui-pad ui-stack` for primary text so content and footer share one edge. Keep previews in the primary button and menu actions outside it; no detached floating menu or nested interactive targets.
+
+Action feedback lives on the action. `SharedUI.setActionState(button,{state:'idle'|'pending'|'success'|'error',message,sprite})` preserves native handlers, label sizing and focus, shows the shared yellow pending spinner or crisp green check, and puts accessible announcements inside the button. `runAction(button,asyncOperation,{pending,success,sprite})` manages the same lifecycle and rethrows failures. Call it for save, submit, confirm and other action results; use the same API for automatic saves. The structural audit flags standalone state feedback without a button owner. Background health/presence may explicitly declare `data-ui-feedback="background"`; that exception does not cover action results. Header status stays centered in the same row instead of moving beneath commands.
+
+The shared `ui-lightbox` shell fills the viewport without a second panel frame. Its `[data-ui-lightbox-body]` owns the media or same-origin gallery iframe and its optional `[data-ui-lightbox-close]` uses the standard close action at the top edge. Catalogue and Canvas use the same shell; the gallery retains domain navigation, metadata flushing and playback inside it.
+
+`createAvatar(name,{document,size:24})` composes the shared tag tokens into a fixed, passive circular presence indicator. Full names stay in the accessible label/title rather than affecting row geometry.
+
+`installZoomShortcuts(document,{canZoom,onZoom})` shares Command+Up/Right/+ and Command+Down/Left/− with native field, composed-path and IME guards. Apps supply bounded content transforms; never scale chrome. Dispose removes all handlers. `createZoomFeedback(document).show(percent)` updates one persistent, bottom-centered native minus/percentage/plus toolbar per document. It emits `ui:zoom` with direction −1/0/+1; zero resets. Apps own bounds and content geometry. Idle opacity increases on hover or keyboard focus. Native dialogs, menus and popovers suspend it automatically. Apps call `setVisible(false)` for custom overlays or non-content routes and restore it on close; dispose removes its listeners. The unframed `.ui-review-dock.ui-stack` centers review actions and tags without a surrounding panel border.
+
+`createValueTransition({value,onChange,duration:110,view})` eases content values to a target on animation frames. Read `.target` when accumulating repeated shortcuts; `.value` is the current frame. The callback receives `{final}` so apps persist once at the end. `cancel` stops work for a direct gesture; `dispose` releases listeners. Hidden views settle without background animation; reduced-motion preferences use the final value immediately. Never apply content zoom to UI chrome.
+
+`createZoomSteps()` shares gentle repeated content zoom: `next(direction)` returns a 10% factor, then 15% and 20% for presses within 240ms in the same direction. A pause, direction change or `next(0)` resets the burst. Use the same instance for keyboard and toolbar actions.

@@ -17,6 +17,8 @@ UI.createColumnDrag($('resizable-sheet'),{
   onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
 });
 sampleResize=UI.createColumnResize($('resizable-sheet'));
+const colourPicker=UI.createColorPicker($('fixture-colour'),{onChange:value=>UI.setCardColor($('fixture-colour-card'),value)});
+$('fixture-colour').addEventListener('click',()=>colourPicker.open());
 const pack=$('pack'),mode=$('mode'),density=$('density');
 const embedded=$('embedded-host').attachShadow({mode:'open'}),embeddedCSS=document.createElement('link');
 embeddedCSS.rel='stylesheet';embeddedCSS.href='./v1/styles.css';embedded.append(embeddedCSS,$('embedded-form').content.cloneNode(true));
@@ -40,7 +42,7 @@ for(const select of [pack,mode,density])select.addEventListener('change',appeara
 $('copy-css').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('css-url').value);toast('CSS URL copied');}catch{$('css-url').focus();$('css-url').select();toast('Select and copy the CSS URL');}});
 document.addEventListener('click',event=>{
 const button=event.target.closest('button');if(!button)return;
-if(button.dataset.toast){toast(button.dataset.toast);button.closest('details.ui-menu')?.removeAttribute('open');}
+if(button.dataset.toast){UI.setActionState(button,{state:'success',message:button.dataset.toast,sprite:'./v1/icons.svg'});button.closest('details.ui-menu')?.removeAttribute('open');}
 if(button.dataset.dialog){button.closest('details.ui-menu')?.removeAttribute('open');$(button.dataset.dialog).showModal();}
 if(button.hasAttribute('data-toggle'))button.setAttribute('aria-pressed',String(button.getAttribute('aria-pressed')!=='true'));
 if(button.dataset.segment){for(const peer of document.querySelectorAll(`[data-segment="${button.dataset.segment}"]`))peer.setAttribute('aria-pressed',String(peer===button));}
@@ -59,14 +61,12 @@ $('fixture-tag-form').addEventListener('submit',event=>{event.preventDefault();f
 $('fixture-tag-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.shiftKey){event.preventDefault();fixtureTagInput.flush();$('fixture-tag-status').textContent='Saved · next media';}});
 const fixtureZoom=UI.createZoom($('fixture-zoom'),{min:72,max:420,step:20,value:220,outLabel:'Smaller tiles',inLabel:'Larger tiles',format:value=>value+' px',sprite:'./v1/icons.svg'});
 UI.adoptAction($('fixture-save'),{labelStates:['Save','Saving…','Saved'],sprite:'./v1/icons.svg'});
-UI.reserveText($('fixture-workspace-status'),['Live','Unsaved','Saving…','Saved','Save failed']);
+
 function fixtureState(){
  const header=$('fixture-workspace-header'),before=UI.captureLayout(header),state=$('fixture-state').value,button=$('fixture-save');
  $('fixture-layout-check').textContent='Checking…';delete $('fixture-layout-check').dataset.checkedState;
- UI.setActionLabel(button,state==='saving'?'Saving…':state==='saved'?'Saved':'Save',{ariaLabel:state==='saving'?'Saving…':state==='saved'?'Saved':'Save'});
- button.setAttribute('aria-busy',String(state==='saving'));button.disabled=state==='saving';
- UI.setText($('fixture-workspace-status'),{live:'Live',dirty:'Unsaved',saving:'Saving…',saved:'Saved',error:'Save failed'}[state]);
- $('fixture-workspace-status').dataset.state=state==='error'?'error':state==='saving'?'pending':state==='dirty'?'warning':'success';
+ UI.setActionState(button,{state:state==='saving'?'pending':state==='saved'?'success':state==='error'?'error':'idle',message:{live:'Ready',dirty:'Unsaved',saving:'Saving…',saved:'Saved',error:'Save failed'}[state],sprite:'./v1/icons.svg'});
+ button.disabled=state==='saving';$('fixture-workspace-status').hidden=true;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{const issues=[...UI.compareLayout(before),...UI.auditControls(header).issues.filter(issue=>issue.severity==='error')],output=$('fixture-layout-check');output.textContent=issues.length?issues.map(issue=>issue.code+': '+issue.name).join('; '):'Stable · no command movement';output.dataset.state=issues.length?'error':'live';output.dataset.checkedState=state;}));
 }
 $('fixture-state').addEventListener('change',fixtureState);
@@ -144,3 +144,10 @@ void openSource();timeline();
 })();
 
 document.getElementById('group-width')?.addEventListener('input',event=>{document.querySelector('.lab-fit-sample').style.inlineSize=`min(100%,${event.target.value}px)`;});
+
+for(const name of ['Alice Example','Very long collaborator name that stays in a tooltip'])$('fixture-avatars').append(UI.createAvatar(name));
+
+const zoomFeedback=UI.createZoomFeedback(document,{sprite:'./v1/icons.svg'});
+const zoomFixture=direction=>{fixtureZoom.setValue(direction?fixtureZoom.value+direction*20:220);zoomFeedback.show(fixtureZoom.value/220*100);};
+document.addEventListener('ui:zoom',event=>zoomFixture(event.detail.direction));
+UI.installZoomShortcuts(document,{canZoom:()=>!document.querySelector('dialog[open]'),onZoom:zoomFixture});

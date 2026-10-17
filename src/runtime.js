@@ -123,8 +123,10 @@
     if(current.textContent!==String(value))current.textContent=String(value);
     return element;
   }
+  const actionStates=new WeakMap();
   function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
+    const feedback=actionStates.get(element);if(feedback&&feedback.state!=='idle'&&icon!==undefined){if(!feedback.applying)feedback.icon=icon;icon=feedback.state==='success'?'check':feedback.state==='error'?'warning':'refresh';}
     const doc=element.ownerDocument,base=new URL(doc.baseURI),asset=new URL(sprite,base);
     let changed=false;
     const attr=(node,name,value)=>{value=String(value);if(node.getAttribute(name)!==value){node.setAttribute(name,value);changed=true;}};
@@ -150,12 +152,57 @@
     if(changed){const group=element.closest?.('details.ui-overflow')?.parentElement?.closest('.ui-actions,.ui-toolbar')||element.closest?.('.ui-actions,.ui-toolbar');if(group)api.observeActions?.(group);}
     return element;
   }
+  function setActionState(button,{state='idle',message='',label,sprite='./shared-ui/icons.svg'}={}){
+    if(!button?.matches?.('button')||!['idle','pending','success','error'].includes(state))throw new TypeError('A native button and idle/pending/success/error state are required');
+    let entry=actionStates.get(button);
+    if(!entry){const use=button.querySelector(':scope > svg')?.querySelector('use'),href=use?.getAttribute('href')||'';entry={state:'idle',icon:href.split('#ui-')[1],primary:button.classList.contains('primary'),uiPrimary:button.classList.contains('ui-primary'),variant:button.getAttribute('data-ui-variant'),name:button.getAttribute('aria-label')||button.textContent.trim()};actionStates.set(button,entry);}
+    entry.state=state;button.dataset.uiActionState=state;button.setAttribute('aria-busy',String(state==='pending'));
+    for(const name of ['ui-success','ui-error','ui-warning'])button.classList.remove(name);
+    if(state!=='idle'){button.classList.remove('primary','ui-primary');button.removeAttribute('data-ui-variant');button.classList.add(state==='success'?'ui-success':state==='error'?'ui-error':'ui-warning');}
+    else{if(entry.primary)button.classList.add('primary');if(entry.uiPrimary)button.classList.add('ui-primary');if(entry.variant!==null)button.setAttribute('data-ui-variant',entry.variant);}
+    entry.applying=true;if(state==='idle'&&!entry.icon)button.querySelector(':scope > svg')?.remove();
+    adoptAction(button,{...(entry.icon?{icon:entry.icon}:state==='idle'?{}:{icon:state==='success'?'check':state==='error'?'warning':'refresh'}),...(label===undefined?{}:{label}),ariaLabel:message?entry.name+': '+message:entry.name,title:message||entry.name,sprite});entry.applying=false;
+    let live=button.querySelector('[data-ui-feedback]');if(!live){live=button.ownerDocument.createElement('span');live.className='ui-sr-only';live.dataset.uiFeedback='action';live.setAttribute('role','status');live.setAttribute('aria-live','polite');button.append(live);}if(live.textContent!==message)live.textContent=message;return button;
+  }
+  async function runAction(button,operation,{pending='Working…',success='Done',sprite}={}){setActionState(button,{state:'pending',message:pending,sprite});try{const result=await operation();setActionState(button,{state:'success',message:success,sprite});return result;}catch(error){setActionState(button,{state:'error',message:error.message||'Action failed',sprite});throw error;}}
+  const cardColorCache=new Map();
+  function resolveCardColor(color){
+    if(color==='#ffffff')return Object.freeze({light:'var(--ui-surface)',dark:'var(--ui-surface)',lightInk:'var(--ui-text)',darkInk:'var(--ui-text)'});
+    if(color==='transparent')return Object.freeze({light:'transparent',dark:'transparent',lightInk:'#000000',darkInk:'#ffffff'});
+    if(typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw new TypeError('A six-digit card color or transparent is required');
+    color=color.toLowerCase();if(cardColorCache.has(color))return cardColorCache.get(color);
+    const light=color==='#ff3b30'?'#c44c53':color==='#ffff00'?'#f3d376':color;
+    const channels=[1,3,5].map(i=>parseInt(light.slice(i,i+2),16));
+    const hex=values=>'#'+values.map(value=>value.toString(16).padStart(2,'0')).join('');
+    const dark=Math.max(...channels)-Math.min(...channels)<18&&channels[0]>230?'#24262b':light;
+    const ink=fill=>{const rgb=[1,3,5].map(i=>parseInt(fill.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722>.179?'#000000':'#ffffff';};
+    const result=Object.freeze({light,dark,lightInk:ink(light),darkInk:ink(dark)});
+    if(cardColorCache.size>=128)cardColorCache.delete(cardColorCache.keys().next().value);cardColorCache.set(color,result);return result;
+  }
   function setCardColor(card,color){
     if(color==null){delete card.dataset.uiColor;card.style.removeProperty('--ui-card-fill');card.style.removeProperty('--ui-card-ink');return;}
-    if(typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw new TypeError('A six-digit card color is required');
-    const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);
-    const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
-    card.dataset.uiColor=color.toLowerCase();card.style.setProperty('--ui-card-fill',color);card.style.setProperty('--ui-card-ink',luminance<.2?'#ffffff':'#111111');
+    const value=resolveCardColor(color);card.dataset.uiColor=color.toLowerCase();
+    if(color==='transparent'||color.toLowerCase()==='#ffffff'){card.style.removeProperty('--ui-card-fill');card.style.removeProperty('--ui-card-ink');return;}
+    card.style.setProperty('--ui-card-fill',`light-dark(${value.light},${value.dark})`);
+    card.style.setProperty('--ui-card-ink',`light-dark(${value.lightInk},${value.darkInk})`);
+  }
+  // Canvas/SVG output needs resolved CSS colours, never var() or light-dark() strings.
+  // One hidden native card per renderer; only distinct colours require style resolution.
+  function createCardColorResolver(root){
+    const doc=root.ownerDocument,view=doc.defaultView,probe=doc.createElement('article'),cache=new Map();
+    const scheme=view.matchMedia('(prefers-color-scheme: dark)');
+    let theme,disposed=false;
+    probe.className='ui-card';probe.hidden=true;probe.setAttribute('aria-hidden','true');root.append(probe);
+    function resolve(color=null){
+      if(disposed)throw new Error('Card colour resolver is disposed');
+      const key=[root.dataset.ui,root.dataset.theme,root.dataset.uiRevision,scheme.matches].join('/');
+      if(key!==theme){cache.clear();theme=key;}
+      if(cache.has(color))return cache.get(color);
+      setCardColor(probe,color);
+      const css=view.getComputedStyle(probe),paint=Object.freeze({fill:css.backgroundColor,ink:css.color,line:css.borderTopColor,font:css.fontFamily});
+      if(cache.size>=128)cache.delete(cache.keys().next().value);cache.set(color,paint);return paint;
+    }
+    return {resolve,invalidate(){theme=undefined;cache.clear();},dispose(){if(disposed)return;disposed=true;cache.clear();probe.remove();}};
   }
   function setSelection(element,selected) {
     element.classList.add('ui-selectable');
@@ -187,6 +234,55 @@
     }
     button.addEventListener('click',scrollToStart);doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',pause);view.addEventListener('pageshow',listen);listen();
     return {update,dispose(){if(disposed)return;disposed=true;pause();button.removeEventListener('click',scrollToStart);doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',pause);view.removeEventListener('pageshow',listen);}};
+  }
+  // Shared native-editor/IME guards based on StaticRef PR33; apps own zoom geometry.
+  function installZoomShortcuts(doc,{canZoom=()=>true,onZoom}={}){
+    if(typeof onZoom!=='function')throw new TypeError('Zoom requires an app callback');
+    let composing=false,disposed=false;
+    const editor=node=>Boolean(node?.isContentEditable||node?.closest?.('input,textarea,select,[contenteditable],[role="textbox"],[role="searchbox"],[role="combobox"]'));
+    const start=()=>{composing=true;},finish=()=>{composing=false;};
+    const press=event=>{
+      if(disposed||!event.metaKey||event.ctrlKey||event.altKey||event.defaultPrevented||event.isComposing||event.keyCode===229||composing||event.getModifierState?.('AltGraph')||editor(event.target)||editor(doc.activeElement)||event.composedPath?.().some(editor))return;
+      const direction=['ArrowUp','ArrowRight','+','='].includes(event.key)||['Equal','NumpadAdd'].includes(event.code)?1:['ArrowDown','ArrowLeft','-','_'].includes(event.key)||['Minus','NumpadSubtract'].includes(event.code)?-1:0;
+      if(!direction||!canZoom())return;
+      event.preventDefault();onZoom(direction);
+    };
+    function dispose(){if(disposed)return;disposed=true;doc.removeEventListener('keydown',press,true);doc.removeEventListener('compositionstart',start,true);doc.removeEventListener('compositionend',finish,true);doc.defaultView?.removeEventListener('blur',finish);doc.defaultView?.removeEventListener('pagehide',dispose);}
+    doc.addEventListener('compositionstart',start,true);doc.addEventListener('compositionend',finish,true);doc.addEventListener('keydown',press,true);doc.defaultView?.addEventListener('blur',finish);doc.defaultView?.addEventListener('pagehide',dispose);
+    return {dispose};
+  }
+  function createValueTransition({value,onChange,duration=110,view=globalThis.window}={}){
+    if(!Number.isFinite(value)||!Number.isFinite(duration)||duration<=0||typeof onChange!=='function')throw new TypeError('A finite value and frame callback are required');
+    let current=value,target=value,frame=null,start=null,from=value,disposed=false;
+    function cancel(){if(frame!==null)view.cancelAnimationFrame(frame);frame=null;start=null;target=current;}
+    function tick(now){if(disposed)return;if(start===null)start=now;const progress=Math.min(1,(now-start)/duration),ease=1-(1-progress)**3;current=progress===1?target:from+(target-from)*ease;onChange(current,{final:progress===1});if(progress<1)frame=view.requestAnimationFrame(tick);else{frame=null;start=null;}}
+    function to(next,{animate=true}={}){if(!Number.isFinite(next))throw new TypeError('A finite target is required');if(disposed)return;cancel();from=current;target=next;if(!animate||!view?.requestAnimationFrame||view.matchMedia?.('(prefers-reduced-motion:reduce)').matches){current=target;onChange(current,{final:true});return;}frame=view.requestAnimationFrame(tick);}
+    const hide=()=>{if(view.document?.hidden&&frame!==null){const next=target;cancel();current=target=next;onChange(current,{final:true});}};
+    function dispose(){cancel();disposed=true;view?.document?.removeEventListener('visibilitychange',hide);view?.removeEventListener('pagehide',dispose);}
+    view?.document?.addEventListener('visibilitychange',hide);view?.addEventListener('pagehide',dispose);
+    return {get value(){return current;},get target(){return target;},get active(){return frame!==null;},to,cancel,dispose};
+  }
+  function createZoomSteps({now=()=>performance.now(),interval=240}={}){
+    let last=-Infinity,previous=0,burst=0;
+    return {next(direction){if(!direction){last=-Infinity;previous=burst=0;return 1;}const time=now();burst=direction===previous&&time-last<=interval?Math.min(2,burst+1):0;last=time;previous=direction;const factor=1+[.1,.15,.2][burst];return direction>0?factor:1/factor;}};
+  }
+  const zoomDocks=new WeakMap();
+  function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
+    if(zoomDocks.has(doc))return zoomDocks.get(doc);
+    const view=doc.defaultView,node=doc.createElement('div');node.className='ui-zoom-feedback ui-toolbar ui-actions ui-inline';node.setAttribute('role','group');node.setAttribute('aria-label','Content zoom');
+    const buttons=[];
+    for(const [direction,icon,label] of [[-1,'minus','Zoom out'],[0,'maximize','Reset zoom'],[1,'plus','Zoom in']]){
+      const button=doc.createElement('button');button.type='button';button.dataset.uiZoom=direction<0?'out':direction>0?'in':'value';
+      adoptAction(button,{...(direction?{icon}:{}),label:direction?label:'100%',ariaLabel:label,labelStates:direction?undefined:['10%','100%','300%','800%'],iconOnly:direction!==0,sprite});
+      if(direction===0){button.dataset.uiLabel='always';button.setAttribute('aria-live','polite');setText(button.querySelector('.ui-label'),'100%');}
+      button.addEventListener('click',()=>doc.dispatchEvent(new view.CustomEvent('ui:zoom',{detail:{direction}})));buttons.push(button);node.append(button);
+    }
+    doc.body.append(node);
+    let visible=true;
+    const sync=()=>{node.hidden=!visible||Boolean(doc.querySelector('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open'));};
+    doc.addEventListener('toggle',sync,true);doc.addEventListener('close',sync,true);
+    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
+    view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);sync();return api;
   }
   function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
     if(![min,max,step,value].every(Number.isFinite)||max<min||step<=0)throw new TypeError('Zoom requires finite bounds, a positive step and a finite value');
@@ -352,7 +448,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.10.2',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.11.2',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

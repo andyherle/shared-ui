@@ -9,13 +9,14 @@ class Node {
  addEventListener(type,handler){if(!this.listeners.has(type))this.listeners.set(type,new Set());this.listeners.get(type).add(handler);}
  removeEventListener(type,handler){this.listeners.get(type)?.delete(handler);}
  fire(type){for(const handler of this.listeners.get(type)||[])handler({});}
- classList={contains:(name)=>(this.className||'').split(/\s+/).includes(name),add:(name)=>{this.className=[...new Set((this.className||'').split(/\s+/).filter(Boolean).concat(name))].join(' ');}};
+ classList={remove:(...names)=>{this.className=(this.className||'').split(/\s+/).filter(name=>!names.includes(name)).join(' ');},contains:(name)=>(this.className||'').split(/\s+/).includes(name),add:(name)=>{this.className=[...new Set((this.className||'').split(/\s+/).filter(Boolean).concat(name))].join(' ');}};
  matches(selector){return selector.split(',').includes(this.name);}
  append(...nodes){for(const node of nodes){if(node.parent)node.parent.childNodes=node.parent.childNodes.filter(n=>n!==node);node.parent=this;this.childNodes.push(node);}}
  prepend(node){this.append(node);this.childNodes=[node,...this.childNodes.filter(n=>n!==node)];}
  replaceChildren(...nodes){for(const n of this.childNodes)n.parent=null;this.childNodes=[];this.append(...nodes);}
  querySelectorAll(selector){if(selector===':scope > [data-ui-text]')return this.childNodes.filter(n=>n.hasAttribute('data-ui-text'));return [];}
- querySelector(selector){if(selector.startsWith('[data-ui-zoom='))return this.childNodes.find(n=>n.getAttribute('data-ui-zoom')===selector.slice(14,-1));if(selector===':scope > [data-ui-current]')return this.childNodes.find(n=>n.hasAttribute('data-ui-current'));if(selector===':scope > .ui-label'||selector===':scope > .ui-dynamic')return this.childNodes.find(n=>(n.className||'').split(' ').includes(selector.slice(10)));if(selector===':scope > svg')return this.childNodes.find(n=>n.name==='svg');return this.childNodes.find(n=>n.name===selector);}
+ removeAttribute(k){this.attrs.delete(k);}
+ querySelector(selector){if(selector==='[data-ui-feedback]')return this.childNodes.find(n=>n.dataset.uiFeedback); if(selector.startsWith('[data-ui-zoom='))return this.childNodes.find(n=>n.getAttribute('data-ui-zoom')===selector.slice(14,-1));if(selector===':scope > [data-ui-current]')return this.childNodes.find(n=>n.hasAttribute('data-ui-current'));if(selector===':scope > .ui-label'||selector===':scope > .ui-dynamic')return this.childNodes.find(n=>(n.className||'').split(' ').includes(selector.slice(10)));if(selector===':scope > svg')return this.childNodes.find(n=>n.name==='svg');return this.childNodes.find(n=>n.name===selector);}
  remove(){if(this.parent)this.parent.childNodes=this.parent.childNodes.filter(n=>n!==this);this.parent=null;}
  setAttribute(k,v){this.ownerDocument.writes=(this.ownerDocument.writes||0)+1;this.attrs.set(k,String(v));}getAttribute(k){return this.attrs.get(k)??null;}hasAttribute(k){return this.attrs.has(k);}
  get textContent(){return this.name==='#text'?this.value||'':this.childNodes.map(n=>n.textContent).join('');}
@@ -75,9 +76,10 @@ test('reserved standalone text supports empty values and literal strings without
 
 test('authored card colors choose readable ink, reject CSS injection and restore the theme',()=>{
  const values=new Map(),card={dataset:{},style:{setProperty:(key,value)=>values.set(key,value),removeProperty:key=>values.delete(key)}};
- module.exports.setCardColor(card,'#ff575c');assert.equal(values.get('--ui-card-fill'),'#ff575c');assert.equal(values.get('--ui-card-ink'),'#111111');
- module.exports.setCardColor(card,'#27313e');assert.equal(values.get('--ui-card-ink'),'#ffffff');
+ module.exports.setCardColor(card,'#ff575c');assert.equal(values.get('--ui-card-fill'),`light-dark(#ff575c,${module.exports.resolveCardColor('#ff575c').dark})`);assert.equal(values.get('--ui-card-ink'),'light-dark(#000000,#000000)');
+ module.exports.setCardColor(card,'#27313e');assert.equal(values.get('--ui-card-ink'),'light-dark(#ffffff,#ffffff)');
  assert.throws(()=>module.exports.setCardColor(card,'url(https://example.com)'),/six-digit/);assert.equal(card.dataset.uiColor,'#27313e');
+ module.exports.setCardColor(card,'transparent');assert.equal(card.dataset.uiColor,'transparent');assert.equal(values.size,0);
  module.exports.setCardColor(card,null);assert.equal(card.dataset.uiColor,undefined);assert.equal(values.size,0);
 });
 
@@ -125,4 +127,66 @@ test('panel back-to-top returns focus, pauses while hidden and releases its list
  view.emit('pagehide');assert.equal(panel.listeners.size,0);view.emit('pageshow');assert.equal(panel.listeners.size,1);
  helper.dispose();helper.dispose();
  assert.equal(panel.listeners.size,0);assert.equal(button.listeners.size,0);assert.equal(doc.listeners.size,0);assert.equal(view.listeners.size,0);
+});
+
+test('theme-adaptive authored colours preserve their value with readable light/dark ink and bounded reusable resolutions',()=>{
+ const resolve=module.exports.resolveCardColor;
+ assert.equal(resolve('#c44c53').lightInk,'#ffffff');assert.equal(resolve('#ff3b30').light,'#c44c53');
+ for(const colour of ['#c44c53','#f3d376','#22c55e'])assert.equal(resolve(colour).dark,colour,'Approval colours stay vivid in both themes');
+ assert.equal(resolve('#ffffff').dark,'var(--ui-surface)');
+ assert.equal(resolve('#f6c7a6'),resolve('#f6c7a6'),'Repeated card colours reuse their resolution');
+ const luminance=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+ for(let r=0;r<=255;r+=17)for(let g=0;g<=255;g+=17)for(let b=0;b<=255;b+=17){
+  const hex='#'+[r,g,b].map(c=>c.toString(16).padStart(2,'0')).join(''),value=resolve(hex);
+  if(hex==='#ffffff')continue;
+  assert.equal(value.light,hex==='#ffff00'?'#f3d376':hex);
+  for(const mode of ['light','dark']){const a=luminance(value[mode]),b=luminance(value[mode+'Ink']);assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,hex+' '+mode);}
+ }
+});
+
+
+test('output colour resolver caches actual native card paint and refreshes themes without CSS expressions',()=>{
+ const {doc}=control(),root=doc.createElement('html');root.dataset={ui:'postvisual',theme:'dark',uiRevision:'one'};
+ let reads=0;doc.defaultView={matchMedia:()=>({matches:false}),getComputedStyle:card=>{reads++;return {backgroundColor:card.dataset.uiColor==='#ffb3d2'?'rgb(255, 179, 210)':root.dataset.theme==='dark'?'rgb(20, 22, 26)':'rgb(255, 255, 255)',color:card.dataset.uiColor==='#ffb3d2'?'rgb(0, 0, 0)':root.dataset.theme==='dark'?'rgb(255, 255, 255)':'rgb(0, 0, 0)',borderTopColor:'rgb(80, 80, 80)',fontFamily:'sans-serif'};}};
+ const create=doc.createElement;doc.createElement=tag=>{const node=create(tag);node.style={setProperty(){},removeProperty(){}};return node;};
+ const resolver=module.exports.createCardColorResolver(root),dark=resolver.resolve();
+ assert.equal(dark.fill,'rgb(20, 22, 26)');assert.equal(resolver.resolve(),dark);assert.equal(reads,1);
+ const pink=resolver.resolve('#ffb3d2');assert.equal(pink.fill,'rgb(255, 179, 210)');assert.equal(pink.ink,'rgb(0, 0, 0)');
+ for(let i=0;i<200;i++)assert.equal(resolver.resolve('#ffb3d2'),pink);assert.equal(reads,2);
+ root.dataset.theme='light';assert.equal(resolver.resolve().fill,'rgb(255, 255, 255)');assert.equal(reads,3);
+ root.dataset.ui='personal';resolver.resolve();assert.equal(reads,4);
+ resolver.invalidate();resolver.resolve();assert.equal(reads,5);resolver.dispose();assert.equal(root.childNodes.length,0);assert.throws(()=>resolver.resolve(),/disposed/);
+});
+
+test('button feedback preserves its handler and icon contract through pending, success, error and reset',async()=>{
+ const {button}=control(),UI=module.exports;UI.adoptAction(button,{icon:'save',label:'Save'});const handler=button.onclick;
+ UI.setActionState(button,{state:'pending',message:'Saving'});assert.equal(button.getAttribute('aria-busy'),'true');assert.ok(button.classList.contains('ui-warning'));assert.equal(button.onclick,handler);
+ UI.setActionState(button,{state:'success',message:'Saved'});assert.ok(button.classList.contains('ui-success'));assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-check$/);
+ UI.adoptAction(button,{icon:'save',label:'Save'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-check$/,'ordinary decoration cannot replace a success glyph');
+ UI.setActionState(button,{state:'idle'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);assert.ok(button.classList.contains('primary'));
+ await assert.rejects(UI.runAction(button,async()=>{throw new Error('Offline')}),/Offline/);assert.equal(button.dataset.uiActionState,'error');assert.equal(button.onclick,handler);
+});
+
+test('Command arrows change content only, preserve native editors and IME, and dispose',()=>{
+ const listeners=new Map(),view={addEventListener(){},removeEventListener(){}},doc={activeElement:null,defaultView:view,addEventListener(type,fn){listeners.set(type,fn);},removeEventListener(type){listeners.delete(type);}};
+ let value=100,allowed=true;const zoom=module.exports.installZoomShortcuts(doc,{canZoom:()=>allowed,onZoom:direction=>value+=direction*10});
+ const key=(name,extra={})=>{let prevented=false;listeners.get('keydown')?.({key:name,metaKey:true,target:{closest:()=>null},preventDefault(){prevented=true;},...extra});return prevented;};
+ assert.equal(key('+',{code:'Equal'}),true);assert.equal(value,110);assert.equal(key('-',{code:'Minus'}),true);assert.equal(value,100);assert.equal(key('ArrowUp'),true);assert.equal(value,110);key('ArrowRight');key('ArrowDown');key('ArrowLeft');assert.equal(value,100);
+ assert.equal(key('ArrowUp',{metaKey:false}),false);assert.equal(key('ArrowUp',{ctrlKey:true}),false);assert.equal(key('ArrowUp',{target:{closest:()=>({})}}),false);
+ listeners.get('compositionstart')();assert.equal(key('ArrowUp'),false);listeners.get('compositionend')();assert.equal(key('ArrowUp',{keyCode:229}),false);
+ allowed=false;assert.equal(key('ArrowUp'),false);assert.equal(value,100);zoom.dispose();assert.equal(listeners.has('keydown'),false);
+});
+
+test('quick value easing accumulates target steps, completes exactly, and respects reduced motion',()=>{
+ let queued,time=0,reduced=false;const changes=[],view={requestAnimationFrame(fn){queued=fn;return 1;},cancelAnimationFrame(){queued=null;},matchMedia(){return {matches:reduced};},addEventListener(){},removeEventListener(){}};
+ const motion=module.exports.createValueTransition({value:100,duration:100,view,onChange:(value,options)=>changes.push([value,options.final])});
+ const advance=now=>{const fn=queued;queued=null;fn(now);};motion.to(120);advance(0);advance(50);assert.ok(motion.value>100&&motion.value<120);motion.to(motion.target+20);advance(50);advance(150);assert.equal(motion.value,140);assert.equal(motion.active,false);assert.deepEqual(changes.at(-1),[140,true]);
+ reduced=true;motion.to(160);assert.equal(motion.value,160);assert.equal(queued,null);motion.dispose();
+});
+
+
+test('content zoom starts gently and accelerates only rapid same-direction presses',()=>{
+ let time=0;const steps=module.exports.createZoomSteps({now:()=>time});
+ assert.equal(steps.next(1),1.1);time=100;assert.equal(steps.next(1),1.15);time=180;assert.equal(steps.next(1),1.2);time=220;assert.equal(steps.next(1),1.2);
+ assert.equal(steps.next(-1),1/1.1);time=600;assert.equal(steps.next(-1),1/1.1);steps.next(0);assert.equal(steps.next(-1),1/1.1);
 });

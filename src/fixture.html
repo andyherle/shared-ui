@@ -21,7 +21,7 @@
       <nav class="ui-actions ui-inline" aria-label="Fixture workspace commands">
         <a class="ui-action ui-icon-button ui-back" href="#control-fixture" data-ui-icon="arrow-left" data-ui-label="hidden" aria-label="Return to library" title="Return to library">Library</a>
         <strong class="ui-section-title" data-ui-header-context>Motion study</strong>
-        <span id="fixture-workspace-status" class="ui-status ui-tag" data-state="success" role="status">Live</span>
+        <span id="fixture-workspace-status" hidden></span>
         <details class="ui-disclosure ui-overflow" data-ui-priority="0"><summary class="ui-action" data-ui-icon="sliders" data-ui-label="hidden" aria-label="Workspace tools" title="Workspace tools">Tools</summary><div class="ui-actions ui-disclosure-body"><button type="button" data-ui-icon="sliders" data-ui-label="hidden" aria-label="Controls" title="Controls" data-toggle>Controls</button><button type="button" data-ui-icon="popout" data-ui-label="hidden" aria-label="Present" title="Present" data-toast="Presentation opened">Present</button></div></details>
         <button id="fixture-save" type="button" data-ui-icon="save" data-ui-variant="primary" data-ui-label="always">Save</button>
         <details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="More workspace actions">More</summary><div class="ui-menu-panel ui-stack"><button type="button" data-ui-icon="save-as">Save as…</button><button type="button" data-ui-icon="film">Storyboard</button><button type="button" data-ui-icon="robot">Collaboration</button></div></details>
@@ -64,6 +64,12 @@
       <div class="ui-tags" id="fixture-tags" aria-label="Fixture quick tags"><form class="ui-field" id="fixture-tag-form"><input id="fixture-tag-input" aria-label="Fixture add tag" placeholder="Type a tag…" autocomplete="off"></form></div>
       <p class="ui-status" id="fixture-tag-status" role="status"></p>
     </article>
+    <header class="ui-header ui-toolbar ui-chrome" data-ui-layout="workspace"><nav data-ui-header-nav><a class="ui-action" href="#control-fixture">Back</a></nav><div class="ui-actions ui-inline" data-ui-header-actions><button type="button">Save</button></div></header>
+    <article class="ui-card ui-pad ui-stack" aria-label="Anchored colour palette"><button id="fixture-colour" type="button">Card colour</button><div id="fixture-colour-card" class="ui-card ui-pad">Approval, pastel and custom colours adapt to the active theme.</div></article>
+    <article class="ui-card ui-chrome" aria-label="Centred editable heading examples">
+      <div class="ui-editable-heading ui-section-title"><div class="ui-prose" tabindex="0">Scene direction — reference set</div><span class="ui-meta">3 cards</span></div>
+      <div class="ui-editable-heading ui-section-title"><input class="ui-inline-field" aria-label="Edit centred heading" value="Scene direction — reference set"><span class="ui-meta">3 cards</span></div>
+    </article>
     <article class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture task card">
       <h3 class="ui-section-title">Review the next revision</h3><p class="ui-meta">Example project</p>
       <div class="ui-actions" aria-label="Fixture task actions">
@@ -103,6 +109,13 @@
         <article class="ui-card ui-pad ui-stack" data-ui-main><h4 class="ui-section-title">Primary work</h4><p>The main content takes the remaining room. On a narrow panel, context and work each get a full row.</p><div class="ui-actions"><button type="button" data-ui-icon="check" data-ui-variant="primary">Continue</button><button type="button" data-ui-icon="close">Cancel</button></div></article>
       </div>
     </section>
+    <section class="ui-stack" aria-label="Movable media pattern"><h3 class="ui-section-title">Selected media</h3><article class="ui-card ui-selectable ui-draggable lab-resizable-media" data-ui-selected="true" data-ui-resize="aspect" tabindex="0" aria-label="Selected reference image"><img class="ui-fit-media" src="./assets/reference.svg" alt="Synthetic reference" draggable="false"><button class="ui-resize-handle" type="button" aria-label="Resize image, keep aspect ratio"></button></article></section>
+    <section class="lab-review-stage" aria-label="Media review dock pattern"><aside class="ui-review-dock ui-stack" aria-label="Example media review controls"><div class="ui-actions"><button type="button" data-ui-icon="check">Approve</button><button type="button" data-ui-icon="info">Details</button></div><div class="ui-tags"><button class="ui-tag" aria-pressed="true" type="button">Selected tag</button><button class="ui-tag" type="button">Suggestion</button></div></aside></section>
+    <div class="ui-card-container ui-card ui-item ui-actions ui-inline ui-pad" aria-current="page"><button class="ui-item ui-stack" type="button"><span>Reference board</span><small>Eight cards</small></button><details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="Board menu">Board menu</summary><div class="ui-menu-panel"><button type="button">Delete board</button></div></details></div>
+    <article class="ui-card-container ui-card ui-stack" aria-label="Card container pattern"><button type="button" data-ui-surface="graphic"><span class="ui-pad ui-stack"><strong class="ui-section-title">Reference board</strong><span class="ui-meta">Five references · Two notes</span></span></button><footer class="ui-actions ui-pad" data-ui-align="end"><details class="ui-menu"><summary class="ui-action" data-ui-icon="more" data-ui-label="hidden" aria-label="Board actions">Actions</summary><div class="ui-menu-panel"><button type="button" data-ui-icon="trash" class="ui-danger">Delete board</button></div></details></footer></article>
+    <div class="ui-actions" aria-label="Button feedback states"><button type="button" class="ui-action ui-warning" data-ui-action-state="pending" aria-busy="true" data-ui-icon="refresh">Save</button><button type="button" class="ui-action ui-success" data-ui-action-state="success" data-ui-icon="check">Submitted</button><button type="button" class="ui-action ui-error" data-ui-action-state="error" data-ui-icon="warning" data-ui-label="hidden" aria-label="Save failed">Save failed</button></div>
+    <button type="button" data-dialog="fixture-media-lightbox" data-ui-icon="image">Open shared media shell</button><dialog id="fixture-media-lightbox" class="ui-lightbox" aria-label="Reference image"><div data-ui-lightbox-body><img class="ui-fit-media" src="./assets/reference.svg" alt="Synthetic reference"></div><form method="dialog" data-ui-lightbox-close><button data-ui-icon="close" aria-label="Close lightbox">Close</button></form></dialog>
+    <div id="fixture-avatars" class="ui-actions ui-inline" aria-label="Compact collaborator presence"></div>
     <form class="ui-card ui-pad ui-stack" id="fixture-capture-form" aria-label="Fixture capture">
       <label class="ui-field"><input name="text" aria-label="Fixture capture text" placeholder="What’s on your mind?" required></label>
       <div class="ui-actions" aria-label="Fixture capture actions">
