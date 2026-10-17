@@ -213,7 +213,7 @@
     .ui-app-tile:is([data-ui-dragging=true],[aria-busy=true]) { opacity:.5; }
     .ui-header > :first-child:not(.ui-actions,.ui-action,.ui-field,button,details) { margin-inline-end:auto; }
     .ui-search { inline-size:100%; min-inline-size:min(100%,8rem); }
-:where(.ui-actions,.ui-toolbar) {
+:where(.ui-actions,.ui-toolbar,.ui-tags) {
   &[data-ui-layout=bar] { flex-wrap:nowrap; overflow-x:auto; }
   &[data-ui-layout=bar] > * { flex-shrink:0; }
   & > :where(details.ui-disclosure) { inline-size:auto; flex:0 1 auto; }
