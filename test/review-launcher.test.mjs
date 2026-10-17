@@ -57,6 +57,7 @@ function fakeHost(planInput=plan()){
       uiSha:s.bundle.uiSha,bundleDigest:s.bundle.bundleDigest,
       seed:s.seed,variant:s.bundle.variant==='baseline'?'installed':s.bundle.variant,
       pack:s.bundle.pack,files:{...s.bundle.digests},
+      composition:{id:'review-workspace',revision:'1',instances:[s.app.id+'.review-workspace']},
       mockOnly:true,productionWritesDisabled:true,realAppCode:true};},
     async stop(child){calls.stop.push(child);if(host.shutdownUnknown)return false;child.exitCode=0;return true;},
     async waitTest(child){child.exitCode=0;return {code:0};},
@@ -129,6 +130,8 @@ test('manual start, deduplication and exact immutable source/UI/seed receipt',as
   assert.equal(host.calls.record[0].seed,'seed-42');
   assert.equal(host.calls.record[0].kind,'start');
   assert.equal(host.calls.record[0].result,'health-verified/browser-unrun');
+  assert.equal(host.calls.record[0].composition.id,'review-workspace');
+  assert.equal(host.calls.record[0].composition.instances[0],'aura.review-workspace');
   await assert.rejects(manager.start('aura','baseline','seed-42'),/stop it explicitly/);
   await assert.rejects(manager.start('aura','candidate','different-seed'),/stop it explicitly/);
   await manager.start('staticref','baseline','seed-42');
