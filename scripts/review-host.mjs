@@ -192,9 +192,17 @@ export class LocalReviewHost {
     // Only the pinned OS sandbox program executes. It supervises the actual
     // fixture process and must forward graceful shutdown; no shell or fallback.
     const iso=this.plan.isolation;
+    // The two app owners agreed on a startup-only candidate selector.
+    // URL/query parameters cannot change the bundle after this process starts.
+    const appVariant=bundle.variant==='baseline'?'installed':bundle.variant;
+    const ownerArgs=mode==='fixture'?[
+      '--ui-variant='+appVariant,'--ui-source-sha='+bundle.uiSha,
+      '--ui-bundle-dir='+bundle.root,'--ui-bundle-sha256='+bundle.bundleDigest,
+      '--app-sha='+app.sha,'--seed='+seed,'--review-root='+scratch
+    ]:[];
     const args=['run','--protocol','shared-ui-review-os-isolation-v1','--policy',iso.policy,
       '--app-root',app.root,'--bundle-root',bundle.root,'--scratch',scratch,'--port',String(app.port),
-      '--',cmd.binary,...cmd.args];
+      '--',cmd.binary,...cmd.args,...ownerArgs];
     const env={
       PATH:'/usr/bin:/bin',HOME:scratch,TMPDIR:scratch,LANG:'C',
       UI_REVIEW_FIXTURE:'1',UI_REVIEW_ASSET_ROOT:bundle.root,
