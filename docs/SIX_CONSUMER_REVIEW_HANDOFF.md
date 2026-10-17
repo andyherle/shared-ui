@@ -153,7 +153,26 @@ and MUST also declare `mountEvidence` for these four owners:
 }
 ```
 For proven original server-side assembly, `strategy` is
-`ssr-pre-hydration-tested` instead. These are **source claims**, not
+`ssr-pre-hydration-tested` instead. The currently identified
+**app-owned existing source-regression files and canonical instance IDs**
+are listed below solely to avoid another interface or mock factory:
+
+| Owner | Original native instance ID(s) | App-owned source regression reference |
+| --- | --- | --- |
+| Home | `postvisual.home.workspace` | `tests/test_fixture_review.py` |
+| Ledger | `ledger.fixture.review-editor` | `tests/test_ui_review_bundle.py` plus original UI fixture assertions |
+| Delivery | `delivery.browser.documents`, `delivery.upload.send` | `tests/test_ui_fixture_bundle.py` and existing browser/SendModal source contracts |
+| Portal | `portal.document.review`, `portal.ledger.review` | `internal/web/ui_fixture_candidate_contract_test.go` (real Go SSR original-node markers) |
+
+Use the app owner's actual regression file in `mountEvidence.testFile`;
+do not manufacture an `instanceIds` marker without its real native
+pre-mount renderer. Portal's SSR form cannot be detached *after* hydration,
+and no candidate may inherit focus by replacing a connected form.
+The coordinator checks that the referenced file exists and is tracked
+at the exact app SHA; actual regression execution/browser behavior is
+a separate release gate.
+
+These are **source claims**, not
 browser proof: the manager checks the exact app SHA and instance
 identity, the host checks that `testFile` is a nonempty tracked source
 file in the exact **clean** checkout, and the real candidate response
