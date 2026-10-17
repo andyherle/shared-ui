@@ -189,6 +189,7 @@
     .ui-toolbar { padding:var(--ui-gap); border:1px solid var(--ui-line); border-radius:var(--ui-radius); background:var(--ui-surface); }
     .ui-header { position:sticky; inset-block-start:0; z-index:50; align-items:center; justify-content:flex-end; border-radius:0; border-inline:0; border-block-start:0; }
 
+    /* shared-floating-panel:start */
     /* Explicitly opted-in floating review chrome; original app controls remain native. */
     .ui-floating-panel { position:fixed; inset:auto; z-index:10000; display:flex; flex-direction:column; gap:var(--ui-gap); inline-size:min(22rem,100%); min-inline-size:0; max-inline-size:100%; max-block-size:calc(100dvh - 16px); margin:0; padding:8px; overflow:auto; overscroll-behavior:contain; overflow-wrap:anywhere; border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius); background:var(--ui-surface); color:var(--ui-text); box-shadow:0 6px 22px var(--ui-shadow-color); font-size:var(--ui-control-size); }
     .ui-floating-panel[hidden] { display:none!important; }
@@ -205,6 +206,7 @@
     .ui-floating-source-list { display:grid; grid-template-columns:minmax(6rem,auto) minmax(0,1fr); gap:3px 8px; margin:6px 0 0; font-size:inherit; overflow-wrap:anywhere; }
     .ui-floating-source-list dt { font-weight:600; color:var(--ui-muted); }
     .ui-floating-source-list dd { margin:0; }
+    /* shared-floating-panel:end */
 
     .ui-header > .ui-back,.ui-header > :has(>.ui-back) { order:-1; margin-inline-end:auto; }
     .ui-context-bar[data-ui-position=floating] { position:fixed; inset-block-end:max(var(--ui-gap),env(safe-area-inset-bottom)); inset-inline:var(--ui-gap); margin:auto; inline-size:auto; max-inline-size:56rem; z-index:130; }
