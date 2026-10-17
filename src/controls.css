@@ -310,6 +310,9 @@
     .ui-graphic-action { min-inline-size:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); min-block-size:calc(var(--ui-control-height) / var(--ui-graphic-scale,1)); padding:calc(min(5px,(var(--ui-control-height) - 20px) / 2) / var(--ui-graphic-scale,1)); border-width:calc(1px / var(--ui-graphic-scale,1)); border-radius:calc(var(--ui-radius) / var(--ui-graphic-scale,1)); }
     .ui-graphic-action > svg.ui-icon { inline-size:calc(18px / var(--ui-graphic-scale,1)); block-size:calc(18px / var(--ui-graphic-scale,1)); }
     :where(input,textarea).ui-inline-field { min-block-size:0; padding:revert-layer; resize:revert-layer; border-color:#0000; border-radius:0; background:#0000; font:inherit; text-align:inherit; }
+    .ui-editable-heading { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; min-inline-size:0; padding:8px 11px 6px; text-align:center; user-select:none; }
+    .ui-editable-heading > .ui-prose { inline-size:fit-content; max-inline-size:100%; min-inline-size:0; margin:0; padding:3px; cursor:text; user-select:text; -webkit-user-select:text; }
+    .ui-editable-heading > .ui-inline-field { inline-size:100%; min-inline-size:0; max-inline-size:100%; padding:3px; text-align:inherit; }
     [aria-invalid=true] { border-color:var(--ui-bad); }
     .ui-status { display:flex; align-items:center; gap:6px; min-inline-size:0; overflow-wrap:anywhere; color:var(--ui-muted); }
     .ui-status.ui-tag { border-color:currentColor; background:var(--ui-surface-soft); }

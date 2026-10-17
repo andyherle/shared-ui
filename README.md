@@ -501,3 +501,13 @@ Start with [the editor and MCP setup](docs/STUDIO_EDITOR_MCP.md) and
 [the foundation API](docs/STUDIO_FOUNDATION.md) and
 [the Studio implementation direction](docs/STUDIO.md). Run `npm run studio -- --describe` for generated contract discovery, `npm run check` for validation, and
 `npm run studio:browser` for the isolated browser fixture.
+
+## Centred editable headings
+
+Use `.ui-editable-heading.ui-section-title` with either a direct `.ui-prose` preview
+or native `.ui-inline-field` input and an optional `.ui-meta` count. The shared
+component owns the 8 px top inset, centred text in both states and transparent
+native editor. Toggle the native `hidden` attribute when entering or leaving
+editing; apps own edit events, data and board placement. Keep the preview and
+input in the same component so input alignment inherits the centred heading.
+Both states are demonstrated in the Control fixture for both packs.

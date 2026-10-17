@@ -146,7 +146,7 @@ export const ROLE_OWNERS = freeze({
   danger: 'action', disclosure: 'disclosure', 'disclosure-body': 'disclosure', 'drag-handle': 'drag-handle', dynamic: 'action',
   error: 'notice', field: 'field', fill: 'actions', form: 'form', 'graphic-action': 'drag-handle', grid: 'grid', group: 'group',
   guide: 'drag-handle', header: 'toolbar', icon: 'icon', 'icon-button': 'icon-action', 'icon-choice': 'checkbox', inline: 'actions',
-  'inline-field': 'textarea', item: 'action', label: 'action', listbox: 'combobox', 'media-button': 'media-action',
+  'editable-heading': 'text', 'inline-field': 'textarea', item: 'action', label: 'action', listbox: 'combobox', 'media-button': 'media-action',
   menu: 'menu', 'menu-panel': 'menu', meta: 'text', mono: 'prose', muted: 'text', notice: 'notice', number: 'table',
   option: 'combobox', overflow: 'overflow', pad: 'panel', panel: 'panel', popout: 'popout', primary: 'action', prose: 'prose',
   range: 'range', 'resize-handle': 'table', search: 'text-input', section: 'section', 'section-title': 'text', selectable: 'selection',
