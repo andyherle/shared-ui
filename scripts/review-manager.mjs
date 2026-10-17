@@ -163,7 +163,9 @@ export class ReviewManager {
         health.appSha===selected.app.sha&&health.uiSha===selected.bundle.uiSha&&
         health.bundleDigest===selected.bundle.bundleDigest&&health.seed===seed&&
         health.variant===expectedVariant&&health.pack===selected.bundle.pack&&
-        JSON.stringify(health.files)===JSON.stringify(selected.bundle.digests)&&
+        health.files&&typeof health.files==='object'&&!Array.isArray(health.files)&&
+        Object.keys(health.files).length===FILES.length&&
+        FILES.every(name=>health.files[name]===selected.bundle.digests[name])&&
         health.mockOnly===true&&health.productionWritesDisabled===true&&health.realAppCode===true,
         'Fixture did not confirm the exact real-code app, bundle and mock boundary');
       session.state='ready';
