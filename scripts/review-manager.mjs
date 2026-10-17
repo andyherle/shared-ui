@@ -121,7 +121,8 @@ export class ReviewManager {
   status(){
     return Object.freeze(this.plan.apps.map(app=>{
       const s=this.owned.get(app.id);
-      return {app:app.id,port:app.port,state:s?.state||'stopped',pid:s?.child?.pid||null,
+      const exited=!!s?.child&&(Number.isInteger(s.child.exitCode)||!!s.child.signalCode);
+      return {app:app.id,port:app.port,state:exited&&s.state==='ready'?'exited-unexpected':s?.state||'stopped',pid:s?.child?.pid||null,
         variant:s?.bundle.variant||null,uiSha:s?.bundle.uiSha||null,seed:s?.seed||null,
         owned:!!s,reviewId:this.plan.reviewId};
     }));
@@ -130,7 +131,9 @@ export class ReviewManager {
     const selected=selection(this.plan,appId,variant,seed),key=identity(selected);
     const previous=this.owned.get(appId);
     if(previous){
-      if(previous.state==='ready'&&previous.key===key)return {reused:true,pid:previous.child.pid,app:appId,variant,seed};
+      const exited=Number.isInteger(previous.child?.exitCode)||!!previous.child?.signalCode;
+      if(previous.state==='ready'&&!exited&&previous.key===key)
+        return {reused:true,pid:previous.child.pid,app:appId,variant,seed};
       throw new Error('An owned session already exists; stop it explicitly before changing revision or seed');
     }
     check(this.owned.size<2,'At most two owned fixture children');
