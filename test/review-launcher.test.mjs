@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {bundleFingerprint,ReviewManager,validateReviewPlan,STATICREF_FIX31} from '../scripts/review-manager.mjs';
-import {verifyBundleFiles,verifySandboxAttestation,readReviewPlan,verifyStaticRefSourceReport} from '../scripts/review-host.mjs';
+import {verifyBundleFiles,verifySandboxAttestation,readReviewPlan,verifyStaticRefSourceReport,reviewChildStdio} from '../scripts/review-host.mjs';
 import {dispatchLine} from '../scripts/review-launcher.mjs';
 
 const hex=(c,n)=>c.repeat(n);
@@ -113,6 +113,12 @@ test('StaticRef-FIRST accepts one owner without requiring Aura; routes are exact
   const tooMany=structuredClone(base);
   tooMany.apps.push({...structuredClone(base.apps[1]),id:'another'});
   assert.throws(()=>validateReviewPlan(tooMany),/one or two/);
+});
+
+test('later headed test output stays live-watchable without inheriting stdin or changing fixture mode',()=>{
+  assert.deepEqual(reviewChildStdio('test'),['ignore','inherit','inherit']);
+  assert.equal(reviewChildStdio('fixture'),'ignore');
+  assert.throws(()=>reviewChildStdio('shell'),/Unknown review child mode/);
 });
 
 test('independent PR31 GitHub canvas blob literal is complete 40hex, never truncated',()=>{
