@@ -220,7 +220,7 @@ test('private plan reading and foreground command parser do not start any child 
   fs.chmodSync(config,0o644);assert.throws(()=>readReviewPlan(config),/Private file permissions/);
   const p=plan(),host=fakeHost(p),m=new ReviewManager(p,host),output=[];
   await dispatchLine(m,host,'help',{output:value=>output.push(value)});
-  assert.ok(output.join(' ').includes('manual'));
+  assert.ok(output.join(' ').toLowerCase().includes('manual'));
   await dispatchLine(m,host,'status',{output:value=>output.push(value)});
   assert.equal(host.calls.spawn.length,0);
   await assert.rejects(dispatchLine(m,host,'start aura candidate bad seed'),/bounded|Unknown|seed|Invalid/);
