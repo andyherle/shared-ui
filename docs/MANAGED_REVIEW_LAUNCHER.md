@@ -12,9 +12,13 @@ app source or generic workflow engine is included.
 `scripts/review-launcher.mjs` is an **interactive foreground manager**, not an
 app UI renderer. It imports PR #3's existing strict
 `scripts/fixture-index.mjs` and reads the *private app-owned* manifests
-without publishing their content. The bounded pilot allows **one StaticRef
-profile first**, then optionally a second Aura profile. It never requires
-Aura to be runnable before StaticRef hands-on review:
+without publishing their content. **All six consumer owners are registered
+from outset** (StaticRef, Aura, Home, Ledger, Delivery, Portal), with
+independent per-pack baseline/candidate source readiness; at most **two
+fixture child processes** can run simultaneously. StaticRef FIRST and Aura
+SECOND are testing priorities only, never a registration whitelist.
+[Six-consumer registry, readiness and Codex handoff](SIX_CONSUMER_REVIEW_HANDOFF.md).
+The original two-row table below is only an early example of fixtures:
 
 | Owner | Exact initial fixture PR head | Real-code fixture command | Manifest |
 | --- | --- | --- | --- |
@@ -99,7 +103,7 @@ private branches. The launcher never touches their generated installed
 ## Pinning baseline, candidate and saved variations
 
 Private JSON plan schema v1 has one `reviewId`, private `receiptDir`,
-`isolation` broker and **one or two `apps`**. StaticRef-first plans should contain just the
+`isolation` broker and **one to six `apps`**. StaticRef-first plans may contain just the
 StaticRef profile; Aura is added only for later cross-consumer verification.
 UI `bundles` contain
 mandatory `baseline` and `candidate`, and optional
@@ -434,8 +438,10 @@ identity and receipts. They **do not** execute the OS verifier, start
 an app, establish sandbox isolation or verify any browser behavior.
 The first unresolved runtime prerequisite is a separately approved
 kernel-enforcing broker and two exact-clean app-side candidate adapters.
-Only after those exist can the two real-code consumers plus the PR #4
-native composition be actually accepted at 390px, ≤280px nested,
+Only after they exist can the first two prioritized real-code consumers
+plus PR #4's native composition be actually accepted; Home, Ledger,
+Delivery and Portal remain registered and explicitly BLOCKED where their
+own source/hydration or execution requirements are missing at 390px, ≤280px nested,
 tablet, desktop and full modes, with keyboard, IME, focus, scroll,
 overflow, native dialogs/forms, stale conflict/retry and Canvas input.
 
