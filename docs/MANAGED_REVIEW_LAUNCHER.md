@@ -12,13 +12,14 @@ app source or generic workflow engine is included.
 `scripts/review-launcher.mjs` is an **interactive foreground manager**, not an
 app UI renderer. It imports PR #3's existing strict
 `scripts/fixture-index.mjs` and reads the *private app-owned* manifests
-without publishing their content. For this bounded pilot only two app
-profiles are permitted:
+without publishing their content. The bounded pilot allows **one StaticRef
+profile first**, then optionally a second Aura profile. It never requires
+Aura to be runnable before StaticRef hands-on review:
 
 | Owner | Exact initial fixture PR head | Real-code fixture command | Manifest |
 | --- | --- | --- | --- |
 | Aura | `3bd271005b0176e846cfda6f97e5bff4a50d31ca` | `node scripts/ui-fixtures.mjs --port=41888` | `fixtures/ui-manifest.json` |
-| StaticRef | `5b693554c59f2451c33b3909cb1722c684bd7745` | `python3 tests/browser/serve_ui_fixture.py --port 8769` | `tests/browser/ui-fixture-manifest.json` |
+| StaticRef | App-owned PR #32, repin its latest approved HEAD | `python3 tests/browser/serve_ui_review.py --port=8769` | `tests/browser/ui-fixture-manifest.json` |
 
 The existing StaticRef Canvas heading fix belongs to **separate** PR #31,
 `d0139bd231b3cb5b1bf02df6b7380d975d992f5e`; do not silently merge
@@ -98,7 +99,9 @@ private branches. The launcher never touches their generated installed
 ## Pinning baseline, candidate and saved variations
 
 Private JSON plan schema v1 has one `reviewId`, private `receiptDir`,
-`isolation` broker and exactly two `apps`. UI `bundles` contain
+`isolation` broker and **one or two `apps`**. StaticRef-first plans should contain just the
+StaticRef profile; Aura is added only for later cross-consumer verification.
+UI `bundles` contain
 mandatory `baseline` and `candidate`, and optional
 `saved:<immutable-version>` selections. Every bundle is a separately
 staged, immutable **read-only** directory outside both app/source checkouts.
@@ -180,6 +183,7 @@ sample is **not executable** until populated from an approved clean checkout):
       "port": 41888,
       "manifest": "/absolute/clean/aura-pr36/fixtures/ui-manifest.json",
       "healthPath": "/__fixture__/review-lock.json",
+      "reviewRoute": "/studio?state=default",
       "start": {
         "binary": "/absolute/pinned/node",
         "binarySha256": "<64hex>",
@@ -209,11 +213,16 @@ sample is **not executable** until populated from an approved clean checkout):
       "port": 8769,
       "manifest": "/absolute/clean/staticref-pr32/tests/browser/ui-fixture-manifest.json",
       "healthPath": "/__fixture__/review-lock.json",
+      "reviewRoute": "/reference/c/editorial/?fixture=normal",
+      "sourceProof": {
+        "fixtureSha": "<exact-clean-PR32-Git-SHA>",
+        "fixSha": "d0139bd231b3cb5b1bf02df6b7380d975d992f5e"
+      },
       "start": {
         "binary": "/absolute/pinned/python3",
         "binarySha256": "<64hex>",
-        "args": ["tests/browser/serve_ui_fixture.py", "--port", "8769"],
-        "sourceFiles": ["tests/browser/serve_ui_fixture.py"]
+        "args": ["tests/browser/serve_ui_review.py", "--port=8769"],
+        "sourceFiles": ["tests/browser/serve_ui_review.py"]
       },
       "tests": {
         "http": {
@@ -233,6 +242,59 @@ The private plan must be a regular 0600 file, `receiptDir` a dedicated
 0700 directory outside source/bundle roots. Only absolute, digest-pinned
 OS executables and bounded argv are permitted. There is no shell expansion,
 unverified third app, cloned tree, login item or installed update.
+
+## StaticRef first: approved clean source lineage and reviewer route
+
+A `staticref` **candidate** is no longer admitted merely because its review
+server claims a `review-workspace@1`. It must supply private coordinator plan
+`apps[].sourceProof` with the **actual reviewed fixture PR #32 SHA**
+(`fixtureSha`) and the exact separately owned PR #31 heading fix SHA
+(`fixSha=d0139bd231b3cb5b1bf02df6b7380d975d992f5e`). The launcher
+performs **read-only Git source verification** on the pinned clean app HEAD:
+the fixture commit must be an ancestor, **exactly four** files may differ,
+and all four committed Git blobs must match both the PR #31 source and
+the following immutable intended values:
+
+| Intended PR #31 changed file | Required Git blob SHA-1 |
+| --- | --- |
+| `staticref/web/canvas.js` | `dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6` |
+| `staticref/web/canvas.css` | `8c3736db9476f74d718ebf46a97a14e26d573673` |
+| `tests/canvas-client.test.mjs` | `83337e0d10233b9d786a0592aa5a37915e3a417f` |
+| `docs/CANVAS.md` | `d99842c18066fb3f27ab94fb52391b0ff0ccd33d` |
+
+A plain PR #32 checkout has **older Canvas** and therefore cannot be the
+fix-inclusive candidate. A dirty worktree overlay also fails. The
+future *synthetic combined review commit* must be created **only in an
+approved disposable checkout**, with exactly those four changes staged,
+without merging either PR or touching the user's active StaticRef tree.
+The independently computed `combinedAppSha` is then the plan's `app.sha`.
+The separate private start/test/stop receipt records
+`sourceProof:{fixturePr32Sha,headingFixPr31Sha,combinedAppSha,gitBlobs}`
+in addition to the unchanged app-owned `/__fixture__/review-lock.json`
+fields. PR #31's intended differences (heading focus/IME/pointer capture
+and zoom grip) remain **separately reviewable** rather than silently
+attributed to shared-ui PR #4.
+
+For baseline **old-production behavior**, use the clean PR #32 fixture SHA
+with **no** `sourceProof` and the separately staged pinned baseline
+v1.10.2 bundle; this is allowed only for `variant=baseline`. For
+**fix-only baseline**, use the clean combined app SHA **with** the proof
+but still select `baseline` UI. For candidate shared UI, reuse that
+**same combined app SHA and seed**, with the full PR #4 candidate. These
+three lanes isolate old Canvas, the intended PR #31 delta, and the
+PR #4 UI delta. One owned StaticRef server on port 8769 runs **sequentially**
+with explicit stop and fresh browser contexts, never an unauthorized
+second StaticRef port. Each lane's `reviewRoute` must name an actual
+same-origin app manifest route; the launcher records and links that route
+instead of fabricating `/`. The exact `GET /__fixture__/review-lock.json`
+request validates the app-selected UI SHA, bundle, seed and real composition
+instance. This does not prove Canvas/gallery parity, native IME, persistence
+or user acceptance—those are release-blocking downstream browser gates.
+
+The [source-complete StaticRef/Codex handoff](STATICREF_SOURCE_COMPLETION.md)
+specifies the exact clean combined recipe and production-behavior parity
+checklist. It is for the user's later approved execution session, not an
+instruction for this authoring task to start one.
 
 ## Required OS isolation broker (not supplied, therefore fail closed)
 
