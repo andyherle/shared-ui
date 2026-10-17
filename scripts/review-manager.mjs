@@ -28,12 +28,19 @@ function argv(value,label){
   return value;
 }
 function executable(cmd,label){
-  object(cmd,['binary','binarySha256','script','args'],label);
+  object(cmd,['binary','binarySha256','args','sourceFiles'],label);
   absolute(cmd.binary,label+'.binary');
   check(HEX64.test(cmd.binarySha256),label+' needs its pinned executable digest');
-  check(typeof cmd.script==='string'&&/^[a-zA-Z0-9_-][a-zA-Z0-9_./-]{0,180}$/.test(cmd.script)&&
-    !cmd.script.split('/').includes('..')&&!cmd.script.startsWith('/'),label+' script must remain within its app checkout');
-  argv(cmd.args||[],label+'.args');
+  argv(cmd.args,label+'.args');
+  check(cmd.args.length>0,'An owned fixture command needs explicit arguments');
+  check(!cmd.args.some(arg=>['-e','--eval','-c','--import','--require'].includes(arg)),
+    'Inline/early executable hooks are forbidden in review commands');
+  check(Array.isArray(cmd.sourceFiles)&&cmd.sourceFiles.length>0&&cmd.sourceFiles.length<=12,
+    'Review commands must pin their app-owned source files');
+  for(const file of cmd.sourceFiles){
+    check(typeof file==='string'&&/^[a-zA-Z0-9_-][a-zA-Z0-9_./-]{0,180}$/.test(file)&&
+      !file.split('/').includes('..')&&!file.startsWith('/'),label+' sourceFiles must remain inside checkout');
+  }
   return cmd;
 }
 export function bundleFingerprint(digests){
@@ -192,7 +199,7 @@ export class ReviewManager {
       const outcome=await this.host.waitTest(child);
       const result=outcome?.code===0?'source-test-executed/browser-evidence-separate':'test-failed';
       const saved=await this.host.record(receipt('test',session,{test:name,testPid:child.pid,
-        testArgv:[test.script,...test.args],exitCode:outcome?.code??null,result}));
+        testArgv:[...test.args],exitCode:outcome?.code??null,result}));
       return {app:appId,test:name,result,exitCode:outcome?.code??null,receipt:saved};
     }finally{this.testActive=false;}
   }
