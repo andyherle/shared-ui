@@ -251,14 +251,20 @@
     doc.addEventListener('compositionstart',start,true);doc.addEventListener('compositionend',finish,true);doc.addEventListener('keydown',press,true);doc.defaultView?.addEventListener('blur',finish);doc.defaultView?.addEventListener('pagehide',dispose);
     return {dispose};
   }
-  function createZoomFeedback(doc,{duration=1100}={}){
-    const view=doc.defaultView,node=doc.createElement('output');node.className='ui-zoom-feedback ui-notice';node.setAttribute('aria-live','polite');node.setAttribute('aria-label','Content zoom');node.hidden=true;doc.body.append(node);
-    let timer;
-    const hide=()=>{view.clearTimeout(timer);node.hidden=true;};
-    const visibility=()=>{if(doc.hidden)hide();};
-    function dispose(){hide();node.remove();doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',dispose);}
-    doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',dispose);
-    return {show(value){if(!Number.isFinite(value))return;view.clearTimeout(timer);node.textContent=Math.round(value)+'%';node.hidden=false;timer=view.setTimeout(hide,duration);},dispose};
+  const zoomDocks=new WeakMap();
+  function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
+    if(zoomDocks.has(doc))return zoomDocks.get(doc);
+    const view=doc.defaultView,node=doc.createElement('div');node.className='ui-zoom-feedback ui-toolbar ui-actions ui-inline';node.setAttribute('role','group');node.setAttribute('aria-label','Content zoom');
+    const buttons=[];
+    for(const [direction,icon,label] of [[-1,'minus','Zoom out'],[0,'maximize','Reset zoom'],[1,'plus','Zoom in']]){
+      const button=doc.createElement('button');button.type='button';button.dataset.uiZoom=direction<0?'out':direction>0?'in':'value';
+      adoptAction(button,{...(direction?{icon}:{}),label:direction?label:'100%',ariaLabel:label,labelStates:direction?undefined:['10%','100%','300%','800%'],iconOnly:direction!==0,sprite});
+      if(direction===0){button.dataset.uiLabel='always';button.setAttribute('aria-live','polite');setText(button.querySelector('.ui-label'),'100%');}
+      button.addEventListener('click',()=>doc.dispatchEvent(new view.CustomEvent('ui:zoom',{detail:{direction}})));buttons.push(button);node.append(button);
+    }
+    doc.body.append(node);
+    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){node.hidden=!value;},dispose(){node.remove();zoomDocks.delete(doc);view.removeEventListener('pagehide',api.dispose);}};
+    view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);return api;
   }
   function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
     if(![min,max,step,value].every(Number.isFinite)||max<min||step<=0)throw new TypeError('Zoom requires finite bounds, a positive step and a finite value');

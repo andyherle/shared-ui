@@ -147,5 +147,7 @@ document.getElementById('group-width')?.addEventListener('input',event=>{documen
 
 for(const name of ['Alice Example','Very long collaborator name that stays in a tooltip'])$('fixture-avatars').append(UI.createAvatar(name));
 
-const zoomFeedback=UI.createZoomFeedback(document);
-UI.installZoomShortcuts(document,{canZoom:()=>!document.querySelector('dialog[open]'),onZoom:direction=>{fixtureZoom.setValue(fixtureZoom.value+direction*20);zoomFeedback.show(fixtureZoom.value/220*100);}});
+const zoomFeedback=UI.createZoomFeedback(document,{sprite:'./v1/icons.svg'});
+const zoomFixture=direction=>{fixtureZoom.setValue(direction?fixtureZoom.value+direction*20:220);zoomFeedback.show(fixtureZoom.value/220*100);};
+document.addEventListener('ui:zoom',event=>zoomFixture(event.detail.direction));
+UI.installZoomShortcuts(document,{canZoom:()=>!document.querySelector('dialog[open]'),onZoom:zoomFixture});
