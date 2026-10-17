@@ -36,3 +36,7 @@
   .lab-comp-host .ui-composition-body textarea { inline-size:100%; min-inline-size:0; }
   .lab-comp-host .ui-composition-header { white-space:normal; overflow-wrap:anywhere; }
 }
+
+@layer app {.lab-resizable-media{position:relative;width:min(100%,320px);aspect-ratio:16/9}.lab-resizable-media>.ui-resize-handle{position:absolute;right:calc(1px - var(--ui-control-height)/2);bottom:calc(1px - var(--ui-control-height)/2)}}
+
+@layer app{.lab-review-stage{position:relative;min-block-size:180px}}

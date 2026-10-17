@@ -110,6 +110,9 @@ export const COMPONENTS = freeze([
   component('progress', 'Progress and meter', 'feedback', 'progress,meter', ['progress', 'meter'], 'overlays', {variants: ['progress', 'meter', 'indeterminate'], tokens: ['--ui-control', '--ui-accent']}),
   component('skeleton', 'Loading placeholder', 'feedback', '.ui-skeleton', ['span', 'div'], 'overlays', {tokens: ['--ui-surface-soft', '--ui-radius']}),
   component('table', 'Native data table', 'data', '.ui-table', ['table'], 'data', {variants: ['default', 'sheet'], states: ['selected', 'sorted', 'resizing', 'reordering'], tokens: ['--ui-surface', '--ui-surface-soft', '--ui-line', '--ui-control-height', '--ui-gap'], accessibility: {name: 'Provide a caption, scoped headings and a named scroll region.', keyboard: 'Column move: Option+Left/Right. Resize: arrows, Shift, Home/End; Escape cancels.'}}),
+  component('resizable-media', 'Movable aspect-preserving media', 'data', '.ui-draggable[data-ui-resize=aspect]', ['article'], 'control-fixture', {states: ['selected', 'dragging'], tokens: ['--ui-text', '--ui-graphic-scale'], accessibility: {name: 'Name the media and resize operation.', keyboard: 'Owning app supplies keyboard movement and aspect-preserving resize; shared UI supplies selection and native cursors.'}}),
+  component('review-dock', 'Centered media review dock', 'layout', '.ui-review-dock', ['aside', 'div'], 'control-fixture', {tokens: ['--ui-gap', '--ui-surface'], accessibility: {name: 'Name the review controls.', keyboard: 'Preserve native action and tag field keyboard behavior.'}}),
+  component('media-fit', 'Fit media to its stage', 'content', '.ui-fit-media', ['img', 'video'], 'media', {tokens: ['--ui-media']}),
   component('selection', 'Media selection', 'data', '.ui-selectable', ['article', 'button'], 'selection-navigation', {states: ['selected', 'mixed'], tokens: ['--ui-accent', '--ui-bg', '--ui-graphic-scale']}),
   component('context-bar', 'Selection context bar', 'layout', '.ui-context-bar', ['aside'], 'selection-navigation', {variants: ['inline', 'floating'], tokens: surfaceTokens}),
   component('app-tile', 'Application shortcut', 'navigation', '.ui-app-tile', ['a'], 'selection-navigation', {states: ['editing', 'dragging', 'busy'], tokens: ['--ui-app-color', ...surfaceTokens]}),
@@ -144,7 +147,7 @@ export const ROLE_OWNERS = freeze({
   action: 'action', actions: 'actions', 'app-symbol': 'app-tile', 'app-tile': 'app-tile', back: 'toolbar',
   'back-to-top': 'back-to-top', button: 'button', card: 'card', check: 'checkbox', choice: 'checkbox',
   chrome: 'text', 'column-resize': 'table', combobox: 'combobox', container: 'actions', 'context-bar': 'context-bar', 'color-picker':'color-picker', 'color-palette':'color-picker', 'board-grid':'grid',
-  danger: 'action', disclosure: 'disclosure', 'disclosure-body': 'disclosure', 'drag-handle': 'drag-handle', dynamic: 'action',
+  danger: 'action', disclosure: 'disclosure', 'disclosure-body': 'disclosure', 'drag-handle': 'drag-handle', draggable: 'resizable-media', 'fit-media': 'media-fit', dynamic: 'action',
   error: 'notice', field: 'field', fill: 'actions', form: 'form', 'graphic-action': 'drag-handle', grid: 'grid', group: 'group',
   guide: 'drag-handle', header: 'toolbar', icon: 'icon', 'icon-button': 'icon-action', 'icon-choice': 'checkbox', inline: 'actions',
   'editable-heading': 'text', 'inline-field': 'textarea', item: 'action', label: 'action', listbox: 'combobox', 'media-button': 'media-action',
@@ -152,6 +155,6 @@ export const ROLE_OWNERS = freeze({
   option: 'combobox', overflow: 'overflow', pad: 'panel', panel: 'panel', popout: 'popout', primary: 'action', prose: 'prose',
   range: 'range', 'resize-handle': 'table', search: 'text-input', section: 'section', 'section-title': 'text', selectable: 'selection',
   skeleton: 'skeleton', split: 'split', 'sr-only': 'text', stack: 'stack', status: 'status', success: 'notice', swatch: 'swatch',
-  switch: 'switch', table: 'table', 'table-scroll': 'table', tabs: 'tabs', tag: 'tags', tags: 'tags', toggle: 'toggle',
+  switch: 'switch', table: 'table', 'table-scroll': 'table', tabs: 'tabs', tag: 'tags', tags: 'tags', 'tag-suggestions': 'tags', 'review-dock': 'review-dock', toggle: 'toggle',
   toolbar: 'toolbar', truncate: 'text', value: 'text', 'value-control': 'value-control', warning: 'notice'
 });
