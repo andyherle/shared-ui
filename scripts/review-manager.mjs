@@ -12,7 +12,7 @@ const APPS=Object.freeze({aura:'andyherle/aura',staticref:'andyherle/StaticRef'}
 export const STATICREF_FIX31=Object.freeze({
   sha:'d0139bd231b3cb5b1bf02df6b7380d975d992f5e',
   blobs:Object.freeze({
-    'staticref/web/canvas.js':'dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6',
+    'staticref/web/canvas.js':'dda63a89ef5a36573bfc9caa2de2ea2b9ff20b6e',
     'staticref/web/canvas.css':'8c3736db9476f74d718ebf46a97a14e26d573673',
     'tests/canvas-client.test.mjs':'83337e0d10233b9d786a0592aa5a37915e3a417f',
     'docs/CANVAS.md':'d99842c18066fb3f27ab94fb52391b0ff0ccd33d'
