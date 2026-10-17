@@ -129,6 +129,7 @@ export class LocalReviewHost {
     this.plan=validateReviewPlan(input);
     this.scratch=new Map();
     this.children=new Set();
+    this.runtimeManifests=new Map();
   }
   prepareRoot(){
     const dir=exactDir(this.plan.receiptDir,{privateDir:true});
@@ -239,6 +240,7 @@ export class LocalReviewHost {
       'Runtime-generated app manifest differs from pinned origin or mock-only contract');
     requireThat(profile.reviewRoute==='/fixture'&&app.reviewRoute==='/fixture',
       'Portal must retain its real synthetic index; no copied demo route');
+    this.runtimeManifests.set(app.id,JSON.parse(body));
     return {verified:true,source:'runtime-loopback',rows:cases.length};
   }
   key(session){return [session.app.id,session.bundle.bundleDigest,session.seed,session.mode].join('|');}
@@ -320,7 +322,9 @@ export class LocalReviewHost {
       UI_REVIEW_FIXTURE:'1',UI_REVIEW_ASSET_ROOT:bundle.root,
       UI_REVIEW_BUNDLE_DIGEST:bundle.bundleDigest,UI_REVIEW_SOURCE_SHA:bundle.uiSha,
       UI_REVIEW_APP_SHA:app.sha,UI_REVIEW_SEED:seed,
-      UI_REVIEW_VARIANT:bundle.variant,UI_REVIEW_PORT:String(app.port)
+      UI_REVIEW_VARIANT:bundle.variant,UI_REVIEW_PORT:String(app.port),
+      UI_REVIEW_ROOT:scratch,
+      ...(app.id==='portal'?{PORTAL_UI_FIXTURE:path.join(scratch,'portal-fixture-launch.json')}:{})
     };
     return await new Promise((resolve,reject)=>{
       let settled=false;
@@ -405,7 +409,11 @@ export class LocalReviewHost {
     requireThat(within(scratch,root)&&path.basename(scratch).startsWith('.review-owned-'),'Unowned scratch cleanup refused');
     fs.rmSync(scratch,{recursive:true,force:true});this.scratch.delete(key);
   }
-  async cleanup(session){this.releaseScratch(this.key(session));}
+  runtimeManifest(appId){return this.runtimeManifests.get(appId)||null;}
+  async cleanup(session){
+    if(session.mode==='fixture')this.runtimeManifests.delete(session.app.id);
+    this.releaseScratch(this.key(session));
+  }
 }
 export function readReviewPlan(file){
   const name=exactFile(file,{privateFile:true,max:64*1024});
