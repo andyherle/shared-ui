@@ -15,7 +15,8 @@
     "studio:mcp:check": "npm --prefix tools/studio-mcp test",
     "studio:browser": "node test/serve-studio.mjs",
     "dev": "node scripts/serve.mjs",
-    "start": "node scripts/serve.mjs"
+    "start": "node scripts/serve.mjs",
+    "review:managed": "node scripts/review-launcher.mjs"
   },
   "files": [
     "public/v1",
