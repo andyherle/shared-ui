@@ -31,7 +31,7 @@ export function createStyleLabServer({watch=true}={}){
    response.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive'});response.write('retry: 1500\n: connected\n\n');clients.add(response);request.on('close',()=>clients.delete(response));return;
   }
   const relative=pathname==='/'?'index.html':pathname.slice(1);
-  if(!/^(?:index\.html|lab\.(?:css|js)|v1\/(?:manifest\.json|runtime\.js|icons\.svg|styles(?:\.[a-f0-9]{64})?\.css)|assets\/[a-z0-9-]+\.(?:svg|wav|mp4))$/.test(relative)){response.writeHead(404);return response.end();}
+  if(!/^(?:index\.html|lab\.(?:css|js)|v1\/(?:manifest\.json|runtime\.js|icons\.svg|floating-panel\.fixture\.css|styles(?:\.[a-f0-9]{64})?\.css)|assets\/[a-z0-9-]+\.(?:svg|wav|mp4))$/.test(relative)){response.writeHead(404);return response.end();}
   const file=path.join(publicRoot,relative);let stat;try{stat=fs.statSync(file);if(!stat.isFile()||!fs.realpathSync(file).startsWith(fs.realpathSync(publicRoot)+path.sep))throw new Error();}catch{response.writeHead(404);return response.end();}
   const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.wav':'audio/wav','.mp4':'video/mp4'}[path.extname(file)];response.setHeader('Content-Type',mime);
   response.setHeader('Cache-Control',/styles\.[a-f0-9]{64}\.css$/.test(file)?'public, max-age=31536000, immutable':'no-cache');

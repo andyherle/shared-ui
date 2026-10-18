@@ -1,3 +1,15 @@
+<section id="floating-review" class="lab-section">
+  <header><h2>Floating fixture review</h2><p class="ui-muted">One shared, screen-bounded panel. Drag only its dedicated handle or move it with arrow keys. The original native fixture controls stay interactive.</p></header>
+  <div class="ui-actions lab-row"><button id="floating-demo-toggle" type="button" aria-controls="floating-review-panel" aria-expanded="true">Hide review panel</button><span class="ui-meta">Pinned to the visible viewport, not the page header</span></div>
+  <aside id="floating-review-panel" class="ui-panel ui-chrome" aria-label="Shared floating fixture review">
+    <details id="floating-demo-tools"><summary>Fixture navigation &amp; test controls</summary>
+      <div class="ui-stack ui-pad">
+        <label class="ui-field"><span class="ui-label">Editable fixture label</span><input id="floating-demo-input" value="Typing does not move this panel" aria-label="Editable floating fixture label"></label>
+        <div class="ui-actions"><button id="floating-demo-action" type="button">Run sample action</button><output id="floating-demo-result" role="status"></output></div>
+      </div>
+    </details>
+  </aside>
+</section>
 <section id="control-fixture" class="lab-section">
   <header><h2>Control fixture</h2></header>
   <div class="lab-fixture-controls" aria-label="Fixture widths">

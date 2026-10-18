@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "catalogue-actions",
+      "app": "shared-ui-catalogue",
+      "repository": "andyherle/shared-ui",
+      "ref": "4982908e9a251bc58026fa7a565b75d727984c5f",
+      "command": "npm run dev",
+      "baseUrl": "http://127.0.0.1:41910",
+      "route": "/#buttons",
+      "state": "disabled-busy-pressed",
+      "expectedInteraction": "Activate the actual native buttons, selection toggles, feedback, and dialog trigger.",
+      "backendAdapter": "In-page synthetic handlers; no server-side application data",
+      "reset": "Reload the page",
+      "sourceKind": "shared-ui-catalogue",
+      "mockOnly": true,
+      "productionWritesDisabled": true,
+      "status": "prepared",
+      "evidence": {
+        "result": "unrun"
+      }
+    },
+    {
+      "id": "catalogue-fields",
+      "app": "shared-ui-catalogue",
+      "repository": "andyherle/shared-ui",
+      "ref": "4982908e9a251bc58026fa7a565b75d727984c5f",
+      "command": "npm run dev",
+      "baseUrl": "http://127.0.0.1:41910",
+      "route": "/#fields",
+      "state": "empty-editing-validation",
+      "expectedInteraction": "Use actual native text/date fields, keyboard navigation, and form validation.",
+      "backendAdapter": "In-page synthetic handlers; no server-side application data",
+      "reset": "Reload the page",
+      "sourceKind": "shared-ui-catalogue",
+      "mockOnly": true,
+      "productionWritesDisabled": true,
+      "status": "prepared",
+      "evidence": {
+        "result": "unrun"
+      }
+    },
+    {
+      "id": "catalogue-responsive",
+      "app": "shared-ui-catalogue",
+      "repository": "andyherle/shared-ui",
+      "ref": "4982908e9a251bc58026fa7a565b75d727984c5f",
+      "command": "npm run dev",
+      "baseUrl": "http://127.0.0.1:41910",
+      "route": "/#responsive",
+      "state": "narrow-container",
+      "expectedInteraction": "Change fixture container width and confirm controls retain native focus and layout.",
+      "backendAdapter": "In-page synthetic handlers; no server-side application data",
+      "reset": "Reload the page",
+      "sourceKind": "shared-ui-catalogue",
+      "mockOnly": true,
+      "productionWritesDisabled": true,
+      "status": "prepared",
+      "evidence": {
+        "result": "unrun"
+      }
+    },
+    {
+      "id": "catalogue-markdown",
+      "app": "shared-ui-catalogue",
+      "repository": "andyherle/shared-ui",
+      "ref": "4982908e9a251bc58026fa7a565b75d727984c5f",
+      "command": "npm run dev",
+      "baseUrl": "http://127.0.0.1:41910",
+      "route": "/#content",
+      "state": "typography-markdown",
+      "expectedInteraction": "Inspect real shared typography, headings, multiline content and overflow handling.",
+      "backendAdapter": "In-page synthetic handlers; no server-side application data",
+      "reset": "Reload the page",
+      "sourceKind": "shared-ui-catalogue",
+      "mockOnly": true,
+      "productionWritesDisabled": true,
+      "status": "prepared",
+      "evidence": {
+        "result": "unrun"
+      }
+    }
+  ]
+}

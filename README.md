@@ -2,7 +2,7 @@
 
 One native HTML control language for Aura, StaticRef and Portal. Postvisual follows StaticRef's neutral media-first interface; Personal follows Portal. Theme, control density and application layout are separate choices.
 
-The package has no runtime dependencies. Shared CSS has a 32 KiB raw budget. Build and validation use Node's standard library:
+The package has no runtime dependencies. The earlier 32 KiB raw shared-CSS target is optional; the floating-review source candidate uses a measured 40 KiB safety cap with separately reported gzip size. Build and source validation use Node's standard library:
 
 ```sh
 npm run check
@@ -531,6 +531,45 @@ No consumer receives its new runtime helper until a normal explicit
 bundle upgrade; compatible CSS refresh alone cannot install JavaScript.
 The source/CI checks are separate from actual multi-app browser acceptance.
 See the contract for 390px/narrow/full and real-app fixture requirements.
+## Fleet UI fixture index
+
+For multi-app convergence, each owner builds a local, UI-only fixture **using
+their actual templates and handlers**, with deterministic synthetic adapters.
+Keep application fixture code, data, routes and manifests in the owning
+repository. The public shared-ui repository contains only the versioned
+[fixture manifest contract](docs/FIXTURE_MANIFEST.md), an offline
+`scripts/fixture-index.mjs` generator and a mock-only Style Lab example
+(`fixtures/manifest.example.json`). The index does **not** launch apps or
+claim browser verification; a fixture is verified only with source-backed run
+evidence. A shared token's adoption is independent of the fixture harness.
+
+## Isolated candidate review (foreground, not a release)
+
+The [managed fixture review launcher](docs/MANAGED_REVIEW_LAUNCHER.md)
+adds **manual start/status/test/stop** around app-owned real-code synthetic
+fixture servers, reusing PR #3's strict offline fixture index. It pins
+clean application/shared-ui SHAs and immutable complete candidate/baseline
+bundle SHA256 digests. It **fails closed** unless a separate audited
+OS isolation broker proves the required network/filesystem prohibitions.
+It has no automatic browser runner, daemon, installer or promotion pathway;
+app integrations and runtime/browser acceptance are separate owner work.
+The source-only CLI is `npm run review:managed -- --config /absolute/private/review-plan.json`.
+All six consumer owners are discoverable with `npm run review:owners`;
+the [six-consumer managed registry and candidate handoff](docs/SIX_CONSUMER_REVIEW_HANDOFF.md)
+separates individual source readiness and BLOCKED candidates from the
+unchanged two-child runtime limit. For the user's later Codex execution, the
+[StaticRef-first source-completion handoff](docs/STATICREF_SOURCE_COMPLETION.md)
+pins the intended PR #31 Canvas blobs, prescribes one clean disposable
+combined commit, and treats existing Canvas **and** gallery/lightbox behavior
+as release-blocking. Physical native IME and user hands-on approval remain
+mandatory; this work does not authorize promotion.
+
+The [shared floating review panel](docs/FLOATING_REVIEW_PANEL.md) has
+one native touch/keyboard-repositionable implementation for all app-owned
+fixture bars, truthful installed-code versus local-candidate labels, and
+a separately pinned fixture-only stylesheet companion for an unchanged
+installed 1.10.2 baseline. This work does not make a local fixture live
+production or change the canonical complete four-file bundle selection.
 
 ## Shared UI Studio
 

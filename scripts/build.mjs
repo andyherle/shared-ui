@@ -17,6 +17,22 @@ export function compactCSS(source){
   }
   return out.trim();
 }
+// The baseline review fixture can load ONLY these shared floating-panel styles
+// as an additional pinned fixture helper, without replacing its historical
+// 1.10.2 complete four-file UI bundle. One CSS source block feeds both builds.
+export function floatingPanelFixtureCSS(controls){
+  const begin='/* shared-floating-panel:start */';
+  const end='/* shared-floating-panel:end */';
+  const first=controls.indexOf(begin),last=controls.indexOf(end);
+  if(first<0||last<=first||controls.indexOf(begin,first+1)!==-1||
+    controls.indexOf(end,last+1)!==-1)
+    throw new Error('Shared floating style markers must appear exactly once');
+  const rules=compactCSS(controls.slice(first+begin.length,last));
+  if(!rules.includes('.ui-floating-panel')||/@import|url\s*\(/i.test(rules))
+    throw new Error('No safe self-contained floating fixture CSS');
+  return '@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.controls{:where([data-ui]){'+rules+'}}\n';
+}
+
 export function buildCSS(tokens,controls){
   const color=value=>value.replace(/#[0-9a-f]{6}(?:[0-9a-f]{2})?\b/gi,hex=>{const pairs=hex.slice(1).match(/../g);return pairs.every(pair=>pair[0]===pair[1])?'#'+pairs.map(pair=>pair[0]).join(''):hex;});
   const declarations=values=>Object.entries(values).map(([key,value])=>`--ui-${key}:${color(value)};`).join('');
@@ -47,8 +63,10 @@ export function manifest(css){
 }
 export function buildSite(directory=root){
   const read=name=>fs.readFileSync(path.join(directory,'src',name),'utf8');
-  for(const file of ['runtime.js','components.js','compositions.js','diagnostics.js','lab.js','composition-lab.js'])new vm.Script(read(file),{filename:file});
+  for(const file of ['runtime.js','components.js','compositions.js','floating-panel.js','diagnostics.js','lab.js','composition-lab.js'])new vm.Script(read(file),{filename:file});
   const css=buildCSS(JSON.parse(read('tokens.json')),read('controls.css'));
+  const floatingCss=floatingPanelFixtureCSS(read('controls.css'));
+  const helper=read('floating-panel.js');
   // Composition layout is shared behavior. Bound raw and transfer size independently.
   const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css).length;
   if(rawBytes>36864||gzipBytes>8192||/@import|url\s*\(/i.test(css))
@@ -62,7 +80,8 @@ export function buildSite(directory=root){
   // Validate every input before replacing any last-working asset. Publish the manifest last.
   const assets=new Map([
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],
-    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('compositions.js')+'\n'+read('diagnostics.js')],
+    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
+    ['v1/floating-panel.fixture.css',floatingCss],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],
     ['lab.js',read('lab.js').replace('@@ICON_NAMES@@',JSON.stringify(Object.keys(icons)))+'\n'+read('composition-lab.js')],['lab.css',read('lab.css')],
@@ -70,6 +89,9 @@ export function buildSite(directory=root){
   ]);
   fs.mkdirSync(out,{recursive:true});
   for(const [name,content] of assets){const target=path.join(directory,'public',name),temporary=target+'.'+process.pid+'.tmp';fs.writeFileSync(temporary,content);fs.renameSync(temporary,target);}
-  return {revision:release.revision,cssBytes:Buffer.byteLength(css),gzipBytes:gzipSync(css).length};
+  return {revision:release.revision,cssBytes:Buffer.byteLength(css),gzipBytes:gzipSync(css).length,
+    floatingFixtureCssBytes:Buffer.byteLength(floatingCss),
+    floatingFixtureCssSha256:createHash('sha256').update(floatingCss).digest('hex'),
+    floatingHelperSha256:createHash('sha256').update(helper).digest('hex')};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url))console.log(JSON.stringify(buildSite()));

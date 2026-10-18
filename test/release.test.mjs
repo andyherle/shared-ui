@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {buildCSS,manifest,compactCSS} from '../scripts/build.mjs';
+import {buildCSS,manifest,compactCSS,floatingPanelFixtureCSS} from '../scripts/build.mjs';
 const module={exports:{}};vm.runInNewContext(fs.readFileSync(new URL('../src/runtime.js',import.meta.url),'utf8'),{module,URL});
 const {release}=module.exports;
 const css=buildCSS(JSON.parse(fs.readFileSync(new URL('../src/tokens.json',import.meta.url))),fs.readFileSync(new URL('../src/controls.css',import.meta.url),'utf8'));
@@ -19,6 +19,20 @@ test('both packs use the same controls and distinct light/dark palettes',()=>{
  assert.ok(css.includes('@layer app,ui.tokens,ui.controls,ui.prose;'));
  assert.doesNotMatch(css,/@import|url\s*\(/i);
  assert.ok(Buffer.byteLength(css)<=36864);
+});
+
+test('standalone baseline fixture CSS comes from one original shared floating block, never app styles',()=>{
+ const source=fs.readFileSync(new URL('../src/controls.css',import.meta.url),'utf8');
+ const floating=floatingPanelFixtureCSS(source);
+ assert.ok(floating.startsWith('@layer app,ui.tokens,ui.controls,ui.prose;'));
+ assert.ok(floating.includes('.ui-floating-panel'));
+ assert.ok(floating.includes('.ui-floating-handle'));
+ assert.ok(floating.includes('touch-action:none'));
+ assert.doesNotMatch(floating,/\.ui-header(?:[.:{\s]|$)/);
+ assert.doesNotMatch(floating,/@import|url\s*\(/i);
+ assert.ok(Buffer.byteLength(floating)<4096,'A fixture-only companion should remain compact');
+ assert.throws(()=>floatingPanelFixtureCSS('.ui-floating-panel{color:blue}'),/markers/);
+ assert.throws(()=>floatingPanelFixtureCSS(source+source),/markers/);
 });
 
 test('compact CSS preserves strings, descendant selectors and calc arithmetic',()=>{
