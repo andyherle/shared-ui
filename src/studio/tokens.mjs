@@ -4,7 +4,7 @@ import {COMPONENTS} from './registry.mjs';
 import {freeze, object, requireThat} from './validation.mjs';
 
 const colorNames = 'prose-code-fill prose-code-ink bg surface surface-raised surface-soft text muted subtle line line-strong control accent accent-hover accent-soft primary on-primary good bad warning note note-text scrim shadow-color media playhead-color playhead-outline';
-const lengthNames = 'composition-gap composition-aside control-height field-height body-size control-size h1 h2 h3 h4 h5 h6 radius radius-small gap range-thumb control-inset range-width tag-height playhead-width focus-offset popout-width popout-height popout-space grid-min grid-gap aside main switch-width switch-height switch-thumb switch-inset resize-target tag-size tag-radius form-column';
+const lengthNames = 'page-width composition-gap composition-aside control-height field-height body-size control-size h1 h2 h3 h4 h5 h6 radius radius-small gap range-thumb control-inset range-width tag-height playhead-width focus-offset popout-width popout-height popout-space grid-min grid-gap aside main switch-width switch-height switch-thumb switch-inset resize-target tag-size tag-radius form-column';
 const expressionNames = 'font font-mono control-font control-padding field-padding tag-font tag-padding fill';
 const contentNames = 'app-color card-fill card-ink swatch-value';
 export const TOKEN_TYPES = freeze(Object.fromEntries([
@@ -15,7 +15,7 @@ export const TOKEN_TYPES = freeze(Object.fromEntries([
   ['--ui-control-weight', {type: 'number', min: 100, max: 900, editable: true}],
   ['--ui-graphic-scale', {type: 'number', min: 0.01, max: 100, editable: false, reason: 'Viewport scale belongs to the owning application.'}]
 ]));
-const semantic = new Set(('bg surface surface-raised surface-soft text muted subtle line line-strong control accent accent-hover accent-soft primary on-primary good bad warning note note-text scrim shadow-color media body-size font font-mono h1 h2 h3 h4 h5 h6 gap radius radius-small').split(' ').map(name => '--ui-' + name));
+const semantic = new Set(('page-width bg surface surface-raised surface-soft text muted subtle line line-strong control accent accent-hover accent-soft primary on-primary good bad warning note note-text scrim shadow-color media body-size font font-mono h1 h2 h3 h4 h5 h6 gap radius radius-small').split(' ').map(name => '--ui-' + name));
 
 // A bounded lexical inventory of our own CSS, including nested rule context.
 // It is not a parser or compliance claim for arbitrary application source.

@@ -98,6 +98,57 @@ For a review card, put the decision form first. Keep a file link with a `.ui-tru
 
 `.ui-field` composes a native input or select with icons, an inline `.ui-label`, or adjacent actions using one field border and focus indicator. Use it for selectors such as Zoom, with the label inside the field instead of a separate heading. A readonly URL input plus a Copy action keeps long links to one line while retaining native selection and keyboard copy. `.ui-truncate` keeps compact filenames to one line; retain the complete text in the accessible name/title. Apps must reuse these native DOM patterns and action helpers rather than inventing custom controls. Native `progress` uses the pack track and accent. Plain Markdown details retain native markers and body typography. `.ui-card` is a quiet surface; `.ui-panel` is a raised overlay. `.ui-item` keeps a structured clickable row's app layout with common control paint. `.ui-swatch` renders a data color inside the standard touch target. `.ui-graphic-action` preserves a native icon action’s physical target inside a scaled world without changing app placement. `.ui-resize-handle` separates the visual handle from its hit area. A transformed world can publish its positive zoom as `--ui-graphic-scale`; the shared hit area and visual handle stay the same physical size. Update that variable when zoom changes, using the existing viewport controller. Timeline markers use `--ui-playhead-color`, `--ui-playhead-outline` and `--ui-playhead-width` for theme contrast. Graphic controls retain app-layer touch gestures; resize handles use `touch-action:none`. Clipped rows can set `--ui-focus-offset` to a negative inset while retaining shared focus paint. Use `data-ui-surface="graphic"` for positioned interactive diagrams, `media` for preview buttons, and `.ui-inline-field` for in-place canvas text. In-place fields retain app-layer padding and resize geometry so a canvas card keeps its writing inset and its own handles. These explicit roles preserve domain geometry without creating new palettes or control implementations.
 
+## One outer content width
+
+`--ui-page-width` is a **single shared semantic setting**, set to `70%` in
+both source packs and exposed through Studio's typed token inventory.
+Applications control *where* this inherited setting applies. Per the cascade
+ownership rule, the **application** owns page layout in `@layer app`, while
+shared-ui owns tokens, control paint, states and interaction helpers.
+
+Adopting applications should have one full-width content host (inside their
+sidebar, chrome and navigation) and **exactly one direct page root**:
+
+```html
+<div data-ui-page-host>
+  <main data-ui-page-root>
+    <article class="ui-card ui-stack">Actual app components and handlers</article>
+  </main>
+</div>
+```
+
+Implement the same small *layout recipe* in the consuming app's `@layer app`:
+
+```css
+@layer app {
+  [data-ui-page-host] { container-type:inline-size; inline-size:100%; min-inline-size:0; }
+  [data-ui-page-host] > [data-ui-page-root] { inline-size:min(var(--ui-page-width),calc(100% - 32px),96rem); min-inline-size:0; margin-inline:auto; }
+  @container (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
+  @media (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
+  [data-ui-page-root][data-ui-page-mode=full] { inline-size:calc(100% - 32px); }
+}
+```
+
+This deliberately shares the **value**, not application structure. One-time
+application layout placement prevents reapplying 70% to every child. Desktop
+content is at most 70% of the host, with a 96rem bound and 16px minimum side
+gutters. The container query makes a narrow app pane responsive even inside
+a wide browser. The viewport fallback covers narrow screens where a named
+host cannot be established. Nested cards, row grids, tables and inspectors
+should use the space available within the root (`min-width:0`,
+`minmax(0,1fr)` as needed) and should **not** mount another `data-ui-page-root`.
+For a full workspace/canvas view, set `data-ui-page-mode="full"` on the
+*outer* root rather than constraining the transformed world. The page-host
+is a full-width block, not an action container; don't nest it into a panel
+that already consumes a parent width.
+
+`src/lab.css` contains the complete generic fixture using this app-layer
+recipe; no application-specific page layout is pushed through shared
+`src/controls.css`. As a result, the shared 32 KiB stylesheet cap stays
+intact and existing consumers do not change until their own isolated PR
+adopts the layout. Test 390px, 768px, full desktop, a 360px embedded pane,
+coarse pointer, keyboard, zoom and state preservation before adopting.
+
 ## Packaging the baseline
 
 Run from this repository to update an app's generated assets:
