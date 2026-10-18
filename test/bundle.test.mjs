@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import os from 'node:os';
 import path from 'node:path';
 import {installBundle} from '../scripts/install.mjs';
@@ -33,4 +34,10 @@ test('consumer audit discovers bundles and separates valid older releases from a
  assert.deepEqual(discoverBundles(directory),[target,source].sort());assert.deepEqual(auditBundle(target).errors,[]);assert.deepEqual(auditBundle(target).stale,[]);
  fs.appendFileSync(path.join(source,'runtime.js'),'\n/* new release */');const stale=auditBundle(target,{source});assert.deepEqual(stale.errors,[]);assert.deepEqual(stale.stale,['runtime.js']);
  fs.appendFileSync(path.join(target,'styles.css'),'button{color:red}');assert.match(auditBundle(target).errors.join(' '),/Generated file drift: styles.css.*integrity/);
+});
+
+test('combined CommonJS bundle preserves the native action API beside floating helpers',()=>{
+ const sandbox={module:{exports:{}},URL};
+ vm.runInNewContext(fs.readFileSync(new URL('../public/v1/runtime.js',import.meta.url),'utf8'),sandbox);
+ for(const name of ['adoptAction','setActionLabel','reserveText','createFloatingPanel'])assert.equal(typeof sandbox.module.exports[name],'function',name);
 });

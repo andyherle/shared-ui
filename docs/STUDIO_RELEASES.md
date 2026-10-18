@@ -24,6 +24,13 @@ A Studio draft edit changes **none** of these channels. Preparing a document dif
 is not publishing. Source changes still require review and the normal shared
 release before any downstream bundle refresh.
 
+The [configuration workspace](STUDIO_CONFIGURATIONS.md) implements that shared CSS
+release path for Postvisual and its Personal mirror. It validates a source-bound
+candidate in isolation and, with the local `--publish` grant, commits/pushes exact
+token and generated asset changes for the existing Pages workflow. A pushed
+receipt is distinct from completed deployment. Documents and consumer source
+remain outside that publisher.
+
 ## Private consumer inventory and executable update workflow
 
 Store this file outside the public checkout, for example in your private tooling

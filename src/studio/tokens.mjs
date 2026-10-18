@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {COMPONENTS} from './registry.mjs';
+import {resolvePacks} from '../packs.mjs';
 import {freeze, object, requireThat} from './validation.mjs';
 
 const colorNames = 'prose-code-fill prose-code-ink bg surface surface-raised surface-soft text muted subtle line line-strong control accent accent-hover accent-soft primary on-primary good bad warning note note-text scrim shadow-color media playhead-color playhead-outline';
@@ -111,6 +112,8 @@ export function resolveTokenGraph(definitions, overrides = {}, {scope = 'documen
 
 /** No source migration: project the existing JSON and CSS declarations for tooling. */
 export function createTokenCatalogue({tokens, controls, pack = 'postvisual', mode = 'dark', density = 'default', pointer = 'fine'}) {
+  const sourceTokens = tokens;
+  tokens = resolvePacks(tokens);
   requireThat(['postvisual', 'personal'].includes(pack), 'Unknown pack');
   requireThat(['light', 'dark'].includes(mode), 'Unknown mode');
   requireThat(['default', 'compact', 'dense', 'comfortable'].includes(density), 'Unknown density');
@@ -125,7 +128,10 @@ export function createTokenCatalogue({tokens, controls, pack = 'postvisual', mod
   for (const [packName, values] of Object.entries(tokens)) for (const [variant, declarations] of Object.entries(values)) {
     for (const [name, value] of Object.entries(declarations)) {
       const item = entry('--ui-' + name);
-      const declaration = {value, file: 'src/tokens.json', pointer: `/${packName}/${variant}/${name}`};
+      let owner = packName;
+      while (sourceTokens[owner].mirror && !Object.hasOwn(sourceTokens[owner].overrides?.[variant] ?? {}, name)) owner = sourceTokens[owner].mirror;
+      const declaration = {value, file: 'src/tokens.json', pointer: `/${owner}/${sourceTokens[owner].mirror ? 'overrides/' : ''}${variant}/${name}`,
+        ...(owner !== packName ? {inheritedFromPack: owner} : {})};
       item.declarations.push(declaration);
       if (packName === pack && (variant === 'defaults' || variant === mode)) item.selected = declaration;
     }

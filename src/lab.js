@@ -164,14 +164,14 @@ window.addEventListener('pagehide',event=>{pageActive=false;closeSource();stopAn
 document.addEventListener('ui:styles',()=>{floatingReview.setProvenance(floatingProvenance());requestAnimationFrame(tokens);});
 window.addEventListener('storage',event=>{if(event.key?.startsWith('shared-ui:v1:'))requestAnimationFrame(tokens);});
 for(const action of document.querySelectorAll('[data-copy-field]'))action.addEventListener('click',async()=>{const input=action.parentElement.querySelector('input');try{await navigator.clipboard.writeText(input.value);toast('Link copied');}catch{input.focus();input.select();toast('Select and copy the link');}});
-void openSource();timeline();
-})();
-
-document.getElementById('group-width')?.addEventListener('input',event=>{document.querySelector('.lab-fit-sample').style.inlineSize=`min(100%,${event.target.value}px)`;});
-
 for(const name of ['Alice Example','Very long collaborator name that stays in a tooltip'])$('fixture-avatars').append(UI.createAvatar(name));
 
 const zoomFeedback=UI.createZoomFeedback(document,{sprite:'./v1/icons.svg'});
 const zoomFixture=direction=>{fixtureZoom.setValue(direction?fixtureZoom.value+direction*20:220);zoomFeedback.show(fixtureZoom.value/220*100);};
 document.addEventListener('ui:zoom',event=>zoomFixture(event.detail.direction));
 UI.installZoomShortcuts(document,{canZoom:()=>!document.querySelector('dialog[open]'),onZoom:zoomFixture});
+
+void openSource();timeline();
+})();
+
+document.getElementById('group-width')?.addEventListener('input',event=>{document.querySelector('.lab-fit-sample').style.inlineSize=`min(100%,${event.target.value}px)`;});

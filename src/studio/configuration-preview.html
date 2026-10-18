@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" data-ui="postvisual" data-theme="dark" data-ui-theme-scope="view">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration preview</title>
+<link data-ui-baseline rel="stylesheet" href="/v1/styles.css"><link rel="stylesheet" href="/editor.css">
+<script src="/v1/runtime.js" defer></script><script type="module" src="/configuration-preview.mjs"></script>
+<body class="studio-preview"><main class="ui-stack">
+  <section class="ui-card ui-stack ui-pad"><h1>Shared interface</h1><p>Typography, surfaces and native controls.</p>
+    <form class="ui-stack">
+      <label class="ui-field"><span class="ui-label">Title</span><input aria-label="Sample title" value="A retained native draft"></label>
+      <div class="ui-actions"><button data-icon="check" data-ui-variant="primary" data-ui-label="always" type="submit">Save changes</button><button data-icon="close" type="button">Cancel</button><button data-icon="trash" data-ui-variant="danger" type="button">Delete</button><button data-icon="lock" disabled>Unavailable</button></div>
+      <div class="ui-actions"><label class="ui-field"><span class="ui-label">View</span><select aria-label="Sample view"><option>Review</option><option>Library</option></select></label><label class="ui-check"><input type="checkbox" checked>Keep selected</label></div>
+    </form>
+    <details class="ui-section"><summary><h2>Optional details</h2><p class="ui-meta">Native disclosure and retained focus</p></summary><p>Details stay open while colors and typography change.</p></details>
+  </section>
+  <section class="ui-card ui-stack ui-pad"><h2>Review a record</h2><p class="ui-meta">Secondary context</p><p class="ui-value">Ready for review</p>
+    <p class="ui-notice ui-pad" data-state="success">Saved successfully</p><p class="ui-notice ui-pad" data-state="warning">Review the highlighted values</p><p class="ui-status" data-state="error">Example validation error</p>
+    <label class="ui-stack">Progress<progress max="100" value="65">65%</progress></label>
+    <div class="ui-table-scroll"><table class="ui-table" data-ui-variant="sheet"><thead><tr><th scope="col">Record</th><th scope="col">State</th></tr></thead><tbody><tr data-ui-selected="true"><td>Selected record</td><td>Ready</td></tr><tr><td>Another record</td><td>Pending</td></tr></tbody></table></div>
+    <article class="ui-prose"><h3>Supporting information</h3><p>Body text with <strong>emphasis</strong>, <a href="#details">a source link</a> and <code>semantic tokens</code>.</p></article>
+  </section>
+</main></body></html>

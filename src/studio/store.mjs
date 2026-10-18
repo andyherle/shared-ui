@@ -43,8 +43,9 @@ export function openStore(directory, {writable = false} = {}) {
       const stat = fs.fstatSync(fd);
       requireThat(stat.isFile() && stat.nlink === 1 && stat.size <= MAX_STORE_BYTES, 'Invalid store file', 'UNSAFE_STORE');
       const state = json(JSON.parse(fs.readFileSync(fd, 'utf8')), MAX_STORE_BYTES);
-      object(state, 'store', ['schemaVersion', 'documents']); requireThat(state.schemaVersion === 1, 'Unsupported store schema');
+      object(state, 'store', ['schemaVersion', 'documents', 'configurations']); requireThat(state.schemaVersion === 1, 'Unsupported store schema');
       object(state.documents, 'stored documents'); requireThat(Object.keys(state.documents).length <= 1000, 'Store document limit exceeded');
+      if (state.configurations) {object(state.configurations, 'stored configurations'); requireThat(Object.keys(state.configurations).length <= 100, 'Store configuration limit exceeded');}
       return state;
     } finally { fs.closeSync(fd); }
   }

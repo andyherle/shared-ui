@@ -267,7 +267,7 @@
     return controller;
   }
   const api={createFloatingPanel,formatReviewProvenance,viewportBox,fitPosition};
-  if(typeof module==='object'&&module.exports)module.exports=api;
+  if(typeof module==='object'&&module.exports)Object.assign(module.exports,api);
   if(typeof window!=='undefined'&&window.SharedUI){
     // Replaying the exact fixture-only augment after a baseline bundle is
     // harmless; never replace a previously initialized factory.

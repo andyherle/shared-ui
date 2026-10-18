@@ -9,7 +9,8 @@ import {writeStudioConnection} from '../src/studio/connection.mjs';
 
 // Foreground only: no LaunchAgent, login item, tunnel, or auto-restart.
 const args = process.argv.slice(2);
-const options = localOptions(args.length ? args : ['--store', path.join(os.homedir(), 'Library/Application Support/Shared UI Studio/drafts'), '--demo', '--write']);
+const defaults = ['--store', path.join(os.homedir(), 'Library/Application Support/Shared UI Studio/drafts'), '--demo', '--write'];
+const options = localOptions(args.every(arg => ['--write', '--publish'].includes(arg)) ? [...defaults, ...args.filter(arg => arg !== '--write')] : args);
 const service = serviceFromOptions(options);
 let editor, mcp;
 try {
@@ -17,8 +18,8 @@ try {
   const token = randomBytes(32).toString('hex');
   editor = await startStudio({service, port: +(options['--port'] ?? 41913)});
   mcp = await startMCPHTTP({service, token});
-  const config = {editor: editor.url + '#' + editor.token, http: {url: mcp.url, authorization: 'Bearer ' + token},
-    mcpServers: {'shared-ui-studio': {command: process.execPath, args: [fileURLToPath(new URL('../tools/studio-mcp/server.mjs', import.meta.url)), '--store', options['--store'], ...(options['--demo'] ? ['--demo'] : ['--views', options['--views']]), ...(options['--write'] ? ['--write'] : [])]}}};
+  const config = {editor: editor.url + 'configurations#' + editor.token, http: {url: mcp.url, authorization: 'Bearer ' + token},
+    mcpServers: {'shared-ui-studio': {command: process.execPath, args: [fileURLToPath(new URL('../tools/studio-mcp/server.mjs', import.meta.url)), '--store', options['--store'], ...(options['--demo'] ? ['--demo'] : ['--views', options['--views']]), ...(options['--write'] ? ['--write'] : []), ...(options['--publish'] ? ['--publish'] : [])]}}};
   const {filename, tokenFile} = writeStudioConnection(options['--store'], config, token);
   console.log(`Shared UI Studio · foreground session\nOpen ${config.editor}\nMCP ${mcp.url}\nPrivate connection details: ${filename}\nPortal token file: ${tokenFile}\nStop with Ctrl-C. No background service was installed.`);
   let closing = false;

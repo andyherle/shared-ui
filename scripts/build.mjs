@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import vm from 'node:vm';
 import {gzipSync} from 'node:zlib';
+import {resolvePacks} from '../src/packs.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 // Compact punctuation outside strings; preserve descendant selectors and calc spaces.
 export function compactCSS(source){
@@ -34,6 +35,7 @@ export function floatingPanelFixtureCSS(controls){
 }
 
 export function buildCSS(tokens,controls){
+  const definitions=tokens; tokens=resolvePacks(tokens);
   const color=value=>value.replace(/#[0-9a-f]{6}(?:[0-9a-f]{2})?\b/gi,hex=>{const pairs=hex.slice(1).match(/../g);return pairs.every(pair=>pair[0]===pair[1])?'#'+pairs.map(pair=>pair[0]).join(''):hex;});
   const declarations=values=>Object.entries(values).map(([key,value])=>`--ui-${key}:${color(value)};`).join('');
   const packs=[];
@@ -44,13 +46,16 @@ export function buildCSS(tokens,controls){
     if(names.every(name=>tokens[name].light[key]===first.light[key]&&tokens[name].dark[key]===first.dark[key]))
       shared[key]=first.light[key]===first.dark[key]?first.light[key]:`light-dark(${first.light[key]},${first.dark[key]})`;
   }
-  packs.push(`[data-ui]{${declarations(shared)}}`);
+  const defaults={};
+  for(const [key,value] of Object.entries(tokens[names[0]].defaults))
+    if(names.every(name=>tokens[name].defaults[key]===value))defaults[key]=value;
+  packs.push(`[data-ui]{${declarations(defaults)}${declarations(shared)}}`);
   // Native color-scheme resolves both palettes without duplicating the dark
   // declarations for a saved choice and the system media query.
   for(const [name,pack] of Object.entries(tokens)){
     const base=`[data-ui="${name}"]`;
     const colors=Object.fromEntries(Object.keys(pack.light).filter(key=>!(key in shared)).map(key=>[key,pack.light[key]===pack.dark[key]?pack.light[key]:`light-dark(${pack.light[key]},${pack.dark[key]})`]));
-    packs.push(`${base}{color-scheme:${name==='personal'?'light dark':'dark'};${declarations(pack.defaults)}${declarations(colors)}}`);
+    packs.push(`${base}{color-scheme:${name==='personal'&&!definitions.personal.mirror?'light dark':'dark'};${declarations(Object.fromEntries(Object.entries(pack.defaults).filter(([key])=>!(key in defaults))))}${declarations(colors)}}`);
   }
   packs.push('[data-ui][data-theme=light]{color-scheme:light}[data-ui][data-theme=dark]{color-scheme:dark}');
   return `@layer app,ui.tokens,ui.controls,ui.prose;@layer ui.tokens{${packs.join('')}}\n`+compactCSS(controls)+'\n';

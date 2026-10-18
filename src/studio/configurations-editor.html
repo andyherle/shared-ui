@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-ui="postvisual" data-theme="dark" data-ui-density="compact" data-ui-theme-scope="view">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurations · Shared UI Studio</title>
+<link rel="stylesheet" href="/v1/styles.css"><link rel="stylesheet" href="/editor.css">
+<script src="/v1/runtime.js" defer></script><script type="module" src="/configurations-editor.mjs"></script>
+<body class="studio-shell">
+<header class="ui-toolbar ui-header ui-pad">
+  <div class="ui-stack"><h1>Configurations</h1><p class="ui-meta">Shared UI Studio</p></div>
+  <nav class="ui-actions ui-inline" aria-label="Studio workspace">
+    <a href="/" class="ui-action" aria-label="Documents"><svg class="ui-icon" aria-hidden="true"><use href="/v1/icons.svg#ui-file-text"></use></svg><span class="ui-label">Documents</span></a>
+    <label class="ui-field"><span class="ui-label">Configuration</span><select id="configuration" aria-label="Configuration"></select></label>
+    <button id="refresh" data-icon="refresh">Refresh</button>
+  </nav>
+</header>
+<main class="ui-stack ui-pad studio-workspace">
+  <p id="status" class="ui-status" role="status" aria-live="polite"></p>
+  <section id="recovery" class="ui-notice ui-stack ui-pad" data-state="warning" hidden>
+    <p id="recovery-text">The request may have completed. Retry the same request to recover its receipt.</p>
+    <div class="ui-actions"><button id="retry" data-icon="refresh">Retry same request</button><button id="load-current" data-icon="file-text">Load current revision</button></div>
+  </section>
+  <section class="ui-card ui-stack ui-pad">
+    <h2 id="name" class="ui-section-title">Loading configurations…</h2><p id="context" class="ui-meta"></p>
+    <p id="inheritance"></p>
+    <div class="ui-actions">
+      <button id="duplicate" data-icon="copy" data-ui-label="always">Duplicate</button>
+      <button id="snapshot" data-icon="save">Keep a snapshot</button>
+      <button id="discard" data-icon="close">Discard form changes</button>
+    </div>
+  </section>
+  <section class="ui-card ui-stack ui-pad" aria-label="Configuration preview">
+    <div class="ui-actions">
+      <label class="ui-field"><span class="ui-label">Preview</span><select id="preview-mode" aria-label="Preview mode"><option value="live">Live draft</option><option value="compare">Before / after</option></select></label>
+      <label class="ui-field"><span class="ui-label">Before</span><select id="baseline" aria-label="Comparison baseline"><option value="">Source</option></select></label>
+      <label class="ui-field"><span class="ui-label">Theme</span><select id="theme" aria-label="Preview theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+      <label class="ui-field"><span class="ui-label">Density</span><select id="density" aria-label="Preview density"><option value="default">Default</option><option value="compact">Compact</option><option value="dense">Dense</option><option value="comfortable">Comfortable</option></select></label>
+      <label class="ui-field"><span class="ui-label">Width</span><select id="width" aria-label="Preview width"><option value="fluid">Available width</option><option value="phone">Phone · 390px</option></select></label>
+    </div>
+    <div id="previews" class="ui-grid studio-config-previews" data-mode="live">
+      <section id="before-pane" class="ui-stack" hidden><h3 class="ui-section-title">Before</h3><iframe id="before" src="/configuration-preview.html" title="Before configuration preview"></iframe></section>
+      <section class="ui-stack"><h3 class="ui-section-title">Working configuration</h3><iframe id="after" src="/configuration-preview.html" title="Working configuration preview"></iframe></section>
+    </div>
+  </section>
+  <div class="ui-split studio-config-panels">
+    <section class="ui-card ui-stack ui-pad" data-ui-main>
+      <h2 class="ui-section-title">Style values</h2>
+      <div class="ui-actions">
+        <label class="ui-field"><span class="ui-label">Scope</span><select id="scope" aria-label="Value scope"><option value="defaults">Typography and geometry</option><option value="dark">Dark palette</option><option value="light">Light palette</option></select></label>
+        <label class="ui-field"><span class="ui-label">Value</span><select id="token" aria-label="Style value"></select></label>
+      </div>
+      <form id="value-form" class="ui-stack">
+        <label class="ui-field"><span id="value-label" class="ui-label">Value</span><input id="value" name="value" required maxlength="100" aria-label="Token value"></label>
+        <p id="value-origin" class="ui-meta"></p>
+        <div class="ui-actions"><button type="submit" data-icon="check" data-ui-variant="primary" data-ui-label="always">Apply value</button><button id="reset-value" type="button" data-icon="refresh">Reset value</button></div>
+      </form>
+      <details class="ui-section"><summary><h3>Changes</h3><p id="change-count" class="ui-meta"></p></summary><div id="changes" class="ui-stack studio-facts"></div></details>
+      <details class="ui-section"><summary><h3>Snapshots</h3><p class="ui-meta">Compare or restore exact saved values</p></summary><div id="snapshots" class="ui-stack"></div></details>
+      <details class="ui-section"><summary><h3>Configuration settings</h3><p class="ui-meta">Name, mirror and source recovery</p></summary>
+        <div class="ui-stack">
+          <form id="rename-form" class="ui-actions"><label class="ui-field"><span class="ui-label">Name</span><input name="name" id="rename" required maxlength="200"></label><button type="submit" data-icon="edit">Rename</button></form>
+          <form id="mirror-form" class="ui-actions"><label class="ui-field"><span class="ui-label">Follow</span><select name="source" id="mirror-source" aria-label="Mirror source"></select></label><button type="submit" data-icon="link">Mirror source</button><button id="detach" type="button" data-icon="copy">Make independent</button></form>
+          <div class="ui-actions"><button id="reset-source" data-icon="refresh">Reset to source</button></div>
+        </div>
+      </details>
+    </section>
+    <aside class="ui-card ui-stack ui-pad">
+      <h2 class="ui-section-title">Release</h2>
+      <p id="release-scope"></p><p id="validation" class="ui-meta">Validate the exact revision before publishing.</p>
+      <div class="ui-actions ui-fill"><button id="validate" data-icon="check" data-ui-label="always">Validate</button><button id="publish" data-icon="upload" data-ui-variant="primary" data-ui-label="always" aria-label="Publish validated revision">Publish</button></div>
+      <p id="publish-permission" class="ui-meta"></p>
+      <details id="check-details" class="ui-section" hidden><summary><h3>Validation details</h3><p class="ui-meta">Checks that need attention</p></summary><pre id="check-output" class="ui-mono studio-check-output"></pre></details>
+      <div id="publications" class="ui-stack studio-facts"></div>
+    </aside>
+  </div>
+</main>
+<dialog id="duplicate-dialog" class="ui-popout studio-dialog" aria-labelledby="duplicate-title">
+  <header><h2 id="duplicate-title">Duplicate configuration</h2></header>
+  <form id="duplicate-form" class="ui-stack" data-ui-popout-body>
+    <label class="ui-field"><span class="ui-label">Name</span><input name="name" required maxlength="200"></label>
+    <label class="ui-field"><span class="ui-label">Release target</span><select name="pack"><option value="postvisual">Postvisual</option><option value="personal">Personal</option></select></label>
+    <p class="ui-meta">An independent copy of the current resolved values. Publishing replaces the selected pack.</p>
+  </form>
+  <footer class="ui-actions ui-fill"><button id="cancel-duplicate" data-icon="close">Cancel</button><button form="duplicate-form" type="submit" data-icon="copy" data-ui-variant="primary" data-ui-label="always">Duplicate</button></footer>
+</dialog>
+</body></html>

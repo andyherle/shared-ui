@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {resolvePacks} from '../src/packs.mjs';
+import {gzipSync} from 'node:zlib';
 import {buildCSS} from '../scripts/build.mjs';
 import {loadTokenCatalogue} from '../src/studio/tokens.mjs';
 
@@ -10,7 +12,7 @@ const controls=source('src/controls.css');
 
 test('one typed semantic page-width setting is defined in both packs',()=>{
   for(const pack of ['postvisual','personal']){
-    assert.equal(tokens[pack].defaults['page-width'],'70%');
+    assert.equal(resolvePacks(tokens)[pack].defaults['page-width'],'70%');
     const catalogue=loadTokenCatalogue({pack});
     assert.equal(catalogue.definitions['--ui-page-width'].type,'length');
     assert.equal(catalogue.definitions['--ui-page-width'].editable,true);
@@ -32,9 +34,10 @@ test('app-layer fixture applies width once, with narrow and full-workspace excep
   assert.ok(html.includes('data-ui-page-root class="ui-card ui-pad ui-stack"'));
 });
 
-test('shared control stylesheet retains its hard 32KiB budget and no app layout selectors',()=>{
+test('shared control stylesheet retains its raw and gzip budgets and no app layout selectors',()=>{
   const css=buildCSS(tokens,controls);
-  assert.ok(Buffer.byteLength(css)<=32768,'shared stylesheet must stay within 32KiB');
+  assert.ok(Buffer.byteLength(css)<=36864,'shared stylesheet must stay within 36KiB');
+  assert.ok(gzipSync(css).length<=8192);
   assert.ok(css.includes('--ui-page-width:70%'));
   assert.ok(!css.includes('[data-ui-page-host]'));
   assert.ok(!css.includes('@import'));

@@ -10,6 +10,8 @@ import {StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {createAuthoringService, DEMO_VIEWS, METHODS} from '../../../src/studio/service.mjs';
 import {startStudio} from '../../../scripts/studio-server.mjs';
 import {startMCPHTTP} from '../server.mjs';
+import {createReleaseManager} from '../../../src/studio/releases.mjs';
+import {buildSite} from '../../../scripts/build.mjs';
 const fixture = () => JSON.parse(fs.readFileSync(new URL('../../../test/fixtures/studio-document.json', import.meta.url)));
 function harness(t) {
   const directory = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'studio-mcp-'));
@@ -25,7 +27,7 @@ async function connectStdio(t, directory, writable = true, options = {}) {
 const call = (client, method, args = {}) => client.callTool({name: 'studio_' + method.replaceAll('.', '_'), arguments: args});
 test('official SDK stdio discovers the contract, edits, replays, and reports conflicts across the editor', async t => {
   const {directory, service} = harness(t), client = await connectStdio(t, directory);
-  const {tools} = await client.listTools(); assert.equal(tools.length, Object.keys(METHODS).length);
+  const {tools} = await client.listTools(); assert.equal(tools.length, Object.values(METHODS).filter(item => item.permission !== 'publish').length);
   assert.ok(tools.find(tool => tool.name === 'studio_document_command').inputSchema.properties.command.oneOf.length >= 18);
   const create = {documentId: 'review', expectedRevision: 0, operationId: 'create', command: {type: 'create', document: fixture()}};
   let result = await call(client, 'document.command', create); assert.equal(result.isError, undefined); assert.equal(result.structuredContent.revision, 1);
@@ -43,12 +45,31 @@ test('official SDK stdio discovers the contract, edits, replays, and reports con
 test('read-only stdio never advertises or executes writes', async t => {
   const {directory} = harness(t), client = await connectStdio(t, directory, false);
   assert.ok(!(await client.listTools()).tools.some(tool => tool.name === 'studio_document_command'));
+  assert.ok(!(await client.listTools()).tools.some(tool => ['studio_configuration_command', 'studio_configuration_validate', 'studio_configuration_publish'].includes(tool.name)));
   const result = await call(client, 'document.command', {}); assert.equal(result.isError, true);
   assert.equal(fs.existsSync(path.join(directory, 'studio.json')), false);
 });
+test('configuration tools share mirror edits, validation and gated publication over official HTTP MCP', async t => {
+  const {directory} = harness(t); let pushed = 0;
+  const releases = {...createReleaseManager({check: async root => buildSite(root)}), canPublish: true,
+    push: async ({validation}) => {pushed++; return {status: 'pushed', commit: 'a'.repeat(40), release: validation.release, checkoutUpdated: false, workflowURL: 'https://example.test/workflow'};}};
+  const service = createAuthoringService({directory, views: DEMO_VIEWS, writable: true, releases});
+  const token = 'synthetic-configuration-mcp-token'.repeat(2), app = await startMCPHTTP({service, token, port: 0}); t.after(app.close);
+  const client = new Client({name: 'configuration-http-test', version: '1.0.0'});
+  await client.connect(new StreamableHTTPClientTransport(new URL(app.url), {requestInit: {headers: {Authorization: `Bearer ${token}`}}})); t.after(() => client.close());
+  assert.ok((await client.listTools()).tools.some(tool => tool.name === 'studio_configuration_publish'));
+  const edit = await call(client, 'configuration.command', {configurationId: 'postvisual', expectedRevision: 0, operationId: 'accent', command: {type: 'set-value', scope: 'light', token: 'accent', value: '#123456'}});
+  assert.equal(edit.structuredContent.revision, 1);
+  assert.equal((await call(client, 'configuration.read', {configurationId: 'personal'})).structuredContent.values.light.accent, '#123456');
+  const validated = await call(client, 'configuration.validate', {configurationId: 'postvisual', expectedRevision: 1, operationId: 'check'});
+  assert.equal(validated.isError, undefined); assert.equal(validated.structuredContent.validationId, 'check');
+  const args = {configurationId: 'postvisual', expectedRevision: 1, operationId: 'publish', validationId: 'check'};
+  assert.equal((await call(client, 'configuration.publish', args)).structuredContent.status, 'pushed');
+  assert.equal((await call(client, 'configuration.publish', args)).structuredContent.replayed, true); assert.equal(pushed, 1);
+});
 test('2025-era stdio clients retain initialization and tool compatibility', async t => {
   const {directory} = harness(t), client = await connectStdio(t, directory, true, {supportedProtocolVersions: ['2025-11-25']});
-  assert.equal((await client.listTools()).tools.length, Object.keys(METHODS).length);
+  assert.equal((await client.listTools()).tools.length, Object.values(METHODS).filter(item => item.permission !== 'publish').length);
   assert.equal((await call(client, 'views.list')).structuredContent.views[0].appId, 'studio-demo');
 });
 test('authenticated Streamable HTTP uses the same SDK contract and rejects public origins', async t => {
@@ -60,7 +81,7 @@ test('authenticated Streamable HTTP uses the same SDK contract and rejects publi
   assert.equal(rebound, 403);
   const client = new Client({name: 'studio-http-test', version: '1.0.0'});
   await client.connect(new StreamableHTTPClientTransport(new URL(app.url), {requestInit: {headers: {Authorization: `Bearer ${token}`}}})); t.after(() => client.close());
-  assert.equal((await client.listTools()).tools.length, Object.keys(METHODS).length);
+  assert.equal((await client.listTools()).tools.length, Object.values(METHODS).filter(item => item.permission !== 'publish').length);
   const result = await call(client, 'document.command', {documentId: 'review', expectedRevision: 0, operationId: 'create', command: {type: 'create', document: fixture()}});
   assert.equal(result.structuredContent.revision, 1);
   assert.equal(service.dispatch({method: 'document.read', args: {documentId: 'review'}}).revision, 1);

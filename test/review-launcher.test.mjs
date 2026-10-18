@@ -333,7 +333,7 @@ test('uncertain timed-out owned test is never orphaned by manager and requires m
 });
 
 test('immutable candidate file checks compare SHA256, stylesheet SRI and disallow symlink/writable assets',t=>{
-  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ui-review-bundle-'));
+  const dir=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'ui-review-bundle-'));
   t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
   const sourceRoot=path.join(dir,'source'),bundleRoot=path.join(dir,'bundle');
   fs.mkdirSync(sourceRoot);fs.mkdirSync(bundleRoot);
@@ -356,7 +356,7 @@ test('immutable candidate file checks compare SHA256, stylesheet SRI and disallo
 });
 
 test('private plan reading and foreground command parser do not start any child on import',async t=>{
-  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ui-review-config-'));
+  const dir=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'ui-review-config-'));
   t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
   const config=path.join(dir,'review.json');
   fs.writeFileSync(config,JSON.stringify(plan()));fs.chmodSync(config,0o600);

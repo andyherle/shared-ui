@@ -8,20 +8,20 @@ import {METHODS} from '../../src/studio/service.mjs';
 import {authorized, errorResult, localOptions, localRequest, secureHeaders, sendJSON, serviceFromOptions} from '../../src/studio/local.mjs';
 
 export function createMCPServer(service) {
-  const writable = service.dispatch({method: 'describe'}).permissions.write;
-  const available = Object.entries(METHODS).filter(([, entry]) => writable || entry.permission !== 'write');
+  const permissions = service.dispatch({method: 'describe'}).permissions;
+  const available = Object.entries(METHODS).filter(([, entry]) => entry.permission === 'read' || permissions[entry.permission]);
   const names = new Map(available.map(([method]) => ['studio_' + method.replaceAll('.', '_'), method]));
   const server = new Server({name: 'shared-ui-studio', version: '0.1.0'}, {capabilities: {tools: {}},
-    instructions: 'Read the exact document before editing. Commands require its current revision and a unique operation ID. Retry uncertain writes with the identical operation ID and arguments. This service edits private drafts; it cannot publish or alter app source.'});
+    instructions: 'Read the exact document or configuration before editing. Commands require its current revision and a unique operation ID. Retry uncertain writes with identical arguments. Personal mirrors Postvisual; configuration publication requires an exact validation receipt and explicit local publish permission. A pushed release still awaits the Pages workflow. Application source is outside this service.'});
   server.setRequestHandler('tools/list', () => ({tools: available.map(([method, entry]) => ({
     name: 'studio_' + method.replaceAll('.', '_'), description: entry.description, inputSchema: entry.inputSchema,
-    annotations: {readOnlyHint: entry.permission === 'read', destructiveHint: entry.permission === 'write', idempotentHint: true, openWorldHint: false}
+    annotations: {readOnlyHint: entry.permission === 'read', destructiveHint: entry.permission !== 'read', idempotentHint: true, openWorldHint: entry.permission === 'publish'}
   }))}));
-  server.setRequestHandler('tools/call', request => {
+  server.setRequestHandler('tools/call', async request => {
     const method = names.get(request.params.name);
     try {
       if (!method) throw Object.assign(new Error('Unknown or unavailable Studio tool'), {code: 'FORBIDDEN'});
-      const result = service.dispatch({method, args: request.params.arguments ?? {}});
+      const result = await service.dispatch({method, args: request.params.arguments ?? {}});
       return {content: [{type: 'text', text: JSON.stringify(result)}], structuredContent: result};
     } catch (error) {
       const result = errorResult(error);

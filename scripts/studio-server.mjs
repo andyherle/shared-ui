@@ -8,7 +8,11 @@ import {authorized, errorResult, localOptions, localRequest, readJSON, secureHea
 // Exact asset routes: no filesystem path, private store, or repository mount.
 const assets = new Map([
   ['/', ['../src/studio/editor.html', 'text/html']],
+  ['/configurations', ['../src/studio/configurations-editor.html', 'text/html']],
   ['/editor.mjs', ['../src/studio/editor.mjs', 'text/javascript']],
+  ['/configurations-editor.mjs', ['../src/studio/configurations-editor.mjs', 'text/javascript']],
+  ['/configuration-preview.html', ['../src/studio/configuration-preview.html', 'text/html']],
+  ['/configuration-preview.mjs', ['../src/studio/configuration-preview.mjs', 'text/javascript']],
   ['/renderer.mjs', ['../src/studio/renderer.mjs', 'text/javascript']],
   ['/editor.css', ['../src/studio/editor.css', 'text/css']],
   ['/preview.html', ['../src/studio/preview.html', 'text/html']],
@@ -23,14 +27,14 @@ export async function startStudio({service, port = 41913, token = randomBytes(32
     if (request.url === '/api' && request.method === 'POST') {
       if (!authorized(request, token)) return sendJSON(response, 401, {error: {message: 'Open the launch link from the local Studio process.'}});
       try {
-        const result = service.dispatch(await readJSON(request));
+        const result = await service.dispatch(await readJSON(request));
         return sendJSON(response, 200, {result});
-      } catch (error) { return sendJSON(response, error.status ?? (error.code === 'REVISION_CONFLICT' ? 409 : error.code === 'FORBIDDEN' ? 403 : 400), error.status ? {error: {message: error.message}} : errorResult(error)); }
+      } catch (error) { return sendJSON(response, error.status ?? (error.code === 'PUBLICATION_UNCERTAIN' ? 503 : error.code === 'REVISION_CONFLICT' ? 409 : error.code === 'FORBIDDEN' ? 403 : 400), error.status ? {error: {message: error.message}} : errorResult(error)); }
     }
     const asset = assets.get(request.url);
     if (!asset || request.method !== 'GET') return sendJSON(response, 404, {error: {message: 'Not found'}});
     try {
-      if (request.url === '/preview.html') {
+      if (['/preview.html', '/configuration-preview.html'].includes(request.url)) {
         response.removeHeader('X-Frame-Options');
         response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'");
       }

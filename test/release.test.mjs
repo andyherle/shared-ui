@@ -52,3 +52,10 @@ test('workspace scale has shared chrome, metadata, rhythm, and native tabs',()=>
 });
 
 test('shared CSS preserves native label row placement',()=>{assert.doesNotMatch(css, /\) label(?:\{| >)/);});
+
+test('composed numerical fields retain intrinsic space without an app width',()=>{
+ assert.ok(css.includes('&>input[type=number]{flex:1 1 8ch;inline-size:8ch}'));
+ const page=fs.readFileSync(new URL('../src/index.html',import.meta.url),'utf8');
+ assert.match(page,/aria-label="Compact numerical fields"/);
+ assert.match(page,/name="amount"[^>]+type="number"[^>]+step="any"/);
+});

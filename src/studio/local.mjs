@@ -6,7 +6,7 @@ import {requireThat} from './validation.mjs';
 export function localOptions(args, extra = []) {
   const options = {};
   const valued = ['--store', '--views', '--port'];
-  const allowed = [...valued, '--demo', '--write', ...extra];
+  const allowed = [...valued, '--demo', '--write', '--publish', ...extra];
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
     requireThat(allowed.includes(flag) && !Object.hasOwn(options, flag), `Unknown or repeated option: ${flag}`);
@@ -16,17 +16,18 @@ export function localOptions(args, extra = []) {
     } else options[flag] = true;
   }
   requireThat(options['--store'], '--store requires an absolute private directory');
+  requireThat(!options['--publish'] || options['--write'], '--publish requires --write');
   requireThat(Boolean(options['--demo']) !== Boolean(options['--views']), 'Choose --demo or --views <private registrations.json>');
   if (options['--port']) requireThat(/^\d+$/.test(options['--port']) && +options['--port'] <= 65535, 'Invalid port');
   return options;
 }
 export function serviceFromOptions(options) {
-  return createAuthoringService({directory: options['--store'], writable: !!options['--write'],
+  return createAuthoringService({directory: options['--store'], writable: !!options['--write'], publish: !!options['--publish'],
     views: options['--demo'] ? DEMO_VIEWS : JSON.parse(fs.readFileSync(options['--views'], 'utf8'))});
 }
 export function errorResult(error) {
   // Filesystem errors can contain private absolute paths. Do not send those to a client.
-  const known = ['INVALID_INPUT', 'INVALID_ARGUMENT', 'VALIDATION_ERROR', 'REVISION_CONFLICT', 'OPERATION_REUSED', 'STORE_BUSY', 'NOT_FOUND', 'FORBIDDEN', 'UNDO_CONFLICT', 'INCOMPATIBLE_BINDING', 'READ_ONLY_VIEW'];
+  const known = ['INVALID_INPUT', 'INVALID_ARGUMENT', 'VALIDATION_ERROR', 'REVISION_CONFLICT', 'OPERATION_REUSED', 'STORE_BUSY', 'NOT_FOUND', 'FORBIDDEN', 'UNDO_CONFLICT', 'INCOMPATIBLE_BINDING', 'READ_ONLY_VIEW', 'SOURCE_CONFLICT', 'RELEASE_CONFLICT', 'PUBLICATION_UNCERTAIN'];
   return {error: {code: error.code ?? 'OPERATION_FAILED', message: known.includes(error.code) ? error.message : 'Studio could not complete the request. Check the local service and retry.', details: error.details ?? {}}};
 }
 export function secureHeaders(response) {

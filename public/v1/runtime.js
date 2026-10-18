@@ -123,8 +123,10 @@
     if(current.textContent!==String(value))current.textContent=String(value);
     return element;
   }
+  const actionStates=new WeakMap();
   function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
+    const feedback=actionStates.get(element);if(feedback&&feedback.state!=='idle'&&icon!==undefined){if(!feedback.applying)feedback.icon=icon;icon=feedback.state==='success'?'check':feedback.state==='error'?'warning':'refresh';}
     const doc=element.ownerDocument,base=new URL(doc.baseURI),asset=new URL(sprite,base);
     let changed=false;
     const attr=(node,name,value)=>{value=String(value);if(node.getAttribute(name)!==value){node.setAttribute(name,value);changed=true;}};
@@ -150,12 +152,57 @@
     if(changed){const group=element.closest?.('details.ui-overflow')?.parentElement?.closest('.ui-actions,.ui-toolbar')||element.closest?.('.ui-actions,.ui-toolbar');if(group)api.observeActions?.(group);}
     return element;
   }
+  function setActionState(button,{state='idle',message='',label,sprite='./shared-ui/icons.svg'}={}){
+    if(!button?.matches?.('button')||!['idle','pending','success','error'].includes(state))throw new TypeError('A native button and idle/pending/success/error state are required');
+    let entry=actionStates.get(button);
+    if(!entry){const use=button.querySelector(':scope > svg')?.querySelector('use'),href=use?.getAttribute('href')||'';entry={state:'idle',icon:href.split('#ui-')[1],primary:button.classList.contains('primary'),uiPrimary:button.classList.contains('ui-primary'),variant:button.getAttribute('data-ui-variant'),name:button.getAttribute('aria-label')||button.textContent.trim()};actionStates.set(button,entry);}
+    entry.state=state;button.dataset.uiActionState=state;button.setAttribute('aria-busy',String(state==='pending'));
+    for(const name of ['ui-success','ui-error','ui-warning'])button.classList.remove(name);
+    if(state!=='idle'){button.classList.remove('primary','ui-primary');button.removeAttribute('data-ui-variant');button.classList.add(state==='success'?'ui-success':state==='error'?'ui-error':'ui-warning');}
+    else{if(entry.primary)button.classList.add('primary');if(entry.uiPrimary)button.classList.add('ui-primary');if(entry.variant!==null)button.setAttribute('data-ui-variant',entry.variant);}
+    entry.applying=true;if(state==='idle'&&!entry.icon)button.querySelector(':scope > svg')?.remove();
+    adoptAction(button,{...(entry.icon?{icon:entry.icon}:state==='idle'?{}:{icon:state==='success'?'check':state==='error'?'warning':'refresh'}),...(label===undefined?{}:{label}),ariaLabel:message?entry.name+': '+message:entry.name,title:message||entry.name,sprite});entry.applying=false;
+    let live=button.querySelector('[data-ui-feedback]');if(!live){live=button.ownerDocument.createElement('span');live.className='ui-sr-only';live.dataset.uiFeedback='action';live.setAttribute('role','status');live.setAttribute('aria-live','polite');button.append(live);}if(live.textContent!==message)live.textContent=message;return button;
+  }
+  async function runAction(button,operation,{pending='Working…',success='Done',sprite}={}){setActionState(button,{state:'pending',message:pending,sprite});try{const result=await operation();setActionState(button,{state:'success',message:success,sprite});return result;}catch(error){setActionState(button,{state:'error',message:error.message||'Action failed',sprite});throw error;}}
+  const cardColorCache=new Map();
+  function resolveCardColor(color){
+    if(color==='#ffffff')return Object.freeze({light:'var(--ui-surface)',dark:'var(--ui-surface)',lightInk:'var(--ui-text)',darkInk:'var(--ui-text)'});
+    if(color==='transparent')return Object.freeze({light:'transparent',dark:'transparent',lightInk:'#000000',darkInk:'#ffffff'});
+    if(typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw new TypeError('A six-digit card color or transparent is required');
+    color=color.toLowerCase();if(cardColorCache.has(color))return cardColorCache.get(color);
+    const light=color==='#ff3b30'?'#c44c53':color==='#ffff00'?'#f3d376':color;
+    const channels=[1,3,5].map(i=>parseInt(light.slice(i,i+2),16));
+    const hex=values=>'#'+values.map(value=>value.toString(16).padStart(2,'0')).join('');
+    const dark=Math.max(...channels)-Math.min(...channels)<18&&channels[0]>230?'#24262b':light;
+    const ink=fill=>{const rgb=[1,3,5].map(i=>parseInt(fill.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722>.179?'#000000':'#ffffff';};
+    const result=Object.freeze({light,dark,lightInk:ink(light),darkInk:ink(dark)});
+    if(cardColorCache.size>=128)cardColorCache.delete(cardColorCache.keys().next().value);cardColorCache.set(color,result);return result;
+  }
   function setCardColor(card,color){
     if(color==null){delete card.dataset.uiColor;card.style.removeProperty('--ui-card-fill');card.style.removeProperty('--ui-card-ink');return;}
-    if(typeof color!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw new TypeError('A six-digit card color is required');
-    const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);
-    const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
-    card.dataset.uiColor=color.toLowerCase();card.style.setProperty('--ui-card-fill',color);card.style.setProperty('--ui-card-ink',luminance<.2?'#ffffff':'#111111');
+    const value=resolveCardColor(color);card.dataset.uiColor=color.toLowerCase();
+    if(color==='transparent'||color.toLowerCase()==='#ffffff'){card.style.removeProperty('--ui-card-fill');card.style.removeProperty('--ui-card-ink');return;}
+    card.style.setProperty('--ui-card-fill',`light-dark(${value.light},${value.dark})`);
+    card.style.setProperty('--ui-card-ink',`light-dark(${value.lightInk},${value.darkInk})`);
+  }
+  // Canvas/SVG output needs resolved CSS colours, never var() or light-dark() strings.
+  // One hidden native card per renderer; only distinct colours require style resolution.
+  function createCardColorResolver(root){
+    const doc=root.ownerDocument,view=doc.defaultView,probe=doc.createElement('article'),cache=new Map();
+    const scheme=view.matchMedia('(prefers-color-scheme: dark)');
+    let theme,disposed=false;
+    probe.className='ui-card';probe.hidden=true;probe.setAttribute('aria-hidden','true');root.append(probe);
+    function resolve(color=null){
+      if(disposed)throw new Error('Card colour resolver is disposed');
+      const key=[root.dataset.ui,root.dataset.theme,root.dataset.uiRevision,scheme.matches].join('/');
+      if(key!==theme){cache.clear();theme=key;}
+      if(cache.has(color))return cache.get(color);
+      setCardColor(probe,color);
+      const css=view.getComputedStyle(probe),paint=Object.freeze({fill:css.backgroundColor,ink:css.color,line:css.borderTopColor,font:css.fontFamily});
+      if(cache.size>=128)cache.delete(cache.keys().next().value);cache.set(color,paint);return paint;
+    }
+    return {resolve,invalidate(){theme=undefined;cache.clear();},dispose(){if(disposed)return;disposed=true;cache.clear();probe.remove();}};
   }
   function setSelection(element,selected) {
     element.classList.add('ui-selectable');
@@ -187,6 +234,55 @@
     }
     button.addEventListener('click',scrollToStart);doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',pause);view.addEventListener('pageshow',listen);listen();
     return {update,dispose(){if(disposed)return;disposed=true;pause();button.removeEventListener('click',scrollToStart);doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',pause);view.removeEventListener('pageshow',listen);}};
+  }
+  // Shared native-editor/IME guards based on StaticRef PR33; apps own zoom geometry.
+  function installZoomShortcuts(doc,{canZoom=()=>true,onZoom}={}){
+    if(typeof onZoom!=='function')throw new TypeError('Zoom requires an app callback');
+    let composing=false,disposed=false;
+    const editor=node=>Boolean(node?.isContentEditable||node?.closest?.('input,textarea,select,[contenteditable],[role="textbox"],[role="searchbox"],[role="combobox"]'));
+    const start=()=>{composing=true;},finish=()=>{composing=false;};
+    const press=event=>{
+      if(disposed||!event.metaKey||event.ctrlKey||event.altKey||event.defaultPrevented||event.isComposing||event.keyCode===229||composing||event.getModifierState?.('AltGraph')||editor(event.target)||editor(doc.activeElement)||event.composedPath?.().some(editor))return;
+      const direction=['ArrowUp','ArrowRight','+','='].includes(event.key)||['Equal','NumpadAdd'].includes(event.code)?1:['ArrowDown','ArrowLeft','-','_'].includes(event.key)||['Minus','NumpadSubtract'].includes(event.code)?-1:0;
+      if(!direction||!canZoom())return;
+      event.preventDefault();onZoom(direction);
+    };
+    function dispose(){if(disposed)return;disposed=true;doc.removeEventListener('keydown',press,true);doc.removeEventListener('compositionstart',start,true);doc.removeEventListener('compositionend',finish,true);doc.defaultView?.removeEventListener('blur',finish);doc.defaultView?.removeEventListener('pagehide',dispose);}
+    doc.addEventListener('compositionstart',start,true);doc.addEventListener('compositionend',finish,true);doc.addEventListener('keydown',press,true);doc.defaultView?.addEventListener('blur',finish);doc.defaultView?.addEventListener('pagehide',dispose);
+    return {dispose};
+  }
+  function createValueTransition({value,onChange,duration=110,view=globalThis.window}={}){
+    if(!Number.isFinite(value)||!Number.isFinite(duration)||duration<=0||typeof onChange!=='function')throw new TypeError('A finite value and frame callback are required');
+    let current=value,target=value,frame=null,start=null,from=value,disposed=false;
+    function cancel(){if(frame!==null)view.cancelAnimationFrame(frame);frame=null;start=null;target=current;}
+    function tick(now){if(disposed)return;if(start===null)start=now;const progress=Math.min(1,(now-start)/duration),ease=1-(1-progress)**3;current=progress===1?target:from+(target-from)*ease;onChange(current,{final:progress===1});if(progress<1)frame=view.requestAnimationFrame(tick);else{frame=null;start=null;}}
+    function to(next,{animate=true}={}){if(!Number.isFinite(next))throw new TypeError('A finite target is required');if(disposed)return;cancel();from=current;target=next;if(!animate||!view?.requestAnimationFrame||view.matchMedia?.('(prefers-reduced-motion:reduce)').matches){current=target;onChange(current,{final:true});return;}frame=view.requestAnimationFrame(tick);}
+    const hide=()=>{if(view.document?.hidden&&frame!==null){const next=target;cancel();current=target=next;onChange(current,{final:true});}};
+    function dispose(){cancel();disposed=true;view?.document?.removeEventListener('visibilitychange',hide);view?.removeEventListener('pagehide',dispose);}
+    view?.document?.addEventListener('visibilitychange',hide);view?.addEventListener('pagehide',dispose);
+    return {get value(){return current;},get target(){return target;},get active(){return frame!==null;},to,cancel,dispose};
+  }
+  function createZoomSteps({now=()=>performance.now(),interval=240}={}){
+    let last=-Infinity,previous=0,burst=0;
+    return {next(direction){if(!direction){last=-Infinity;previous=burst=0;return 1;}const time=now();burst=direction===previous&&time-last<=interval?Math.min(2,burst+1):0;last=time;previous=direction;const factor=1+[.1,.15,.2][burst];return direction>0?factor:1/factor;}};
+  }
+  const zoomDocks=new WeakMap();
+  function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
+    if(zoomDocks.has(doc))return zoomDocks.get(doc);
+    const view=doc.defaultView,node=doc.createElement('div');node.className='ui-zoom-feedback ui-toolbar ui-actions ui-inline';node.setAttribute('role','group');node.setAttribute('aria-label','Content zoom');
+    const buttons=[];
+    for(const [direction,icon,label] of [[-1,'minus','Zoom out'],[0,'maximize','Reset zoom'],[1,'plus','Zoom in']]){
+      const button=doc.createElement('button');button.type='button';button.dataset.uiZoom=direction<0?'out':direction>0?'in':'value';
+      adoptAction(button,{...(direction?{icon}:{}),label:direction?label:'100%',ariaLabel:label,labelStates:direction?undefined:['10%','100%','300%','800%'],iconOnly:direction!==0,sprite});
+      if(direction===0){button.dataset.uiLabel='always';button.setAttribute('aria-live','polite');setText(button.querySelector('.ui-label'),'100%');}
+      button.addEventListener('click',()=>doc.dispatchEvent(new view.CustomEvent('ui:zoom',{detail:{direction}})));buttons.push(button);node.append(button);
+    }
+    doc.body.append(node);
+    let visible=true;
+    const sync=()=>{node.hidden=!visible||Boolean(doc.querySelector('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open'));};
+    doc.addEventListener('toggle',sync,true);doc.addEventListener('close',sync,true);
+    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
+    view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);sync();return api;
   }
   function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
     if(![min,max,step,value].every(Number.isFinite)||max<min||step<=0)throw new TypeError('Zoom requires finite bounds, a positive step and a finite value');
@@ -352,7 +448,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.10.2',mount,release,adoptAction,reserveText,setText,setCardColor,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.11.3',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -366,6 +462,57 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
+  UI.createAvatar=(name,{document=window.document,size=24}={})=>{
+    const element=document.createElement('span');element.className='ui-avatar ui-tag';const label=String(name||'Editor');element.textContent=Array.from(label.trim()).slice(0,2).join('').toUpperCase();element.title=label;element.setAttribute('aria-label',label);size=Math.max(20,Math.min(44,Number(size)||24));
+    element.style.setProperty('--ui-tag-height',size+'px');element.style.setProperty('--ui-tag-radius','50%');element.style.setProperty('--ui-tag-padding','0');element.style.inlineSize=size+'px';element.style.blockSize=size+'px';element.style.flex='none';element.style.display='grid';element.style.placeItems='center';element.style.overflow='hidden';return element;
+  };
+  UI.fitMedia=(media,stage=media.parentElement,{controlsOnIntent=false}={})=>{
+    const view=media.ownerDocument.defaultView,old={width:media.style.width,height:media.style.height,controls:media.controls,tabIndex:media.getAttribute('tabindex')};const removers=[];let disposed=false;
+    function fit(){if(disposed)return;const style=view.getComputedStyle(stage),width=stage.clientWidth-parseFloat(style.paddingLeft||0)-parseFloat(style.paddingRight||0),height=stage.clientHeight-parseFloat(style.paddingTop||0)-parseFloat(style.paddingBottom||0),ratio=(media.videoWidth||media.naturalWidth||Number(media.getAttribute('width')))/(media.videoHeight||media.naturalHeight||Number(media.getAttribute('height')));if(!(width>0&&height>0&&ratio>0))return;const w=Math.min(width,height*ratio);media.style.width=w+'px';media.style.height=w/ratio+'px';}
+    if(controlsOnIntent&&media.tagName==='VIDEO'){
+      media.controls=false;media.tabIndex=0;
+      const listen=(type,fn)=>{media.addEventListener(type,fn);removers.push(()=>media.removeEventListener(type,fn));};
+      listen('pointermove',event=>{if(event.movementX||event.movementY)media.controls=true;});listen('pointerdown',()=>{media.controls=true;});listen('focus',()=>{media.controls=true;});listen('pointerleave',()=>{if(media.ownerDocument.activeElement!==media)media.controls=false;});
+    }
+    const observer=new view.ResizeObserver(fit);observer.observe(stage);media.addEventListener('loadedmetadata',fit);media.addEventListener('load',fit);fit();
+    return {refresh:fit,dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();if(controlsOnIntent&&media.tagName==='VIDEO'){media.controls=old.controls;if(old.tabIndex===null)media.removeAttribute('tabindex');else media.setAttribute('tabindex',old.tabIndex);}observer.disconnect();media.removeEventListener('loadedmetadata',fit);media.removeEventListener('load',fit);media.style.width=old.width;media.style.height=old.height;}};
+  };
+  UI.createColorPicker=(trigger,{value=null,onChange=()=>{},title='Card colour'}={})=>{
+    const doc=trigger.ownerDocument,view=doc.defaultView,removers=[];
+    const panel=doc.createElement('div');panel.className='ui-popout ui-color-picker ui-chrome';panel.popover='auto';
+    panel.dataset.uiComponent='color-picker';panel.id='ui-colour-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');
+    const header=doc.createElement('header'),heading=doc.createElement('h2');heading.className='ui-section-title';heading.id=panel.id+'-title';heading.textContent=title;header.append(heading);panel.setAttribute('aria-labelledby',heading.id);
+    const body=doc.createElement('div');body.dataset.uiPopoutBody='';body.className='ui-stack';
+    const buttons=[];
+    const swatches=(label,entries,captions=false)=>{
+      const section=doc.createElement('section');section.className='ui-stack';
+      const caption=doc.createElement('h3');caption.className='ui-meta';caption.textContent=label;
+      const group=doc.createElement('div');group.className='ui-color-palette';group.setAttribute('role','group');group.setAttribute('aria-label',label);if(captions)group.dataset.uiLabels='true';
+      for(const [name,color]of entries){const button=doc.createElement('button');button.type='button';button.className='ui-swatch';button.dataset.uiColorValue=color;UI.adoptAction(button,{label:name,ariaLabel:name,title:name});
+        button.querySelector(':scope > .ui-label').hidden=true;const fill=UI.resolveCardColor(color);button.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);button.addEventListener('click',()=>choose(color));buttons.push(button);group.append(button);}
+      section.append(caption,group);body.append(section);
+    };
+    swatches('Approval',[['Neutral','#ffffff'],['Changes','#c44c53'],['Review','#f3d376'],['Approved','#22c55e'],['Translucent','transparent']],true);
+    swatches('Everyday',[['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8']]);
+    const custom=doc.createElement('label');custom.className='ui-field';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');custom.append(caption,input);body.append(custom);
+    const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';hexField.append(hexLabel,hex,apply);body.append(hexField);
+    const footer=doc.createElement('footer');footer.className='ui-actions ui-fill';const done=doc.createElement('button');done.type='button';done.textContent='Done';footer.append(done);panel.append(header,body,footer);doc.body.append(panel);
+    trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded','false');
+    let disposed=false;
+    function listen(node,type,fn,options){node.addEventListener(type,fn,options);removers.push(()=>node.removeEventListener(type,fn,options));}
+    function setValue(next,{mixed=false}={}){if(next!==null)UI.resolveCardColor(next);value=next?.toLowerCase()??null;for(const button of buttons){const pressed=String(!mixed&&button.dataset.uiColorValue===value);if(button.getAttribute('aria-pressed')!==pressed)button.setAttribute('aria-pressed',pressed);}if(doc.activeElement!==input&&input.value!==(value||'#ffffff'))input.value=value&&value!=='transparent'?value:'#ffffff';if(doc.activeElement!==hex)hex.value=value&&value!=='transparent'?value:'#ffffff';}
+    function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect(),p=panel.getBoundingClientRect();const right=r.right+10,left=right+p.width<=view.innerWidth-12?right:r.left-p.width-10;panel.style.left=Math.max(12,Math.min(left,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,Math.min(r.top,view.innerHeight-p.height-12))+'px';}
+    function close(){if(panel.matches(':popover-open'))panel.hidePopover();}
+    function open(){if(disposed||trigger.disabled)return;panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
+    function choose(next){setValue(next);close();onChange(next);trigger.focus({preventScroll:true});}
+    listen(panel,'keydown',event=>event.stopPropagation());
+    function applyHex(){const next=hex.value.trim();const valid=/^#?[0-9a-f]{6}$/i.test(next);hex.setCustomValidity(valid?'':'Enter six hex digits, such as #99d6ff.');hex.setAttribute('aria-invalid',String(!valid));if(valid)choose((next.startsWith('#')?next:'#'+next).toLowerCase());else hex.reportValidity();}
+    listen(hex,'input',()=>{hex.setCustomValidity('');hex.removeAttribute('aria-invalid');});listen(hex,'keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyHex();}});listen(apply,'click',applyHex);
+    listen(input,'change',()=>choose(input.value));listen(done,'click',close);
+    listen(panel,'toggle',event=>{const open=event.newState==='open';trigger.setAttribute('aria-expanded',String(open));if(open){position();view.addEventListener('resize',position);doc.addEventListener('scroll',position,true);}else{view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);if(panel.contains(doc.activeElement)||doc.activeElement===doc.body)trigger.focus({preventScroll:true});}});
+    setValue(value);
+    return {element:panel,open,close,setValue,dispose(){if(disposed)return;disposed=true;close();view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);for(const remove of removers)remove();panel.remove();for(const name of ['aria-haspopup','aria-controls','aria-expanded'])trigger.removeAttribute(name);}};
+  };
   UI.createCombobox=(input,{options=[],onSelect=()=>{}}={})=>{
     const doc=input.ownerDocument,view=doc.defaultView;
     const wrapper=doc.createElement('span');wrapper.className='ui-combobox';input.before(wrapper);wrapper.append(input);
@@ -402,9 +549,9 @@
     setOptions(options);return control;
   };
   UI.createTagInput=(input,{options=()=>[],excluded=()=>[],onCommit=()=>{},limit=6}={})=>{
-    const doc=input.ownerDocument,list=doc.createElement('div'),removers=[];
-    list.className='ui-tags';list.id=`${input.id||'ui-tags'}-suggestions`;list.setAttribute('role','listbox');list.setAttribute('aria-label','Suggested tags');
-    (input.closest('.ui-field')||input.parentElement).after(list);
+    const doc=input.ownerDocument,list=doc.createElement('div'),slot=doc.createElement('div'),removers=[];
+    slot.className='ui-tag-suggestions';slot.append(list);list.className='ui-tags';list.id=`${input.id||'ui-tags'}-suggestions`;list.setAttribute('role','listbox');list.setAttribute('aria-label','Suggested tags');
+    (input.closest('.ui-field')||input.parentElement).after(slot);
     for(const [name,value] of Object.entries({role:'combobox','aria-autocomplete':'list','aria-controls':list.id,autocomplete:'off',enterkeyhint:'done'}))input.setAttribute(name,value);
     let matches=[],active=-1,disposed=false;
     function on(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
@@ -427,7 +574,7 @@
     }
     on(input,'input',()=>{active=-1;draw();});on(input,'focus',draw);on(input,'blur',hide);on(input,'keydown',handleKey);
     on(input,'paste',event=>{const value=event.clipboardData?.getData('text');if(value?.includes(',')){event.preventDefault();commit(value);}});
-    hide();return {element:list,hide,draw,handleKey,flush:()=>commit(input.value),dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();list.remove();for(const name of ['role','aria-autocomplete','aria-controls','aria-expanded','aria-activedescendant'])input.removeAttribute(name);}};
+    hide();return {element:list,hide,draw,handleKey,flush:()=>commit(input.value),dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();slot.remove();for(const name of ['role','aria-autocomplete','aria-controls','aria-expanded','aria-activedescendant'])input.removeAttribute(name);}};
   };
   function activate(tab){const group=tab.closest('[data-ui-tabs]');if(!group)return;
     for(const item of group.querySelectorAll('[role=tab]')){const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;const panel=document.getElementById(item.getAttribute('aria-controls'));if(panel)panel.hidden=!selected;}
@@ -508,7 +655,7 @@
       if(!group.isConnected){untrack(group);return;}
       // Overflow contents are governed by their outer group, including while closed.
       if(group.closest(overflowSelector))return;
-      const css=style(group),nodes=children(group),actions=descendants(nodes).filter(eligible);
+      const css=style(group),nodes=children(group).filter(node=>!['absolute','fixed'].includes(style(node).position)),actions=descendants(nodes).filter(eligible);
       const overflows=priorities(nodes);
       const vertical=group.dataset.uiLayout==='vertical'||css.flexDirection==='column';
       const targetCSS=style(item.target),box=item.target.getBoundingClientRect();
@@ -590,6 +737,407 @@
     const group=details.parentElement?.closest('.ui-actions,.ui-toolbar');if(group)UI.observeActions(group);return details;
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>UI.mountActions(document),{once:true});else UI.mountActions(document);
+})();
+
+/* Native canonical compositions: shells only, no app state, transport or listeners. */
+(() => {
+  'use strict';
+  if (typeof window === 'undefined' || !window.SharedUI) return;
+  const UI = window.SharedUI;
+  const ID = 'review-workspace', REVISION = '1';
+  const SLOTS = ['header', 'toolbar', 'filters', 'body', 'aside', 'footer'];
+  const VARIANTS = ['standard', 'split', 'stack'];
+  const CROWDING = ['wrap', 'scroll', 'priority'];
+  const OVERRIDES = Object.freeze({
+    gap: {property: '--ui-composition-gap', min: 0, max: 64, units: ['px', 'rem', 'em']},
+    aside: {property: '--ui-composition-aside', min: 0, max: 640, units: ['px', 'rem', 'em', '%']}
+  });
+  const plain = value => value && typeof value === 'object' && !Array.isArray(value);
+  function length(value, spec, name) {
+    const match = typeof value === 'string' && /^(\d+(?:\.\d+)?|\.\d+)(px|rem|em|%)$/.exec(value);
+    if (!match || !spec.units.includes(match[2])) throw new TypeError('Invalid ' + name + ' length');
+    const amount = Number(match[1]), unit = match[2], max = unit === '%' ? (name === 'aside' ? 60 : 100) : unit === 'rem' || unit === 'em' ? (name === 'aside' ? 40 : 4) : spec.max;
+    const min = name === 'aside' ? unit === 'px' ? 128 : unit === '%' ? 15 : 8 : 0;
+    if (!Number.isFinite(amount) || amount < min || amount > max) throw new RangeError('Out-of-range ' + name);
+    return value;
+  }
+  function configuration(options = {}) {
+    if (!plain(options) || Object.keys(options).some(key => !['variant', 'crowding', 'overrides', 'instanceId', 'document'].includes(key)))
+      throw new TypeError('Unknown composition option');
+    const variant = options.variant ?? 'standard', crowding = options.crowding ?? 'wrap';
+    if (!VARIANTS.includes(variant) || !CROWDING.includes(crowding)) throw new TypeError('Unknown composition variant or crowding');
+    const raw = options.overrides ?? {}, overrides = {};
+    if (!plain(raw) || Object.keys(raw).some(key => !['gap', 'aside', 'reason'].includes(key))) throw new TypeError('Unknown composition override');
+    for (const [key, spec] of Object.entries(OVERRIDES)) {
+      if (raw[key] !== undefined) overrides[key] = length(raw[key], spec, key);
+    }
+    const count = Object.keys(overrides).length;
+    if (count) {
+      if (typeof raw.reason !== 'string' || raw.reason.trim().length < 4 || raw.reason.length > 200 ||
+          /[\u0000-\u001f\u007f]/.test(raw.reason)) throw new TypeError('Layout overrides need a concise reason');
+      overrides.reason = raw.reason.trim();
+    } else if (raw.reason !== undefined) throw new TypeError('Reason without a layout override');
+    return {variant, crowding, overrides};
+  }
+  UI.createComposition = (componentId, slots, options = {}) => {
+    if (componentId !== ID) throw new TypeError('Unknown canonical composition: ' + componentId);
+    if (!plain(slots) || Object.keys(slots).some(key => !SLOTS.includes(key))) throw new TypeError('Unknown composition slot');
+    const doc = options.document || SLOTS.flatMap(key => slots[key] == null ? [] : Array.isArray(slots[key]) ? slots[key] : [slots[key]])[0]?.ownerDocument || window.document;
+    if (!doc || typeof doc.createElement !== 'function') throw new TypeError('DOM document required');
+    const instanceId = options.instanceId;
+    if (instanceId !== undefined && (typeof instanceId !== 'string' || !/^[a-z][a-z0-9.-]{1,79}$/.test(instanceId))) throw new TypeError('Invalid stable instance identity');
+    let config = configuration(options);
+    const nodes = new Map(), seen = new Set();
+    for (const key of SLOTS) {
+      const value = slots[key], group = value == null ? [] : Array.isArray(value) ? value : [value];
+      if ((key === 'header' || key === 'body') && group.length === 0) throw new TypeError('Missing required composition slot: ' + key);
+      if (group.length > 100) throw new RangeError('Too many slot elements');
+      for (const item of group) {
+        if (item?.nodeType !== 1 || item.ownerDocument !== doc || item.isConnected || seen.has(item))
+          throw new TypeError('Slot elements must be unique, detached native DOM nodes');
+        for (const prior of seen) if (item.contains?.(prior) || prior.contains?.(item))
+          throw new TypeError('Nested slot elements must be passed through one parent');
+        seen.add(item);
+      }
+      nodes.set(key, group);
+    }
+    const make = (tag, cls, slot) => {
+      const el = doc.createElement(tag);
+      if (cls) el.className = cls;
+      if (slot) el.dataset.uiCompositionSlot = slot;
+      return el;
+    };
+    const root = make('article', 'ui-composition ui-card');
+    root.dataset.uiComposition = ID; root.dataset.uiCompositionRevision = REVISION;
+    if (instanceId) root.dataset.uiCompositionInstance = instanceId;
+    const frame = make('div', 'ui-composition-layout');
+    const hosts = new Map();
+    function insert(key, tag, cls, into) {
+      if (!nodes.get(key).length) return;
+      const host = make(tag, cls, key);
+      host.append(...nodes.get(key)); into.append(host); hosts.set(key, host);
+    }
+    insert('header', 'header', 'ui-composition-header ui-stack', frame);
+    insert('toolbar', 'div', 'ui-composition-toolbar ui-toolbar', frame);
+    insert('filters', 'div', 'ui-composition-filters', frame);
+    const main = make('div', 'ui-composition-main');
+    insert('body', 'section', 'ui-composition-body ui-stack', main);
+    insert('aside', 'aside', 'ui-composition-aside ui-stack', main);
+    frame.append(main);
+    insert('footer', 'footer', 'ui-composition-footer ui-actions', frame);
+    root.append(frame);
+    let disposed = false;
+    function apply(next) {
+      const previous = config.overrides;
+      for (const key of Object.keys(OVERRIDES)) if (previous[key] !== undefined) root.style.removeProperty(OVERRIDES[key].property);
+      for (const key of Object.keys(OVERRIDES)) if (next.overrides[key] !== undefined) root.style.setProperty(OVERRIDES[key].property, next.overrides[key]);
+      root.dataset.uiVariant = next.variant; root.dataset.uiCrowding = next.crowding;
+      root.dataset.uiCompositionOrigin = Object.keys(next.overrides).some(key => key !== 'reason') ? 'instance' : 'canonical';
+      const keys = Object.keys(next.overrides).filter(key => key !== 'reason');
+      if (keys.length) root.dataset.uiCompositionOverrides = keys.join(',');
+      else delete root.dataset.uiCompositionOverrides;
+      config = next;
+    }
+    apply(config);
+    return Object.freeze({
+      element: root,
+      slots: Object.freeze(Object.fromEntries(hosts)),
+      getConfiguration() {
+        return Object.freeze({id: ID, revision: REVISION, instanceId: instanceId ?? null, variant: config.variant,
+          crowding: config.crowding, origin: root.dataset.uiCompositionOrigin, overrides: Object.freeze({...config.overrides})});
+      },
+      setLayout(next = {}) {
+        if (disposed) throw new Error('Composition disposed');
+        if (!plain(next) || Object.keys(next).some(key => !['variant', 'crowding', 'overrides'].includes(key))) throw new TypeError('Invalid layout update');
+        const updated = configuration({variant: next.variant ?? config.variant, crowding: next.crowding ?? config.crowding,
+          overrides: next.overrides === undefined ? config.overrides : next.overrides});
+        apply(updated); // Existing DOM and callbacks remain unchanged; container CSS handles reflow.
+        return this.getConfiguration();
+      },
+      dispose() {
+        if (disposed) return; disposed = true; root.remove();
+        // No listeners, timers, observers or global coordination were created.
+      }
+    });
+  };
+})();
+
+/* Shared native floating review surface. Can augment a pinned fixture's v1
+ * baseline runtime OR be bundled into a candidate runtime. No app markup copy,
+ * network/storage, global drag listener, source selection or auto-mount. */
+(() => {
+  'use strict';
+  const instances=new WeakMap();
+  const placements=new Set(['bottom-right','bottom-left','top-right','top-left']);
+  const variants=/^(installed|baseline|candidate|unverified|saved:[a-z0-9][a-z0-9-]{1,63})$/;
+  const sha40=/^[a-f0-9]{40}$/;
+  const sha64=/^[a-f0-9]{64}$/;
+  const versions=/^[a-zA-Z0-9][a-zA-Z0-9._+-]{0,63}$/;
+  const deployments=new Set(['not-deployed','deployed','unverified']);
+  function readProvenance(value={}){
+    if(!value||typeof value!=='object'||Array.isArray(value)||
+      Object.keys(value).some(k=>!['appName','appVersion','appSha','uiVersion','uiSha','cssRevision',
+        'variant','deploymentState'].includes(k)))
+      throw new TypeError('Review provenance must use the shared typed fields');
+    const string=(value,label)=>{
+      if(value===undefined||value===null||value==='')return null;
+      if(typeof value!=='string'||value.length>80||/[\u0000-\u001f\u007f]/.test(value))
+        throw new TypeError('Invalid '+label+' provenance');
+      return value.trim()||null;
+    };
+    const appName=string(value.appName,'appName')||'Application unverified';
+    const appVersion=string(value.appVersion,'appVersion');
+    const appSha=string(value.appSha,'appSha');
+    const uiVersion=string(value.uiVersion,'uiVersion');
+    const uiSha=string(value.uiSha,'uiSha');
+    const cssRevision=string(value.cssRevision,'cssRevision');
+    if(appVersion&&!versions.test(appVersion)||uiVersion&&!versions.test(uiVersion)||
+       appSha&&!sha40.test(appSha)||uiSha&&!sha40.test(uiSha)||
+       cssRevision&&!sha64.test(cssRevision))
+      throw new TypeError('Source/version identity needs a complete validated SHA or version');
+    const variant=value.variant??'unverified',deploymentState=value.deploymentState??'unverified';
+    if(!variants.test(variant)||!deployments.has(deploymentState)||
+      deploymentState==='deployed'&&variant==='candidate')
+      throw new TypeError('Review variant/deployment claim is invalid');
+    return {appName,appVersion,appSha,uiVersion,uiSha,cssRevision,variant,deploymentState};
+  }
+  function formatReviewProvenance(value={}){
+    const p=readProvenance(value);
+    const baseline=p.variant==='baseline'||p.variant==='installed';
+    const variantLabel=baseline?'Installed baseline · code-equivalent only':
+      p.variant==='candidate'?'Local candidate shared-ui':
+      p.variant.startsWith('saved:')?'Saved shared-ui draft':
+      'Unverified local review';
+    const deploymentLabel=p.deploymentState==='deployed'?'Deployed (host-reported)':
+      p.deploymentState==='not-deployed'?
+        (baseline?'Local fixture · NOT live production':'Local fixture · NOT deployed'):
+      'Deployment status unverified';
+    const short=value=>value?value.slice(0,8):'unverified';
+    const identityLabel='App '+(p.appVersion||'version unknown')+' · '+short(p.appSha)+
+      ' | UI '+(p.uiVersion||'version unknown')+' · '+short(p.uiSha);
+    return Object.freeze({
+      ...p,variantLabel,deploymentLabel,identityLabel,
+      details:Object.freeze([
+        ['Application',p.appName],['Application version',p.appVersion||'Unreported'],
+        ['App source Git SHA',p.appSha||'Unverified'],
+        ['Shared UI version',p.uiVersion||'Unreported'],
+        ['Shared UI source Git SHA',p.uiSha||'Unverified'],
+        ['CSS asset SHA256',p.cssRevision||'Unverified'],
+        ['Variant',variantLabel],['Deployment',deploymentLabel]
+      ])
+    });
+  }
+  function viewportBox(view){
+    const vv=view.visualViewport;
+    const finite=(n,backup)=>typeof n==='number'&&Number.isFinite(n)?n:backup;
+    const width=Math.max(1,finite(vv?.width,finite(view.innerWidth,1)));
+    const height=Math.max(1,finite(vv?.height,finite(view.innerHeight,1)));
+    return {x:finite(vv?.offsetLeft,0),y:finite(vv?.offsetTop,0),width,height};
+  }
+  function fitPosition(point,size,viewport,margin=8){
+    const m=Math.max(0,Math.min(margin,viewport.width/4,viewport.height/4));
+    const minX=viewport.x+m,minY=viewport.y+m;
+    const maxX=Math.max(minX,viewport.x+viewport.width-m-size.width);
+    const maxY=Math.max(minY,viewport.y+viewport.height-m-size.height);
+    const clamp=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
+    return {x:clamp(point.x,minX,maxX),y:clamp(point.y,minY,maxY),
+      minX,minY,maxX,maxY,gutter:m};
+  }
+  function createFloatingPanel(panel,{label='Review panel',placement='bottom-right',margin=8,provenance={}}={}){
+    if(!panel?.ownerDocument||typeof panel.prepend!=='function'||!panel.isConnected)
+      throw new TypeError('Floating panel must be an already mounted native element');
+    if(instances.has(panel))return instances.get(panel);
+    if(typeof label!=='string'||!label.trim()||label.length>80||
+      !placements.has(placement)||!Number.isFinite(margin)||margin<0||margin>24)
+      throw new TypeError('Floating panel needs a readable label, safe placement and margin');
+    // Reject malformed/unverified source claims before adding any native chrome.
+    formatReviewProvenance(provenance);
+    const doc=panel.ownerDocument,view=doc.defaultView;
+    if(!view)throw new TypeError('Floating panel needs its own window');
+    let stopped=false,drag=null,moved=false,current={x:0,y:0},lastProvenance=null;
+    const old={
+      style:panel.getAttribute('style'),aria:panel.getAttribute('aria-label'),
+      marker:panel.getAttribute('data-ui-floating-panel'),
+      variant:panel.getAttribute('data-ui-floating-variant'),
+      hadClass:panel.classList.contains('ui-floating-panel')
+    };
+    const node=(tag,css,text)=>{
+      const element=doc.createElement(tag);
+      if(css)element.className=css;
+      if(text!==undefined)element.textContent=text;
+      return element;
+    };
+    // Prepend ONLY new fixture chrome. The original native forms/buttons and
+    // app-owned <details> remain at their original DOM identity and position.
+    const chrome=node('header','ui-floating-chrome');
+    const controls=node('div','ui-floating-controls');
+    const handle=node('button','ui-floating-handle','Move panel');
+    handle.type='button';
+    handle.setAttribute('aria-label','Move '+label+'; arrow keys move, Shift+arrows move faster, Home resets');
+    handle.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight Home');
+    handle.title='Drag here with mouse/touch · Arrow keys to move · Home to reset';
+    const reset=node('button','ui-floating-reset','Reset position');
+    reset.type='button';reset.title='Restore panel to '+placement.replace('-',' ')+' corner';
+    reset.setAttribute('aria-label','Reset position of '+label);
+    controls.append(handle,reset);
+    const name=node('strong','ui-floating-name',label);
+    const variant=node('span','ui-floating-variant');
+    const deployment=node('span','ui-floating-deployment');
+    const identity=node('span','ui-floating-identity');
+    const info=node('details','ui-floating-provenance');
+    const summary=node('summary',null,'Versions & provenance');
+    const fields=node('dl','ui-floating-source-list');
+    info.append(summary,fields);
+    const status=node('span','ui-sr-only');
+    status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    chrome.append(controls,name,variant,deployment,identity,info,status);
+    panel.prepend(chrome);
+    panel.classList.add('ui-floating-panel');
+    panel.setAttribute('data-ui-floating-panel','true');
+    if(old.aria===null)panel.setAttribute('aria-label',label);
+    Object.assign(panel.style,{position:'fixed',inset:'auto',right:'auto',bottom:'auto'});
+    const removers=[];
+    function on(target,event,listener,options){
+      target?.addEventListener?.(event,listener,options);
+      if(target?.removeEventListener)removers.push(()=>target.removeEventListener(event,listener,options));
+    }
+    function setProvenance(value){
+      if(stopped)return lastProvenance;
+      const formatted=formatReviewProvenance(value);
+      lastProvenance=formatted;
+      variant.textContent=formatted.variantLabel;
+      deployment.textContent=formatted.deploymentLabel;
+      identity.textContent=formatted.identityLabel;
+      fields.replaceChildren();
+      for(const [key,value] of formatted.details){
+        const dt=node('dt',null,key),dd=node('dd',null,value);
+        fields.append(dt,dd);
+      }
+      panel.dataset.uiFloatingVariant=formatted.variant;
+      return formatted;
+    }
+    function visibleBox(){
+      const v=viewportBox(view);
+      const inset=Math.max(0,Math.min(margin,v.width/4,v.height/4));
+      const maxWidth=Math.max(1,v.width-2*inset);
+      const maxHeight=Math.max(1,v.height-2*inset);
+      const w=maxWidth+'px',h=maxHeight+'px';
+      if(panel.style.maxWidth!==w)panel.style.maxWidth=w;
+      if(panel.style.maxHeight!==h)panel.style.maxHeight=h;
+      const rect=panel.getBoundingClientRect();
+      return {viewport:v,size:{width:Math.min(maxWidth,Math.max(0,rect.width)),
+        height:Math.min(maxHeight,Math.max(0,rect.height))}};
+    }
+    function positionAt(point){
+      const {viewport,size}=visibleBox();
+      const fitted=fitPosition(point,size,viewport,margin);
+      current={x:fitted.x,y:fitted.y};
+      const left=current.x+'px',top=current.y+'px';
+      if(panel.style.left!==left)panel.style.left=left;
+      if(panel.style.top!==top)panel.style.top=top;
+      return fitted;
+    }
+    function corner(bounds){
+      return {x:placement.endsWith('right')?bounds.maxX:bounds.minX,
+        y:placement.startsWith('bottom')?bounds.maxY:bounds.minY};
+    }
+    function reflow(){
+      if(stopped)return;
+      const {viewport,size}=visibleBox(),bounds=fitPosition(current,size,viewport,margin);
+      positionAt(moved?current:corner(bounds));
+    }
+    function resetPosition(){
+      if(stopped)return;
+      moved=false;reflow();
+      status.textContent='Panel position reset to '+placement.replace('-',' ')+'.';
+    }
+    function finish(cancel){
+      if(!drag)return;
+      const prior=drag;drag=null;
+      if(cancel){moved=prior.wasMoved;positionAt(prior.origin);}
+      try{if(handle.hasPointerCapture?.(prior.id))handle.releasePointerCapture(prior.id);}catch{}
+      delete handle.dataset.uiDragging;
+    }
+    on(handle,'pointerdown',event=>{
+      if(stopped||drag||event.button!==0||event.isPrimary===false)return;
+      const interactive=event.target?.closest?.('button,a,input,select,textarea,summary,[contenteditable],[role=button],[data-ui-no-drag]');
+      if(interactive&&interactive!==handle)return;
+      const origin={...current};
+      try{handle.setPointerCapture(event.pointerId);}catch{return;}
+      drag={id:event.pointerId,start:{x:event.clientX,y:event.clientY},
+        origin,wasMoved:moved};
+      handle.dataset.uiDragging='true';
+      event.preventDefault?.();
+    });
+    on(handle,'pointermove',event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      const dx=event.clientX-drag.start.x,dy=event.clientY-drag.start.y;
+      if(!Number.isFinite(dx)||!Number.isFinite(dy))return;
+      moved=true;positionAt({x:drag.origin.x+dx,y:drag.origin.y+dy});
+      event.preventDefault?.();
+    });
+    on(handle,'pointerup',event=>{if(drag?.id===event.pointerId)finish(false);});
+    on(handle,'pointercancel',event=>{if(drag?.id===event.pointerId)finish(true);});
+    on(handle,'lostpointercapture',event=>{if(drag?.id===event.pointerId)finish(false);});
+    on(handle,'keydown',event=>{
+      if(event.target!==handle||event.altKey||event.ctrlKey||event.metaKey)return;
+      if(event.key==='Home'){event.preventDefault?.();resetPosition();return;}
+      const offsets={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+      const offset=offsets[event.key];
+      if(!offset)return;
+      event.preventDefault?.();
+      const step=event.shiftKey?48:16;
+      moved=true;positionAt({x:current.x+offset[0]*step,y:current.y+offset[1]*step});
+      status.textContent='Panel moved. Home resets its position.';
+    });
+    on(reset,'click',()=>{finish(true);resetPosition();});
+    on(view,'resize',reflow);
+    on(view,'orientationchange',reflow);
+    on(view,'scroll',reflow);
+    on(view.visualViewport,'resize',reflow);
+    on(view.visualViewport,'scroll',reflow);
+    on(panel,'toggle',reflow,true);
+    on(doc,'visibilitychange',()=>{if(doc.visibilityState==='hidden')finish(true);});
+    on(view,'pagehide',event=>{if(!event.persisted)dispose();else finish(true);});
+    let observer=null;
+    if(typeof view.ResizeObserver==='function'){
+      observer=new view.ResizeObserver(()=>reflow());
+      observer.observe(panel);
+    }
+    function dispose(){
+      if(stopped)return;
+      finish(true);stopped=true;
+      observer?.disconnect();
+      for(const remove of removers)remove();
+      chrome.remove();
+      if(!old.hadClass)panel.classList.remove('ui-floating-panel');
+      if(old.style===null)panel.removeAttribute('style');else panel.setAttribute('style',old.style);
+      if(old.aria===null)panel.removeAttribute('aria-label');else panel.setAttribute('aria-label',old.aria);
+      if(old.marker===null)panel.removeAttribute('data-ui-floating-panel');
+      else panel.setAttribute('data-ui-floating-panel',old.marker);
+      if(old.variant===null)delete panel.dataset.uiFloatingVariant;
+      else panel.setAttribute('data-ui-floating-variant',old.variant);
+      instances.delete(panel);
+    }
+    const controller=Object.freeze({
+      panel,handle,resetButton:reset,provenanceDetails:info,
+      get position(){return {...current,moved};},
+      get provenance(){return lastProvenance;},
+      setProvenance,reset:resetPosition,reflow,dispose
+    });
+    instances.set(panel,controller);
+    setProvenance(provenance);
+    resetPosition();
+    return controller;
+  }
+  const api={createFloatingPanel,formatReviewProvenance,viewportBox,fitPosition};
+  if(typeof module==='object'&&module.exports)Object.assign(module.exports,api);
+  if(typeof window!=='undefined'&&window.SharedUI){
+    // Replaying the exact fixture-only augment after a baseline bundle is
+    // harmless; never replace a previously initialized factory.
+    if(!window.SharedUI.createFloatingPanel)
+      window.SharedUI.createFloatingPanel=createFloatingPanel;
+  }
 })();
 
 /* Explicit read-only checks for consumer browser tests. No observers or app state. */

@@ -5,6 +5,11 @@ JSON CLI, and MCP clients share revision checks, operation receipts and the same
 store. They can run simultaneously. This is a document editor with native previews;
 application source and running application behavior still belong to their owners.
 
+The [configuration workspace](STUDIO_CONFIGURATIONS.md) separately manages
+Postvisual and its Personal mirror, with validation and publishing through an
+explicit local `--publish` grant. The default launch link opens Configurations;
+Documents remains available from its header.
+
 ## Start temporarily on your Mac
 
 Use Node 22 or newer. The foreground launcher starts the editor and authenticated
@@ -232,7 +237,8 @@ checking scoped paint, inert content/navigation and cleanup.
 The full editor is additionally exercised in the macOS browser with native form
 submission, keyboard reordering, saved-version operations and concurrent sessions.
 There are no live consumer adapters, three-consumer acceptance, hosted OAuth,
-source migrations, publishing tools, or desktop app packaging in this increment. The foreground launcher does not
+application source migrations or desktop app packaging. Configuration publishing
+is available with the explicit local grant above. The foreground launcher does not
 install a persistent service.
 
 References: [official MCP SDK](https://ts.sdk.modelcontextprotocol.io/v2/),

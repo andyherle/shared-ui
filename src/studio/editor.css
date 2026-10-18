@@ -38,4 +38,10 @@
   .studio-comparison { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:var(--ui-gap); }
   .studio-comparison iframe { inline-size:100%; block-size:22rem; border:0; }
   .studio-change { overflow-wrap:anywhere; }
+  .studio-config-previews { --ui-grid-min:24rem; --ui-grid-gap:calc(var(--ui-gap)*2); }
+  .studio-config-previews > section { min-inline-size:0; }
+  .studio-config-previews iframe { display:block; border:0; inline-size:100%; block-size:36rem; }
+  .studio-config-previews[data-width=phone] > section { inline-size:100%; max-inline-size:390px; margin-inline:auto; }
+  .studio-config-panels { align-items:flex-start; --ui-main:32rem; --ui-aside:22rem; }
+  .studio-check-output { white-space:pre-wrap; overflow-wrap:anywhere; max-block-size:24rem; overflow:auto; }
 }

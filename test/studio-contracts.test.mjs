@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import {COMPONENTS, REGISTRY, ROLE_OWNERS, AUDIT_CONTRACTS, listComponents} from '../src/studio/registry.mjs';
 import {AUDIT_CONTRACTS as auditContracts, auditSchemaSnapshot} from '../src/schema-audit.mjs';
 import {TOKEN_TYPES, createTokenCatalogue, loadTokenCatalogue, inventoryCSS, resolveTokenGraph, resolveScopedTokens} from '../src/studio/tokens.mjs';
+import {resolvePacks} from '../src/packs.mjs';
 const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8');
-const controls = read('src/controls.css'), tokens = JSON.parse(read('src/tokens.json'));
+const controls = read('src/controls.css'), tokens = resolvePacks(JSON.parse(read('src/tokens.json')));
 
 test('component contracts have stable unique IDs and the same native language in both packs', () => {
   assert.equal(new Set(COMPONENTS.map(item => item.id)).size, COMPONENTS.length);
@@ -64,7 +65,7 @@ test('token sources resolve pack/mode/density/pointer precedence without changin
     const height = pointer === 'coarse' ? '44px' : ({default: tokens[pack].defaults['control-height'], compact: '30px', dense: '24px', comfortable: '44px'})[density];
     assert.equal(c.resolved['--ui-control-height'].value, height);
     assert.equal(c.resolved['--ui-primary'].value, tokens[pack][mode].primary);
-    assert.equal(c.resolved['--ui-radius'].value, pack === 'postvisual' ? '4px' : '8px');
+    assert.equal(c.resolved['--ui-radius'].value, tokens[pack].defaults.radius);
     assert.equal(c.resolved['--ui-playhead-color'].value, tokens[pack][mode].primary);
   }
   assert.equal(read('src/controls.css'), controls);
@@ -77,6 +78,14 @@ test('typed alias graph detects cycles, missing references, unit errors and type
     {'--ui-control-weight': 1200}, {'--ui-primary': '#12345'}, {'--ui-primary': '#123456; color:red'},
     {'--ui-font': 'serif'}, {'primitive.primary': '#000000'}
   ]) assert.throws(() => resolveTokenGraph(c.definitions, overrides));
+});
+test('mirror token provenance points to real source values or explicit override locations', () => {
+  const mirrored = {postvisual: tokens.postvisual, personal: {mirror: 'postvisual', overrides: {dark: {accent: '#123456'}}}};
+  const catalogue = createTokenCatalogue({tokens: mirrored, controls, pack: 'personal', mode: 'dark'});
+  assert.equal(catalogue.resolved['--ui-primary'].origin.pointer, '/postvisual/dark/primary');
+  assert.equal(catalogue.resolved['--ui-primary'].origin.inheritedFromPack, 'postvisual');
+  assert.equal(catalogue.resolved['--ui-accent'].origin.pointer, '/personal/overrides/dark/accent');
+  assert.equal(catalogue.resolved['--ui-accent'].value, '#123456');
 });
 test('alias resolution distinguishes primitives, semantic/component tokens and override origins', () => {
   const c = loadTokenCatalogue();

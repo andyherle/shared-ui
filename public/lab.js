@@ -17,6 +17,8 @@ UI.createColumnDrag($('resizable-sheet'),{
   onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
 });
 sampleResize=UI.createColumnResize($('resizable-sheet'));
+const colourPicker=UI.createColorPicker($('fixture-colour'),{onChange:value=>UI.setCardColor($('fixture-colour-card'),value)});
+$('fixture-colour').addEventListener('click',()=>colourPicker.open());
 const pack=$('pack'),mode=$('mode'),density=$('density');
 const embedded=$('embedded-host').attachShadow({mode:'open'}),embeddedCSS=document.createElement('link');
 embeddedCSS.rel='stylesheet';embeddedCSS.href='./v1/styles.css';embedded.append(embeddedCSS,$('embedded-form').content.cloneNode(true));
@@ -31,6 +33,30 @@ previewWidth.addEventListener('input',()=>resizePreview(previewWidth.value));
 for(const button of document.querySelectorAll('[data-preview-width]'))button.addEventListener('click',()=>resizePreview(button.dataset.previewWidth));
 let toastTimer=null,source=null,sourceAbort=null,lockWaiting=false,pageActive=true,layoutRevision=null,labChannel=null;
 const hostedStatic=location.hostname.endsWith('.github.io');
+
+/* Shared fixture: the same native controls stay in place; only fixture
+ * chrome/positioning comes from the single reusable SharedUI API. */
+const floatingDemo=$('floating-review-panel');
+const floatingProvenance=()=>({
+  appName:'Shared UI Style Lab',appVersion:'source-preview',
+  uiVersion:root.dataset.uiVersion,cssRevision:root.dataset.uiRevision,
+  variant:hostedStatic?'unverified':'candidate',
+  deploymentState:hostedStatic?'unverified':'not-deployed'
+});
+const floatingReview=UI.createFloatingPanel(floatingDemo,{
+  label:'Fixture review',placement:'bottom-right',provenance:floatingProvenance()
+});
+$('floating-demo-toggle').addEventListener('click',()=>{
+  floatingDemo.hidden=!floatingDemo.hidden;
+  const opened=!floatingDemo.hidden;
+  $('floating-demo-toggle').textContent=opened?'Hide review panel':'Show review panel';
+  $('floating-demo-toggle').setAttribute('aria-expanded',String(opened));
+  if(opened)floatingReview.reflow();
+});
+$('floating-demo-action').addEventListener('click',()=>{
+  $('floating-demo-result').textContent='Retained: '+$('floating-demo-input').value;
+});
+
 try{if(window.BroadcastChannel)labChannel=new BroadcastChannel('shared-ui-lab-events');}catch{}
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2800);}
 function tokens(){const style=getComputedStyle(root),items=[['Background','bg'],['Surface','surface'],['Text','text'],['Muted','muted'],['Border','line'],['Accent','accent'],['Primary','primary'],['Focus','accent']];$('tokens').replaceChildren();for(const [name,key] of items){const group=document.createElement('div'),swatch=document.createElement('span'),term=document.createElement('dt'),value=document.createElement('dd');swatch.className='lab-token-swatch';swatch.style.background=style.getPropertyValue('--ui-'+key);term.textContent=name;value.textContent=style.getPropertyValue('--ui-'+key).trim();group.append(swatch,term,value);$('tokens').append(group);}$('revision').textContent='Style revision · '+(root.dataset.uiRevision||'bundled').slice(0,12);}
@@ -40,7 +66,7 @@ for(const select of [pack,mode,density])select.addEventListener('change',appeara
 $('copy-css').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('css-url').value);toast('CSS URL copied');}catch{$('css-url').focus();$('css-url').select();toast('Select and copy the CSS URL');}});
 document.addEventListener('click',event=>{
 const button=event.target.closest('button');if(!button)return;
-if(button.dataset.toast){toast(button.dataset.toast);button.closest('details.ui-menu')?.removeAttribute('open');}
+if(button.dataset.toast){UI.setActionState(button,{state:'success',message:button.dataset.toast,sprite:'./v1/icons.svg'});button.closest('details.ui-menu')?.removeAttribute('open');}
 if(button.dataset.dialog){button.closest('details.ui-menu')?.removeAttribute('open');$(button.dataset.dialog).showModal();}
 if(button.hasAttribute('data-toggle'))button.setAttribute('aria-pressed',String(button.getAttribute('aria-pressed')!=='true'));
 if(button.dataset.segment){for(const peer of document.querySelectorAll(`[data-segment="${button.dataset.segment}"]`))peer.setAttribute('aria-pressed',String(peer===button));}
@@ -59,14 +85,12 @@ $('fixture-tag-form').addEventListener('submit',event=>{event.preventDefault();f
 $('fixture-tag-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.shiftKey){event.preventDefault();fixtureTagInput.flush();$('fixture-tag-status').textContent='Saved · next media';}});
 const fixtureZoom=UI.createZoom($('fixture-zoom'),{min:72,max:420,step:20,value:220,outLabel:'Smaller tiles',inLabel:'Larger tiles',format:value=>value+' px',sprite:'./v1/icons.svg'});
 UI.adoptAction($('fixture-save'),{labelStates:['Save','Saving…','Saved'],sprite:'./v1/icons.svg'});
-UI.reserveText($('fixture-workspace-status'),['Live','Unsaved','Saving…','Saved','Save failed']);
+
 function fixtureState(){
  const header=$('fixture-workspace-header'),before=UI.captureLayout(header),state=$('fixture-state').value,button=$('fixture-save');
  $('fixture-layout-check').textContent='Checking…';delete $('fixture-layout-check').dataset.checkedState;
- UI.setActionLabel(button,state==='saving'?'Saving…':state==='saved'?'Saved':'Save',{ariaLabel:state==='saving'?'Saving…':state==='saved'?'Saved':'Save'});
- button.setAttribute('aria-busy',String(state==='saving'));button.disabled=state==='saving';
- UI.setText($('fixture-workspace-status'),{live:'Live',dirty:'Unsaved',saving:'Saving…',saved:'Saved',error:'Save failed'}[state]);
- $('fixture-workspace-status').dataset.state=state==='error'?'error':state==='saving'?'pending':state==='dirty'?'warning':'success';
+ UI.setActionState(button,{state:state==='saving'?'pending':state==='saved'?'success':state==='error'?'error':'idle',message:{live:'Ready',dirty:'Unsaved',saving:'Saving…',saved:'Saved',error:'Save failed'}[state],sprite:'./v1/icons.svg'});
+ button.disabled=state==='saving';$('fixture-workspace-status').hidden=true;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{const issues=[...UI.compareLayout(before),...UI.auditControls(header).issues.filter(issue=>issue.severity==='error')],output=$('fixture-layout-check');output.textContent=issues.length?issues.map(issue=>issue.code+': '+issue.name).join('; '):'Stable · no command movement';output.dataset.state=issues.length?'error':'live';output.dataset.checkedState=state;}));
 }
 $('fixture-state').addEventListener('change',fixtureState);
@@ -136,11 +160,171 @@ async function openSource(){
 }
 async function refreshLayout(){const old=document.querySelector('link[href*="lab.css"]'),next=document.createElement('link');next.rel='stylesheet';next.href='./lab.css?refresh='+Date.now();next.media='not all';next.onload=()=>{next.media='all';old?.remove();};next.onerror=()=>next.remove();document.head.append(next);}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){closeSource();stopAnimation();for(const media of document.querySelectorAll('audio,video'))media.pause();}else{void openSource();if(playing)raf=requestAnimationFrame(animate);requestAnimationFrame(tokens);}});
-window.addEventListener('pagehide',event=>{pageActive=false;closeSource();stopAnimation();clearTimeout(toastTimer);if(!event.persisted){UI.releaseActions(embeddedRoot);combo.dispose();simpleTagInput.dispose();fixtureTagInput.dispose();labChannel?.close();}});window.addEventListener('pageshow',event=>{pageActive=true;if(event.persisted){void openSource();if(playing)raf=requestAnimationFrame(animate);requestAnimationFrame(tokens);}});
-document.addEventListener('ui:styles',()=>requestAnimationFrame(tokens));
+window.addEventListener('pagehide',event=>{pageActive=false;closeSource();stopAnimation();clearTimeout(toastTimer);if(!event.persisted){floatingReview.dispose();UI.releaseActions(embeddedRoot);combo.dispose();simpleTagInput.dispose();fixtureTagInput.dispose();labChannel?.close();}});window.addEventListener('pageshow',event=>{pageActive=true;if(event.persisted){void openSource();if(playing)raf=requestAnimationFrame(animate);requestAnimationFrame(tokens);}});
+document.addEventListener('ui:styles',()=>{floatingReview.setProvenance(floatingProvenance());requestAnimationFrame(tokens);});
 window.addEventListener('storage',event=>{if(event.key?.startsWith('shared-ui:v1:'))requestAnimationFrame(tokens);});
 for(const action of document.querySelectorAll('[data-copy-field]'))action.addEventListener('click',async()=>{const input=action.parentElement.querySelector('input');try{await navigator.clipboard.writeText(input.value);toast('Link copied');}catch{input.focus();input.select();toast('Select and copy the link');}});
+for(const name of ['Alice Example','Very long collaborator name that stays in a tooltip'])$('fixture-avatars').append(UI.createAvatar(name));
+
+const zoomFeedback=UI.createZoomFeedback(document,{sprite:'./v1/icons.svg'});
+const zoomFixture=direction=>{fixtureZoom.setValue(direction?fixtureZoom.value+direction*20:220);zoomFeedback.show(fixtureZoom.value/220*100);};
+document.addEventListener('ui:zoom',event=>zoomFixture(event.detail.direction));
+UI.installZoomShortcuts(document,{canZoom:()=>!document.querySelector('dialog[open]'),onZoom:zoomFixture});
+
 void openSource();timeline();
 })();
 
 document.getElementById('group-width')?.addEventListener('input',event=>{document.querySelector('.lab-fit-sample').style.inlineSize=`min(100%,${event.target.value}px)`;});
+
+/* Generic synthetic composition fixture. Uses the same native factory as consumers. */
+(() => {
+  'use strict';
+  const doc=document, UI=window.SharedUI, $=id=>doc.getElementById(id);
+  const host=$('composition-host'); if(!host || !UI?.createComposition) return;
+  const opts={variant:$('composition-variant'),crowding:$('composition-crowding'),
+    width:$('composition-width'),state:$('composition-state'),override:$('composition-override')};
+  const mk=(tag,cls,text)=>{const node=doc.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
+  const action=(name,icon,handler)=>{
+    const b=mk('button','ui-action',name);b.type='button';
+    UI.adoptAction(b,{icon,label:name,ariaLabel:name,sprite:'./v1/icons.svg'});
+    if(handler)b.addEventListener('click',handler);
+    return b;
+  };
+  const heading=mk('div','ui-stack');
+  const title=mk('h3','ui-section-title','Sample review #0042');
+  const subtitle=mk('p','ui-meta','Synthetic content · not connected to any application');
+  heading.append(title,subtitle);
+  const commands=mk('div','ui-actions');
+  const select=action('Select','check',()=>{select.setAttribute('aria-pressed',String(select.getAttribute('aria-pressed')!=='true'));});
+  const copy=action('Copy','copy',()=>setMessage('Synthetic reference copied · 0042','success'));
+  const next=action('Next','arrow-right',()=>setMessage('Next synthetic review selected','success'));
+  const overflow=mk('details','ui-disclosure ui-overflow');overflow.dataset.uiPriority='0';
+  const summary=mk('summary','ui-action','More actions');summary.setAttribute('aria-label','More actions');
+  UI.adoptAction(summary,{icon:'more',label:'More actions',ariaLabel:'More actions',sprite:'./v1/icons.svg'});
+  const overflowActions=mk('div','ui-actions ui-disclosure-body');
+  overflowActions.append(action('Flag','pin',()=>setMessage('Flagged for synthetic inspection','warning')),action('Clear','refresh',()=>setMessage('Selection cleared','success')));
+  overflow.append(summary,overflowActions);commands.append(select,copy,next,overflow);
+  const filters=mk('form','ui-actions');filters.id='composition-filter-form';
+  const searchLabel=mk('label','ui-field');
+  const searchCaption=mk('span','ui-label','Filter');
+  const search=mk('input');search.type='search';search.name='filter';search.placeholder='Search fake items…';search.setAttribute('aria-label','Filter synthetic list');
+  searchLabel.append(searchCaption,search);
+  const filterButton=mk('button','ui-action','Apply filter');filterButton.type='submit';
+  UI.adoptAction(filterButton,{icon:'filter',label:'Apply filter',sprite:'./v1/icons.svg'});
+  filters.append(searchLabel,filterButton);
+  const body=mk('div','ui-stack');
+  const form=mk('form','ui-stack');form.id='composition-edit-form';
+  const field=mk('label','ui-field');
+  const fieldName=mk('span','ui-label','Title');const titleInput=mk('input');
+  titleInput.name='title';titleInput.value='Quarterly source review';titleInput.required=true;titleInput.setAttribute('aria-label','Editable synthetic review title');
+  field.append(fieldName,titleInput);
+  const notesLabel=mk('label','ui-stack'),notesCaption=mk('span','ui-meta','Notes');
+  const notes=mk('textarea');notes.rows=3;notes.name='notes';notes.value='Review a synthetic record. Typing, copy, paste, selection and IME remain native.';
+  notes.setAttribute('aria-label','Editable synthetic notes');
+  notesLabel.append(notesCaption,notes);
+  form.append(field,notesLabel);
+  const rowsTitle=mk('h4','ui-section-title','Synthetic references');
+  const tableScroll=mk('div','ui-table-scroll');tableScroll.tabIndex=0;tableScroll.setAttribute('aria-label','Synthetic reference table');
+  const table=mk('table','ui-table');table.dataset.uiVariant='sheet';
+  const caption=mk('caption',null,'Example records · no customer data');
+  const thead=mk('thead');const thRow=mk('tr');
+  for(const name of ['ID','Title','State']){const th=mk('th',null,name);th.scope='col';thRow.append(th);}
+  thead.append(thRow);const tbody=mk('tbody');table.append(caption,thead,tbody);tableScroll.append(table);
+  const details=mk('details','ui-disclosure');
+  const detailsSummary=mk('summary',null,'Additional native details');
+  const extra=mk('p',null,'Retains open state, focus and selection across layout changes.');
+  details.append(detailsSummary,extra);
+  const message=mk('output','ui-status');message.setAttribute('role','status');message.textContent='Ready for synthetic review';
+  body.append(form,rowsTitle,tableScroll,details,message);
+  const aside=mk('div','ui-stack');
+  const asideTitle=mk('h4','ui-section-title','Source inspector');
+  const asideMeta=mk('p','ui-meta','Non-sensitive synthetic metadata and layout context.');
+  const nestedHeader=mk('h4','ui-section-title','Nested composition');
+  const nestedBody=mk('p','ui-meta','This is the same canonical shell in a narrow inspector.');
+  const nested=UI.createComposition('review-workspace',{header:nestedHeader,body:nestedBody},
+    {variant:'split',crowding:'wrap',instanceId:'nested-sample'});
+  aside.append(asideTitle,asideMeta,nested.element);
+  const footer=mk('div','ui-actions');
+  const save=mk('button','ui-action','Save synthetic edit');save.type='submit';save.setAttribute('form',form.id);
+  UI.adoptAction(save,{icon:'save',label:'Save synthetic edit',sprite:'./v1/icons.svg'});
+  const reset=action('Clear message','refresh',()=>setMessage('Ready for synthetic review','success'));
+  footer.append(save,reset);
+  const instance=UI.createComposition('review-workspace',
+    {header:heading,toolbar:commands,filters,body,aside,footer},
+    {variant:'standard',crowding:'wrap',instanceId:'synthetic-review'});
+  host.append(instance.element);
+  let attempts=0;
+  const status=$('composition-layout-status');
+  function setMessage(text,state){message.textContent=text;message.dataset.state=state;}
+  function rowsFor(state){
+    tbody.replaceChildren();
+    const count=state==='empty'?0:state==='many'?84:4;
+    const sample=state==='unicode'?'会議資料 • مرحبا بالعالم • é café 📝':state==='long'?'unbroken-abcdefghijklmnopqrstuvwxyz0123456789-'.repeat(5):'Synthetic reference';
+    for(let i=0;i<count;i++){
+      const row=mk('tr');
+      for(const value of [String(i+1).padStart(3,'0'),sample+' '+(i+1),i%3?'Ready':'Review'])row.append(mk('td',null,value));
+      tbody.append(row);
+    }
+    rowsTitle.textContent='Synthetic references · '+count;
+  }
+  function showState(){
+    const state=opts.state.value;attempts=0;
+    save.disabled=state==='disabled'||state==='loading';
+    save.setAttribute('aria-busy',String(state==='loading'));
+    title.textContent=state==='unicode'?'レビュー · مراجعة · 📝':'Sample review #0042';
+    subtitle.textContent=state==='long'?'# Header 1\n## Heading 2\n- Markdown-shaped content — '+'超長字'.repeat(32):'Synthetic content · no private data';
+    notes.value=state==='long'?'# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6\n- A long **Markdown** example.':
+      state==='unicode'?'日本語 中文 العربية עברית ♻️ — editable via native IME':
+      'Review a synthetic record. Typing, copy, paste, selection and IME remain native.';
+    if(state==='empty')titleInput.value='';
+    else if(state==='unicode')titleInput.value='資料 समीक्षा مراجعة';
+    else if(state==='long')titleInput.value='Long title '+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.repeat(5);
+    else titleInput.value='Quarterly source review';
+    rowsFor(state);
+    const statuses={loading:['Loading synthetic records…','pending'],error:['Synthetic request failed. Submit to retry.','error'],
+      conflict:['Stale revision; first save will conflict.','warning'],disabled:['Changes disabled in this fixture.','warning'],
+      editing:['Editing live native fields','warning'],empty:['Empty list; title is required for save.','warning']};
+    const [text,kind]=statuses[state]||['Ready for synthetic review','success'];setMessage(text,kind);
+  }
+  filters.addEventListener('submit',event=>{
+    event.preventDefault();
+    const q=search.value.trim().toLocaleLowerCase();
+    const rows=[...tbody.rows];for(const tr of rows)tr.hidden=!tr.textContent.toLocaleLowerCase().includes(q);
+    setMessage('Filter applied without losing field input','success');
+  });
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    if (!form.reportValidity()) {setMessage('Native validation requires a title.','error');return;}
+    attempts++;
+    if(opts.state.value==='conflict'&&attempts===1){setMessage('409 stale revision · edit remains intact; retry save','error');return;}
+    if(opts.state.value==='error'&&attempts===1){setMessage('503 synthetic failure · same input retained; retry save','error');return;}
+    setMessage('Saved synthetic edit #'+attempts+' · no backend write','success');
+  });
+  function updateLayout(){
+    const size=opts.width.value;
+    host.style.inlineSize=size==='full'?'100%':`min(100%,${size}px)`;
+    const asideWidth=opts.override.value;
+    const overrides=asideWidth==='none'?{}:{aside:asideWidth,reason:'Reviewed wider synthetic inspector layout'};
+    const savedTitle=titleInput.value,open=details.open,wasActive=doc.activeElement;
+    const result=instance.setLayout({variant:opts.variant.value,crowding:opts.crowding.value,overrides});
+    if(titleInput.value!==savedTitle||details.open!==open)throw new Error('Composition unexpectedly rebuilt live content');
+    status.textContent='review-workspace@'+result.revision+' · '+result.variant+' · '+result.crowding+
+      (result.overrides.aside?' · OVERRIDE aside '+result.overrides.aside+' (reason recorded)':' · canonical tokens')+
+      ' · focused node '+(wasActive===doc.activeElement?'retained':'changed');
+    status.dataset.state=result.overrides.aside?'warning':'success';
+    UI.refreshActions?.(doc);
+  }
+  for(const id of ['variant','crowding','width','override'])opts[id].addEventListener('change',updateLayout);
+  opts.state.addEventListener('change',showState);
+  $('composition-reset').addEventListener('click',()=>{
+    for(const [name,select] of Object.entries(opts))select.selectedIndex=0;
+    details.open=false;search.value='';showState();updateLayout();
+  });
+  const query=new URL(location.href).searchParams;
+  for(const [parameter,target] of [['compositionWidth',opts.width],['compositionState',opts.state],
+      ['compositionVariant',opts.variant],['compositionCrowding',opts.crowding],['compositionOverride',opts.override]]){
+    const value=query.get(parameter);
+    if(value&&[...target.options].some(item=>item.value===value))target.value=value;
+  }
+  showState();updateLayout();
+})();

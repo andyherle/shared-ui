@@ -1,8 +1,8 @@
 # Shared UI
 
-One native HTML control language for Aura, StaticRef and Portal. Postvisual follows StaticRef's neutral media-first interface; Personal follows Portal. Theme, control density and application layout are separate choices.
+One native HTML control language for Aura, StaticRef and Portal. Personal mirrors Postvisual, with explicit overrides available through Studio. Theme, control density and application layout are separate choices.
 
-The package has no runtime dependencies. The earlier 32 KiB raw shared-CSS target is optional; the floating-review source candidate uses a measured 40 KiB safety cap with separately reported gzip size. Build and source validation use Node's standard library:
+The package has no runtime dependencies. Shared CSS is bounded to 36 KiB raw and 8 KiB gzip, including the shared floating review panel. Build and source validation use Node's standard library:
 
 ```sh
 npm run check
@@ -94,7 +94,7 @@ For a review card, put the decision form first. Keep a file link with a `.ui-tru
 
 `--ui-range-thumb` fixes shared slider geometry for sibling timeline markers. `.ui-range` is the optional common track/thumb skin.
 
-`aria-pressed` (including native `mixed` partial selection), `aria-selected`, `aria-invalid`, `aria-busy`, native `disabled` and `aria-disabled` express shared states. `.ui-status` and `.ui-notice` accept `data-state="pending|success|error|warning"`; empty status rows disappear. Notices add a quiet tint and colored border to the written feedback; success statuses show a check and pending statuses show a spinner. Personal uses a blue action accent on neutral surfaces and 16 px body text, including borderless `.ui-inline-field` composition, so capture text remains readable before focus on iOS. Native menu summaries, buttons, button links, radio choices, and fields share focus and state definitions.
+`aria-pressed` (including native `mixed` partial selection), `aria-selected`, `aria-invalid`, `aria-busy`, native `disabled` and `aria-disabled` express shared states. `.ui-status` and `.ui-notice` accept `data-state="pending|success|error|warning"`; empty status rows disappear. Notices add a quiet tint and colored border to the written feedback; success statuses show a check and pending statuses show a spinner. Personal inherits Postvisual's palette and typography; coarse pointers retain 16 px native field text, including borderless `.ui-inline-field` composition. Native menu summaries, buttons, button links, radio choices, and fields share focus and state definitions.
 
 `.ui-field` composes a native input or select with icons, an inline `.ui-label`, or adjacent actions using one field border and focus indicator. Use it for selectors such as Zoom, with the label inside the field instead of a separate heading. A readonly URL input plus a Copy action keeps long links to one line while retaining native selection and keyboard copy. `.ui-truncate` keeps compact filenames to one line; retain the complete text in the accessible name/title. Apps must reuse these native DOM patterns and action helpers rather than inventing custom controls. Native `progress` uses the pack track and accent. Plain Markdown details retain native markers and body typography. `.ui-card` is a quiet surface; `.ui-panel` is a raised overlay. `.ui-item` keeps a structured clickable row's app layout with common control paint. `.ui-swatch` renders a data color inside the standard touch target. `.ui-graphic-action` preserves a native icon action’s physical target inside a scaled world without changing app placement. `.ui-resize-handle` separates the visual handle from its hit area. A transformed world can publish its positive zoom as `--ui-graphic-scale`; the shared hit area and visual handle stay the same physical size. Update that variable when zoom changes, using the existing viewport controller. Timeline markers use `--ui-playhead-color`, `--ui-playhead-outline` and `--ui-playhead-width` for theme contrast. Graphic controls retain app-layer touch gestures; resize handles use `touch-action:none`. Clipped rows can set `--ui-focus-offset` to a negative inset while retaining shared focus paint. Use `data-ui-surface="graphic"` for positioned interactive diagrams, `media` for preview buttons, and `.ui-inline-field` for in-place canvas text. In-place fields retain app-layer padding and resize geometry so a canvas card keeps its writing inset and its own handles. These explicit roles preserve domain geometry without creating new palettes or control implementations.
 
@@ -144,7 +144,7 @@ that already consumes a parent width.
 
 `src/lab.css` contains the complete generic fixture using this app-layer
 recipe; no application-specific page layout is pushed through shared
-`src/controls.css`. As a result, the shared 32 KiB stylesheet cap stays
+`src/controls.css`. As a result, the shared 36 KiB raw / 8 KiB gzip stylesheet cap stays
 intact and existing consumers do not change until their own isolated PR
 adopts the layout. Test 390px, 768px, full desktop, a 360px embedded pane,
 coarse pointer, keyboard, zoom and state preservation before adopting.
@@ -272,7 +272,7 @@ paints alignment guides; the app owns their positions and lengths.
 
 ## Component tokens and control fixture
 
-Postvisual and Personal share every component type, subtype, native DOM pattern and interaction. Palettes and semantic tokens provide the visual differences. `--ui-control-size`, `--ui-control-weight`, `--ui-control-inset`, and the density-scoped `--ui-control-font` govern commands, selector captions, values and checkbox rows together. Action rows stretch controls to the same line height. Fit measurements use expanded token geometry without temporarily changing the rendered row, so compact padding cannot create resize oscillation.
+Postvisual and Personal share every component type, subtype, native DOM pattern and interaction. Personal inherits Postvisual's semantic values; explicit mirror overrides provide intentional differences. `--ui-control-size`, `--ui-control-weight`, `--ui-control-inset`, and the density-scoped `--ui-control-font` govern commands, selector captions, values and checkbox rows together. Action rows stretch controls to the same line height. Fit measurements use expanded token geometry without temporarily changing the rendered row, so compact padding cannot create resize oscillation.
 
 Use `label.ui-check.ui-field` for an inline caption and native checkbox in the same control surface as a selector. Operational menu commands and field rows use a shared SVG `.ui-icon` before `.ui-label`; include the icon on every row in that group. Put related choices in `fieldset.ui-group`; remove redundant helper prose.
 
@@ -586,6 +586,12 @@ After installing it, `./studio` starts a temporary editor + MCP session; Ctrl-C 
 both. No background service is installed.
 Private drafts and registrations stay outside Git working trees.
 
+The [configuration workspace](docs/STUDIO_CONFIGURATIONS.md) manages Postvisual
+and its Personal mirror, independent duplicates, native previews, comparisons,
+snapshots and full isolated validation. `./studio --publish` separately enables
+exact-revision publication through the existing GitHub Pages workflow, from both
+the editor and Portal MCP. Documents remain private view compositions.
+
 Start with [the editor and MCP setup](docs/STUDIO_EDITOR_MCP.md) and
 [public/private downstream releases](docs/STUDIO_RELEASES.md). Also see
 [the foundation API](docs/STUDIO_FOUNDATION.md) and
@@ -645,3 +651,14 @@ The shared `ui-lightbox` shell fills the viewport without a second panel frame. 
 `createValueTransition({value,onChange,duration:110,view})` eases content values to a target on animation frames. Read `.target` when accumulating repeated shortcuts; `.value` is the current frame. The callback receives `{final}` so apps persist once at the end. `cancel` stops work for a direct gesture; `dispose` releases listeners. Hidden views settle without background animation; reduced-motion preferences use the final value immediately. Never apply content zoom to UI chrome.
 
 `createZoomSteps()` shares gentle repeated content zoom: `next(direction)` returns a 10% factor, then 15% and 20% for presses within 240ms in the same direction. A pause, direction change or `next(0)` resets the burst. Use the same instance for keyboard and toolbar actions.
+
+### Compact numerical fields
+
+Use the existing native `label.ui-field` with `span.ui-label` and
+`input[type=number]` for frame, duration and amount fields. The numeric subtype
+reserves eight character widths and shrinks within its container; density and
+coarse-pointer rules keep the common field height and native text size. Keep
+`min`, `max`, `step`, precision, validation and values with the application.
+No extra wrapper or number-stepper runtime is needed. The Fields catalogue
+demonstrates integer, decimal and readonly values. Slider/exact-value rows use
+`.ui-value-control`, which reserves twelve characters for precise values.

@@ -6,14 +6,32 @@ import {loadTokenCatalogue, resolveScopedTokens} from './tokens.mjs';
 import {COMMANDS, applyCommand, compareDocuments, validateCommand, validateDocument, validateViews} from './document.mjs';
 import {openStore} from './store.mjs';
 import {tokenImpact} from './impact.mjs';
+import {createConfigurations} from './configurations.mjs';
+import {createReleaseManager} from './releases.mjs';
 import {canonical, freeze, ID_PATTERN, identifier, integer, json, object, requireThat, string} from './validation.mjs';
 
 export const DEMO_VIEWS = freeze([{appId: 'studio-demo', viewId: 'review', adapter: 'document', bindings: {save: 'action', cancel: 'action', title: 'value', enabled: 'boolean', source: 'navigation'}}]);
 const id = {type: 'string', pattern: ID_PATTERN};
 const method = (description, properties = {}, required = [], permission = 'read') => ({description, permission,
   inputSchema: {type: 'object', properties, required, additionalProperties: false}});
+const configRef = {configurationId: id};
+const configWrite = {...configRef, expectedRevision: {type: 'integer', minimum: 0}, operationId: id};
+const configCommand = (type, properties = {}) => ({type: 'object', properties: {type: {const: type}, ...properties}, required: ['type', ...Object.keys(properties)], additionalProperties: false});
 export const METHODS = freeze({
   describe: method('Describe the shared authoring contract.'),
+  'configurations.list': method('List Postvisual, its Personal mirror and independent configuration drafts.'),
+  'configuration.read': method('Read effective values, mirror inheritance, snapshots and publication receipts.', configRef, ['configurationId']),
+  'configuration.compare': method('Compare effective configuration values with source or an exact snapshot.', {...configRef, snapshotId: id}, ['configurationId']),
+  'configuration.preview': method('Compile the exact draft and linked packs for a private native preview. Does not publish.', {...configRef, snapshotId: id}, ['configurationId']),
+  'configuration.command': method('Edit, duplicate, mirror, snapshot or restore a configuration with revision checks.', {...configWrite, command: {oneOf: [
+    configCommand('duplicate', {sourceId: id, sourceRevision: {type: 'integer', minimum: 0}, name: {type: 'string'}, pack: {enum: ['postvisual', 'personal']}}),
+    configCommand('set-value', {scope: {enum: ['defaults', 'light', 'dark']}, token: {type: 'string'}, value: {type: 'string'}}),
+    configCommand('reset-value', {scope: {enum: ['defaults', 'light', 'dark']}, token: {type: 'string'}}),
+    configCommand('rename', {name: {type: 'string'}}), configCommand('mirror', {sourceId: id}), configCommand('detach'), configCommand('reset-source'),
+    configCommand('snapshot', {snapshotId: id, name: {type: 'string'}}), configCommand('restore', {snapshotId: id})
+  ]}}, ['configurationId', 'expectedRevision', 'operationId', 'command'], 'write'),
+  'configuration.validate': method('Run full shared tests and build in isolation; save an exact revision and source validation receipt.', configWrite, ['configurationId', 'expectedRevision', 'operationId'], 'write'),
+  'configuration.publish': method('Push the exact validated configuration to origin/main for the existing Pages workflow. Requires local --publish permission. Retry uncertain outcomes with identical arguments.', {...configWrite, validationId: id}, ['configurationId', 'expectedRevision', 'operationId', 'validationId'], 'publish'),
   'components.list': method('Search the complete registered library independently of app usage.', {text: {type: 'string'}, family: {type: 'string'}, pack: {enum: ['postvisual', 'personal']}, status: {type: 'string'}, authorable: {type: 'boolean'}}),
   'tokens.list': method('Inspect source tokens and their declared component consumers.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'comfortable']}, pointer: {enum: ['fine', 'coarse']}}),
   'views.list': method('List explicitly registered views and their adapter permissions.'),
@@ -27,14 +45,19 @@ export const METHODS = freeze({
 });
 export const SERVICE_CONTRACT = freeze({schemaVersion: 1, registry: REGISTRY, commands: COMMANDS,
   methods: METHODS,
-  capabilities: {read: true, write: 'explicit local permission', publish: false, appSourceMutation: false,
+  capabilities: {read: true, write: 'explicit local permission', publish: 'explicit local --publish permission', appSourceMutation: false, configurationWorkspace: true,
     nativeDocumentPreview: true, liveApplicationPreview: false, transport: 'adapter-owned'}});
 const icons = Object.keys(JSON.parse(fs.readFileSync(fileURLToPath(new URL('../icons.json', import.meta.url)), 'utf8')));
 
-export function createAuthoringService({directory, views, writable = false}) {
+export function createAuthoringService({directory, views, writable = false, publish = false, releases}) {
+  requireThat(!publish || writable, 'Publishing requires draft write permission');
   views = freeze(validateViews(json(views)));
   const store = openStore(directory, {writable}), catalogues = new Map();
+  const configurations = createConfigurations({store, writable, releases: releases ?? createReleaseManager({publish})});
+  let catalogueSource;
   const catalogueFor = (context = {}) => {
+    const source = createHash('sha256').update(fs.readFileSync(new URL('../tokens.json', import.meta.url))).update(fs.readFileSync(new URL('../controls.css', import.meta.url))).digest('hex');
+    if (source !== catalogueSource) {catalogues.clear(); catalogueSource = source;}
     const key = JSON.stringify([context.pack, context.mode, context.density, context.pointer]);
     if (!catalogues.has(key)) catalogues.set(key, loadTokenCatalogue(context));
     return catalogues.get(key);
@@ -154,9 +177,10 @@ export function createAuthoringService({directory, views, writable = false}) {
         else if (descriptor.type === 'boolean') requireThat(typeof value === 'boolean', `Invalid ${key}`);
         else if (descriptor.type === 'integer') integer(value, key, descriptor.minimum);
       }
+      if (request.method.startsWith('configuration.') || request.method === 'configurations.list') return configurations.dispatch(request.method, args);
       let result;
       switch (request.method) {
-        case 'describe': result = {...SERVICE_CONTRACT, icons, permissions: {write: writable, publish: false}}; break;
+        case 'describe': result = {...SERVICE_CONTRACT, icons, permissions: {write: writable, publish: writable && configurations.canPublish}}; break;
         case 'components.list': result = {schemaVersion: 1, components: listComponents(args)}; break;
         case 'tokens.list': result = catalogueFor(args); break;
         case 'views.list': result = {views}; break;
