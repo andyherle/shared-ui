@@ -199,14 +199,14 @@ for(const input of document.querySelectorAll('.ui-function-value'))window.Shared
 
 document.getElementById('property-fixture-width')?.addEventListener('change',event=>document.getElementById('fixture-property-panel').style.inlineSize=event.target.value);
 
-for(const action of document.querySelectorAll('[data-keyframe-state]'))window.SharedUI.setKeyframeState(action,{present:action.dataset.keyframeState!=='empty',selected:action.dataset.keyframeState==='selected',sprite:'./v1/icons.svg'});
+for(const action of document.querySelectorAll('[data-keyframe-state]'))window.SharedUI.setKeyframeState(action,{present:action.dataset.keyframeState==='present',keyframed:action.dataset.keyframeState!=='empty',sprite:'./v1/icons.svg'});
 
 // The compact inspector uses the same controls as application schema adapters.
 {
  const UI=window.SharedUI,panel=document.getElementById('fixture-property-panel');
  if(panel){
-  for(const [name,control] of [['Geometry',UI.createChoiceControl({label:'Geometry',options:['Cube','Sphere','Torus'],value:'Cube'})],['Palette',UI.createChoiceControl({label:'Palette',options:['Aurora','Ember','Lagoon','Orchid','Citrus','Glacier','Rose','Copper'],value:'Aurora'})]]){const row=document.createElement('div'),actions=document.createElement('div');actions.className='ui-actions ui-inline';panel.append(row);UI.adoptPropertyRow(row,{name,control:control.element,actions});}
-  for(const [name,multiline,readonly,value] of [['Title',false,false,'Control / Motion'],['Caption',true,false,'A shared language\nfor live controls'],['Active events',false,true,'3']]){const row=document.createElement('div'),field=document.createElement('div'),input=document.createElement(multiline?'textarea':'input'),actions=document.createElement('div');field.className='ui-field';input.value=value;input.readOnly=readonly;if(multiline)input.rows=2;field.append(input);actions.className='ui-actions ui-inline';panel.append(row);UI.adoptPropertyRow(row,{name,control:field,actions});}
+  for(const [name,control] of [['Geometry',UI.createChoiceControl({label:'Geometry',sprite:'./v1/icons.svg',options:['Cube','Sphere','Torus'],value:'Cube'})],['Palette',UI.createChoiceControl({label:'Palette',sprite:'./v1/icons.svg',options:['Aurora','Ember','Lagoon','Orchid','Citrus','Glacier','Rose','Copper'],value:'Aurora'})]]){const row=document.createElement('div'),actions=document.createElement('div');actions.className='ui-actions ui-inline';panel.append(row);UI.adoptPropertyRow(row,{name,control:control.element,actions});}
+  for(const [name,multiline,readonly,value] of [['Title',false,false,'Control / Motion'],['Caption',true,false,'A shared language\nfor live controls'],['Active events',false,true,'3']]){const row=document.createElement('div'),field=document.createElement('div'),input=document.createElement(multiline?'textarea':'input'),actions=document.createElement('div');field.className='ui-field';input.value=value;input.readOnly=readonly;if(multiline)input.rows=2;field.append(input);actions.className='ui-actions ui-inline';panel.append(row);UI.adoptPropertyRow(row,{name,control:field,actions:readonly?undefined:actions});}
   const actionRow=document.createElement('div'),action=document.createElement('button'),slot=document.createElement('div');action.type='button';UI.adoptAction(action,{label:'Burst now',icon:'add',sprite:'./v1/icons.svg'});slot.className='ui-actions ui-inline';action.addEventListener('click',()=>UI.setActionState(action,{state:'success',sprite:'./v1/icons.svg'}));panel.append(actionRow);UI.adoptPropertyRow(actionRow,{name:'Trigger',control:action,actions:slot});
   const title=document.createElement('h3');title.textContent='Event envelope';panel.append(title,UI.createCurveControl({label:'Event envelope'}).element);
   const response=UI.createResponseControl({spec:{label:'Response',default:1,curve:'power-in',inputMin:.05,inputMax:12,step:.01},model:{powerCurve:(v,x)=>Math.pow(x,v),curveExponent:(x,y)=>Math.log(Math.max(.0001,Math.min(.9999,y)))/Math.log(Math.max(.0001,Math.min(.9999,x))),numberStep:s=>s.step,steppedNumber:(v,d,s)=>Math.max(s.inputMin,Math.min(s.inputMax,v+d*s.step))},onSet:()=>{}});panel.append(response.element);
@@ -217,6 +217,10 @@ for(const action of document.querySelectorAll('[data-keyframe-state]'))window.Sh
   const spec={key:'start',label:'Colour interval',min:0,max:1,step:.01,rangeControl:{end:'end',mode:'absolute',spectrum:'hue'}};
   const editor=UI.createIntervalControl({spec,onSet:()=>{},onError:console.error,model:{sliderBounds:(s,v)=>({min:Math.min(s.min,v),max:Math.max(s.max,v)}),rangeEndpoint:(s,e)=>e,rangeValue:(s,e)=>e,typedNumber:value=>{if(String(value).trim()===''||!Number.isFinite(Number(value)))throw new Error('Enter a finite number');return Number(value);},numberStep:s=>s.step||.01,steppedNumber:(v,d,s)=>v+d*(s.step||.01),wireNumberInput:()=>{}}});panel.append(editor.element);editor.sync(.1,spec,[{key:'end',value:.8,step:.01}]);
  }
+}
+
+{
+ const panel=document.getElementById('fixture-property-panel');if(panel){const row=document.createElement('div'),field=document.createElement('select');field.multiple=true;field.size=3;field.setAttribute('aria-label','Channels');for(const name of ['Colour','Shape','Motion']){const option=document.createElement('option');option.value=option.textContent=name;option.selected=name==='Colour';field.append(option);}panel.append(row);window.SharedUI.adoptPropertyRow(row,{name:'Channels',control:field});}
 }
 
 /* Generic synthetic composition fixture. Uses the same native factory as consumers. */

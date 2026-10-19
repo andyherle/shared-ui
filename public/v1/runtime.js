@@ -466,22 +466,45 @@
   const UI=window.SharedUI,documents=new WeakMap();
   // Inspector rows share stable label/value/action columns; original controls stay alive.
   UI.adoptPropertyRow=(row,{name,control,actions}={})=>{
-    if(!row||!control||!actions||row.ownerDocument!==control.ownerDocument||row.ownerDocument!==actions.ownerDocument)throw new TypeError('Property rows require controls from one document');
-    const doc=row.ownerDocument,input=control.matches?.('input,select,textarea')?control:control.querySelector('input,select,textarea');
+    const hasActions=Boolean(actions);
+    if(!row||!control||row.ownerDocument!==control.ownerDocument||actions&&row.ownerDocument!==actions.ownerDocument)throw new TypeError('Property rows require controls from one document');
+    const doc=row.ownerDocument;
+    if(!actions){actions=doc.createElement('div');actions.className='ui-actions ui-inline';actions.hidden=true;}
+    const input=control.matches?.('input,select,textarea')?control:control.querySelector('input,select,textarea');
     let label=row.querySelector(':scope > [data-ui-property-label]');
     if(!label){label=doc.createElement('label');label.dataset.uiPropertyLabel='';label.className='ui-label';row.prepend(label);}
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
-    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:'minmax(0,30%) minmax(0,1fr) auto',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
+    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:hasActions?'minmax(0,30%) minmax(0,1fr) auto':'minmax(0,30%) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(control.style,{minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
-    Object.assign(actions.style,{minInlineSize:'calc(4 * var(--ui-control-height) + 3 * var(--ui-gap))',justifyContent:'flex-end'});
+    Object.assign(actions.style,{minInlineSize:'0',justifyContent:'flex-end'});
     row.append(control,actions);return {element:row,label,control,actions};
   };
+  const propertyNavigation=new WeakMap();
+  UI.setPropertyNavigation=(row,{onActivate,destination='Curves',controls}={})=>{
+    let label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');if(!label)return;
+    let entry=propertyNavigation.get(row);
+    if(!entry&&typeof onActivate==='function'){
+      const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';
+      button.style.color=label.style.color;Object.assign(button.style,{textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
+      const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
+      entry={button,name,activate:onActivate};button.addEventListener('click',()=>entry.activate?.());propertyNavigation.set(row,entry);
+    }
+    if(entry){entry.activate=onActivate;entry.button.disabled=typeof onActivate!=='function';entry.button.setAttribute('aria-label',`${entry.name} — show in ${destination}`);entry.button.title=`Show ${entry.name} in ${destination}`;if(controls)entry.button.setAttribute('aria-controls',controls);}
+    return label;
+  };
+  // Automation changes the existing label, never inspector geometry or authored values.
+  UI.setPropertyState=(row,{active=false,description='',color}={})=>{
+    const label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');
+    row.dataset.uiDriven=String(Boolean(active));if(!label)return;
+    label.style.color=active?(color||'var(--ui-accent)'):'';
+    label.title=description||label.textContent;
+  };
   // Key presence is an icon state; selection keeps the normal shared pressed surface.
-  UI.setKeyframeState=(action,{present=false,selected=false,sprite}={})=>{
-    const icon=present?'keyframe-filled':'keyframe',changed=action.dataset.uiKeyframeIcon!==icon||action.getAttribute('aria-pressed')!==String(Boolean(selected));
+  UI.setKeyframeState=(action,{present=false,keyframed=present,sprite}={})=>{
+    const icon=present?'keyframe-filled':'keyframe',changed=action.dataset.uiKeyframeIcon!==icon||action.getAttribute('aria-pressed')!==String(Boolean(keyframed));
     if(action.dataset.uiKeyframeIcon!==icon){UI.adoptAction(action,{icon,iconOnly:true,sprite});action.dataset.uiKeyframeIcon=icon;}
     const graphic=action.querySelector?.('svg.ui-icon');if(graphic)graphic.style.color=present?'var(--ui-text)':'';
-    action.setAttribute('aria-pressed',String(Boolean(selected)));return changed;
+    action.setAttribute('aria-pressed',String(Boolean(keyframed)));return changed;
   };
   UI.createBooleanControl=({label,value=false,variant='regular',onChange=()=>{},document=window.document}={})=>{
     const element=document.createElement('label');element.className=variant==='controller'?'ui-icon-choice ui-controller-toggle':'ui-switch';
@@ -675,13 +698,14 @@
     return {element:panel,open,close,setValue,dispose(){if(disposed)return;disposed=true;close();view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);for(const remove of removers)remove();panel.remove();for(const name of ['aria-haspopup','aria-controls','aria-expanded'])trigger.removeAttribute(name);}};
   };
 
-  UI.createChoiceControl=({label='Choice',options=[],value,searchable=options.length>6,onChange=()=>{},document=window.document}={})=>{
-    const element=document.createElement('div');element.className='ui-field';
+  UI.createChoiceControl=({label='Choice',options=[],value,searchable=options.length>6,onChange=()=>{},document=window.document,sprite}={})=>{
+    let element=document.createElement('div');element.className='ui-field';
     const input=document.createElement(searchable?'input':'select');input.setAttribute('aria-label',label);element.append(input);
     let current=value,items=options,combo=null,disposed=false;
     const normalized=()=>items.map(item=>typeof item==='string'?{value:item,label:item}:{value:String(item.value),label:String(item.label??item.value)});
     const show=()=>{if(document.activeElement===input)return;const chosen=normalized().find(item=>item.value===String(current));input.value=searchable?(chosen?.label??''):String(current??'');input.setCustomValidity('');};
-    if(searchable){input.type='text';input.autocomplete='off';combo=UI.createCombobox(input,{options:normalized(),onSelect:item=>{current=item.value;input.setCustomValidity('');onChange(current);}});}
+    if(searchable){input.type='text';input.autocomplete='off';combo=UI.createCombobox(input,{options:normalized(),onSelect:item=>{current=item.value;input.setCustomValidity('');onChange(current);}});element=combo.element;element.classList.add('ui-field');element.style.display='flex';const open=document.createElement('button');open.type='button';UI.adoptAction(open,{label:'Show '+label+' choices',icon:'chevron-down',iconOnly:true,sprite});open.addEventListener('click',()=>combo.open());element.append(open);}
+    else input.style.textAlignLast='start';
     const change=()=>{if(!searchable){current=input.value;onChange(current);}};
     const blur=()=>{if(searchable)show();};input.addEventListener('change',change);input.addEventListener('blur',blur);
     function sync(next,nextOptions=items){current=next;items=nextOptions;const values=normalized();if(combo)combo.setOptions(values);else{const signature=JSON.stringify(values);if(input.dataset.options!==signature){input.replaceChildren(...values.map(item=>{const node=document.createElement('option');node.value=item.value;node.textContent=item.label;return node;}));input.dataset.options=signature;}}show();}
@@ -698,7 +722,7 @@
     function on(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
     let pool=documents.get(doc);
     if(!pool){pool={open:new Set(),count:0,handler:event=>{for(const item of pool.open)if(!item.element.contains(event.target))item.close();}};doc.addEventListener('pointerdown',pool.handler);documents.set(doc,pool);}pool.count++;
-    const control={element:wrapper,close,dispose,setOptions};
+    const control={element:wrapper,open(){input.focus();active=-1;render();},close,dispose,setOptions};
     function close(){list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');pool.open.delete(control);}
     function render(){
       if(disposed)return;
@@ -906,7 +930,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     const end=rangeEndpoint(start,other,spec.rangeControl.mode), bounds=dragBounds ? {...dragBounds} : sliderBounds(spec,start);
     if (!dragBounds) { bounds.min=Math.min(bounds.min,end);bounds.max=Math.max(bounds.max,end); }
     const span=bounds.max-bounds.min||1;
-    [start,end].forEach((value,index)=>{handles[index].style.left=`${(value-bounds.min)/span*100}%`;handles[index].setAttribute('aria-valuenow',String(value));if(document.activeElement!==inputs[index])inputs[index].value=Number(Number(value).toPrecision(6)).toString();});
+    [start,end].forEach((value,index)=>{handles[index].style.left=`${(value-bounds.min)/span*100}%`;handles[index].setAttribute('aria-valuenow',String(value));if(document.activeElement!==inputs[index]&&!inputs[index].dataset.draft)inputs[index].value=Number(Number(value).toPrecision(6)).toString();});
     fill.style.left=`${(Math.min(start,end)-bounds.min)/span*100}%`;fill.style.width=`${Math.abs(end-start)/span*100}%`;
     track.classList.toggle('is-hue',spec.rangeControl.spectrum==='hue');
     if (spec.rangeControl.spectrum === 'hue') {
@@ -921,8 +945,8 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       const requested=index ? rangeValue(start,Number(raw),spec.rangeControl.mode) : raw;
       const next=typedNumber(commit ? requested : Math.max(limits.inputMin??-Infinity,Math.min(limits.inputMax??Infinity,Number(requested))),limits);
       if(index)other=next;else start=next;
-      paint();onSet(index?spec.rangeControl.end:spec.key||spec.id,next,commit);
-    }catch(error){onError(error);}
+      paint();Promise.resolve(onSet(index?spec.rangeControl.end:spec.key||spec.id,next,commit)).catch(onError);return true;
+    }catch(error){onError(error);return false;}
   };
   for(let index=0;index<2;index++){
     const handle=document.createElement('button');handle.type='button';handle.className='ui-interval-handle';Object.assign(handle.style,{position:'absolute',top:'50%',transform:'translate(-50%,-50%)',inlineSize:'var(--ui-control-height)',minInlineSize:'var(--ui-control-height)',padding:'0',touchAction:'none',cursor:'ew-resize'});const mark=document.createElement('span');mark.textContent='│';mark.setAttribute('aria-hidden','true');handle.append(mark);handle.setAttribute('role','slider');handle.setAttribute('aria-label',`${spec.label} ${index?'end':'start'}`);
@@ -931,13 +955,13 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     handles.push(handle);inputs.push(input);track.append(handle);
     let dirty = false;
     listen(input,'input',()=>{dirty=true;input.dataset.draft='true';});
-    const commitInput = () => { if(dirty){dirty=false;send(index,input.value);} };
+    const commitInput = () => {if(dirty&&send(index,input.value)){dirty=false;delete input.dataset.draft;}};
     listen(input,'change',commitInput);
     listen(input,'keydown',event=>{
       if(event.key==='Enter'){event.preventDefault();commitInput();input.blur();}
-      if(event.key==='Escape'){event.preventDefault();dirty=false;input.value=String(index?rangeEndpoint(start,other,spec.rangeControl.mode):start);input.blur();}
+      if(event.key==='Escape'){event.preventDefault();dirty=false;delete input.dataset.draft;input.value=String(index?rangeEndpoint(start,other,spec.rangeControl.mode):start);input.blur();}
     });
-    wireNumberInput(input,()=>index?{step:endSpec.step}:spec,value=>{dirty=false;send(index,value);});
+    wireNumberInput(input,()=>index?{step:endSpec.step}:spec,value=>{dirty=false;delete input.dataset.draft;send(index,value);});
     let bounds=null;
     const move=event=>{const rect=track.getBoundingClientRect(),x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),step=numberStep(index?endSpec:spec);send(index,Number((Math.round((bounds.min+x*(bounds.max-bounds.min))/step)*step).toPrecision(12)),false);};
     listen(handle,'pointerdown',event=>{if(event.button!==0||dragging)return;event.preventDefault();handle.focus();activeHandle=handle;activeFinish=finish;bounds=paint();dragBounds=bounds;original={start,other,pointerId:event.pointerId};dragging=true;handle.setPointerCapture(event.pointerId);});
@@ -1249,7 +1273,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     const end=rangeEndpoint(start,other,spec.rangeControl.mode), bounds=dragBounds ? {...dragBounds} : sliderBounds(spec,start);
     if (!dragBounds) { bounds.min=Math.min(bounds.min,end);bounds.max=Math.max(bounds.max,end); }
     const span=bounds.max-bounds.min||1;
-    [start,end].forEach((value,index)=>{handles[index].style.left=`${(value-bounds.min)/span*100}%`;handles[index].setAttribute('aria-valuenow',String(value));if(document.activeElement!==inputs[index])inputs[index].value=Number(Number(value).toPrecision(6)).toString();});
+    [start,end].forEach((value,index)=>{handles[index].style.left=`${(value-bounds.min)/span*100}%`;handles[index].setAttribute('aria-valuenow',String(value));if(document.activeElement!==inputs[index]&&!inputs[index].dataset.draft)inputs[index].value=Number(Number(value).toPrecision(6)).toString();});
     fill.style.left=`${(Math.min(start,end)-bounds.min)/span*100}%`;fill.style.width=`${Math.abs(end-start)/span*100}%`;
     track.classList.toggle('is-hue',spec.rangeControl.spectrum==='hue');
     if (spec.rangeControl.spectrum === 'hue') {
@@ -1264,8 +1288,8 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       const requested=index ? rangeValue(start,Number(raw),spec.rangeControl.mode) : raw;
       const next=typedNumber(commit ? requested : Math.max(limits.inputMin??-Infinity,Math.min(limits.inputMax??Infinity,Number(requested))),limits);
       if(index)other=next;else start=next;
-      paint();onSet(index?spec.rangeControl.end:spec.key||spec.id,next,commit);
-    }catch(error){onError(error);}
+      paint();Promise.resolve(onSet(index?spec.rangeControl.end:spec.key||spec.id,next,commit)).catch(onError);return true;
+    }catch(error){onError(error);return false;}
   };
   for(let index=0;index<2;index++){
     const handle=document.createElement('button');handle.type='button';handle.className='ui-interval-handle';Object.assign(handle.style,{position:'absolute',top:'50%',transform:'translate(-50%,-50%)',inlineSize:'var(--ui-control-height)',minInlineSize:'var(--ui-control-height)',padding:'0',touchAction:'none',cursor:'ew-resize'});const mark=document.createElement('span');mark.textContent='│';mark.setAttribute('aria-hidden','true');handle.append(mark);handle.setAttribute('role','slider');handle.setAttribute('aria-label',`${spec.label} ${index?'end':'start'}`);
@@ -1274,13 +1298,13 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     handles.push(handle);inputs.push(input);track.append(handle);
     let dirty = false;
     listen(input,'input',()=>{dirty=true;input.dataset.draft='true';});
-    const commitInput = () => { if(dirty){dirty=false;send(index,input.value);} };
+    const commitInput = () => {if(dirty&&send(index,input.value)){dirty=false;delete input.dataset.draft;}};
     listen(input,'change',commitInput);
     listen(input,'keydown',event=>{
       if(event.key==='Enter'){event.preventDefault();commitInput();input.blur();}
-      if(event.key==='Escape'){event.preventDefault();dirty=false;input.value=String(index?rangeEndpoint(start,other,spec.rangeControl.mode):start);input.blur();}
+      if(event.key==='Escape'){event.preventDefault();dirty=false;delete input.dataset.draft;input.value=String(index?rangeEndpoint(start,other,spec.rangeControl.mode):start);input.blur();}
     });
-    wireNumberInput(input,()=>index?{step:endSpec.step}:spec,value=>{dirty=false;send(index,value);});
+    wireNumberInput(input,()=>index?{step:endSpec.step}:spec,value=>{dirty=false;delete input.dataset.draft;send(index,value);});
     let bounds=null;
     const move=event=>{const rect=track.getBoundingClientRect(),x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),step=numberStep(index?endSpec:spec);send(index,Number((Math.round((bounds.min+x*(bounds.max-bounds.min))/step)*step).toPrecision(12)),false);};
     listen(handle,'pointerdown',event=>{if(event.button!==0||dragging)return;event.preventDefault();handle.focus();activeHandle=handle;activeFinish=finish;bounds=paint();dragBounds=bounds;original={start,other,pointerId:event.pointerId};dragging=true;handle.setPointerCapture(event.pointerId);});

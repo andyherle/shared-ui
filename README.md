@@ -704,10 +704,31 @@ Open native menu panels use the same viewport fitting in both packs: maintain th
 
 `createExpressionEditor({label,suggestions,onCommit,sprite})` returns a named native `trigger`, multiline `input`, and `element` form. Put the trigger in the property action slot and the form beneath the row. It owns completion at the caret, composition-safe typing, native Base/Result read-only fields and a right-aligned Clear/Apply group, retryable validation, Ctrl/Command+Enter apply, Tab completion, Escape cancellation and draft-preserving `sync({expression,base,value,error})`. Use `setSuggestions` for live vocabularies and `flush` before Save/exit; `dispose` removes listeners. The application owns evaluation and History. Display the live result in the compact field, show the independent base on focus/scrub, and keep the fx indicator while driven. Comfortable scrub bounds can grow after explicit typed entry; genuine input limits remain application-owned.
 
-`setKeyframeState(action,{present,selected,sprite})` separates key presence from selection: hollow/solid shared diamond icons indicate absence/presence at the playhead; `aria-pressed` supplies the ordinary blue selected surface. Clicking an existing key should select it for editing, with deletion in the timeline. Read-only fields and their composed `.ui-field` shells use the grey semantic surface while retaining native selection/copy.
+`setKeyframeState(action,{present,keyframed,sprite})` separates the current frame from animation: the ordinary blue pressed surface means the property has keys anywhere; a solid foreground-colour diamond means a key exists at the playhead, and a hollow diamond means it does not. Clicking an existing key selects its editable base; deletion stays in the timeline. Read-only fields and composed shells use the grey semantic surface while retaining native selection/copy.
 
 `createChoiceControl({label,options,value,searchable,onChange})` composes a native select or the shared searchable combobox in one field. `sync(value,options)` preserves focused entry; arbitrary search text never becomes an enum value. Dispose it with its row. The combobox handles IME composition, arrows, Enter, Escape and outside dismissal.
 
 `createCurveControl({label,points,defaults,onChange})` presents a normalized cubic response in the compact inspector. Four coordinates define the handles; optional fifth/sixth coordinates enable editable endpoints. Native exact fields, presets, pointer capture, keyboard adjustment and Escape/hidden-view cancellation share the same control paint. `sync({points,defaults,available})` leaves an active drag intact; `dispose()` releases listeners. Applications map coordinates to scalar targets and commit through their existing History.
 
 `createResponseControl` and `createIntervalControl` share power-response and two-endpoint controls. They accept descriptor metadata, app-supplied numerical model functions and callbacks; the kit owns DOM, theme, focus and pointer/keyboard interaction while the consumer owns accepted values and state. They are demonstrated alongside native choice, text, read-only and action controls in the effects inspector catalogue.
+
+Inspector fields fill the space between the fixed name column and the actual action
+slot, without reserving absent numeric actions. Omit `actions` from
+`adoptPropertyRow` for read-only output rows to fill the remaining width.
+`setPropertyState(row,{active,description,color})` colours the existing name and
+updates its native hover description; automation never inserts a status line or
+moves neighbouring rows. The owning app supplies the sampled value.
+Choice controls accept `sprite` for the local shared icon bundle. A searchable
+choice has one `.ui-combobox.ui-field` shell, a borderless native text input and a
+shared chevron action; ordinary choices use a native select in the same shell.
+
+The native `.ui-effects-inspector` composition is the shared **Effects control
+panel** catalogue component. It groups property rows, including native multiple
+selects, with shared choices, switches, colours, curves and expression fields.
+Use an existing named section or group; no application state or second wrapper
+is required. State evaluation, validation and undo remain consumer-owned.
+
+`setPropertyNavigation(row,{onActivate,destination,controls})` turns the existing
+property name into one native keyboard-accessible action without adding another
+button column. Route numeric properties to Curves and event-driven properties to
+Events; consumers choose the target and retain transport/state ownership.
