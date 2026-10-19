@@ -1,0 +1,22 @@
+{
+  "component": "debug",
+  "version": 1,
+  "requiresSharedUI": "1.12.0",
+  "files": {
+    "debug.js": "383e294bd4d2784fee8fb8971c5556e08044a2c2c2d808978eb59cbe17d6dcc2",
+    "debug.css": "f3d49c9623aad0ef7a3ce09d09bd44141363466a5ed70c3f73762af1c7998d6f",
+    "debug.d.ts": "589bbe8cac2ee41354b847c7577bcdf0951a44ca30cc208415ec17f10bc61246"
+  },
+  "sizes": {
+    "css": 4225,
+    "cssGzip": 1254,
+    "js": 24247,
+    "jsGzip": 8271
+  },
+  "budget": {
+    "css": 6144,
+    "cssGzip": 2048,
+    "js": 32768,
+    "jsGzip": 10240
+  }
+}

@@ -749,3 +749,7 @@ Content-oriented inline editing retains its explicit role.
 ### Inline text suggestions
 
 `SharedUI.createTextSuggestions(input, {label, onSelect})` attaches the shared listbox to an existing native input or textarea without wrapping or replacing it. Call `show([{label, ...data}])` with application-ranked results and `hide()` when the caret leaves the completion. The helper owns viewport fitting, pointer selection, arrows, Enter/Tab selection, Escape, IME guards, dismissal and accessible active options. The application owns triggers, asynchronous retrieval, stale-response checks and text replacement. Call `dispose()` when removing the field. The Selectors & search catalogue demonstrates file mentions.
+
+## Optional debug console
+
+The reusable [debug console](docs/DEBUG.md) provides evaluated-state tables, sampled all-channel plots, lane views and machine-style diagnostic traces. It is a separate reviewed add-on, with a portable packet/adapter API and no application state or transport. Open `public/debug.html` for the interactive synthetic fixtures.

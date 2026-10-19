@@ -1,3 +1,4 @@
+import {debugAssets} from './debug-bundle.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -84,6 +85,8 @@ export function buildSite(directory=root){
   }).join('');
   // Validate every input before replacing any last-working asset. Publish the manifest last.
   const assets=new Map([
+    ...debugAssets(directory,compactCSS),
+    ['debug.html',read('debug-lab.html').replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],['debug-lab.js',read('debug-lab.js')],
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],
     ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
     ['v1/floating-panel.fixture.css',floatingCss],
