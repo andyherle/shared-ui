@@ -108,7 +108,7 @@ The component uses dirty-frame scheduling with no free-running animation. Hidden
 
 Maximum accepted packet: 512 unique channels, 2,048 retained supplied points per channel, 2,048 recent trace records, 512 characters per scalar text value. Truncation is reported. The plot uses min/max-preserving reduction so narrow spikes survive; gaps remain discontinuities. This is a bounded inspection surface, not an unbounded telemetry recorder. Hosts must not provide credentials, private raw logs or unsupported claims as data. Shared UI renders supplied strings as text, not HTML.
 
-The base CSS remains 36,310 bytes raw / 8,184 gzip. The optional component has independent hard build limits: CSS 6 KiB raw / 2 KiB gzip, JS 32 KiB raw / 10 KiB gzip. `debug.manifest.json` records measured sizes, hashes and required base version. Both build and installer validate before replacing working assets; this bundle stays outside the CSS-only channel.
+The base CSS remains 36,272 bytes raw / 8,179 gzip. The optional component has independent hard build limits: CSS 6 KiB raw / 2 KiB gzip, JS 32 KiB raw / 10 KiB gzip. `debug.manifest.json` records measured sizes, hashes and required base version. Both build and installer validate before replacing working assets; this bundle stays outside the CSS-only channel.
 
 ## Verification
 
