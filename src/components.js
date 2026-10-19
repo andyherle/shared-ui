@@ -4,14 +4,15 @@
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
   // Bulk controls retain native details, text, and the host's persistence owner.
-  UI.createSectionActions=({root,actions,selector='details.ui-section',onChange=()=>{}}={})=>{
+  UI.createSectionActions=({root,actions,selector='details.ui-section',sprite,onChange=()=>{}}={})=>{
     if(!root||!actions||root.ownerDocument!==actions.ownerDocument)throw new TypeError('Section actions need a root and native action group in one document');
-    const doc=root.ownerDocument,buttons=[true,false].map(open=>{const button=doc.createElement('button');button.type='button';UI.adoptAction(button,{label:open?'Expand all':'Collapse all',icon:open?'chevron-down':'chevron-up'});actions.append(button);return button;});
+    const originalClass=actions.className;actions.classList?.remove('ui-inline');actions.classList?.add('ui-actions','ui-fill');
+    const doc=root.ownerDocument,buttons=[true,false].map(open=>{const button=doc.createElement('button');button.type='button';UI.adoptAction(button,{label:open?'Expand all':'Collapse all',icon:open?'chevron-down':'chevron-up',...(sprite?{sprite}:{})});actions.append(button);return button;});
     const sections=()=>[...root.querySelectorAll(selector)].filter(node=>!node.closest('[hidden]'));
     const refresh=()=>{const nodes=sections();actions.hidden=!nodes.length;buttons[0].disabled=!nodes.some(node=>!node.open);buttons[1].disabled=!nodes.some(node=>node.open);};
     const set=open=>{const nodes=sections();for(const node of nodes)node.open=open;onChange({open,sections:nodes});refresh();};
     const expand=()=>set(true),collapse=()=>set(false);buttons[0].addEventListener('click',expand);buttons[1].addEventListener('click',collapse);root.addEventListener('toggle',refresh,true);UI.observeActions?.(actions);refresh();
-    return {refresh,expand,collapse,dispose(){buttons[0].removeEventListener('click',expand);buttons[1].removeEventListener('click',collapse);root.removeEventListener('toggle',refresh,true);UI.releaseActions?.(actions);for(const button of buttons)button.remove();}};
+    return {refresh,expand,collapse,dispose(){buttons[0].removeEventListener('click',expand);buttons[1].removeEventListener('click',collapse);root.removeEventListener('toggle',refresh,true);UI.releaseActions?.(actions);for(const button of buttons)button.remove();actions.className=originalClass;}};
   };
   // Inspect presented media without changing its dimensions or creative state.
   UI.createMediaViewport=({surface,content,minScale=.125,maxScale=32,keyboard=true,spacePan=true,onChange=()=>{}}={})=>{
