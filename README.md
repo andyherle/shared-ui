@@ -439,7 +439,32 @@ shared action group wrap; do not add application-specific input widths. The
 Control fixture includes an empty From date, a populated To date and a time.
 
 
+### Clickable column sorting
+
+`SharedUI.createTableSort(table, {column:'date', direction:'desc', manual:false, onChange, getValue, sprite})`
+adds native quiet action buttons to the column headers and keeps `aria-sort` current.
+Each header has a stable `data-column`; use `data-ui-sort-type="number"` for numbers,
+`data-sort-value` on a cell for an unformatted value, and `data-ui-sort-disabled`
+on a header that is not sortable. ISO dates sort naturally. Missing values stay
+last. Existing row nodes, links, focus and selection survive sorting. Only the
+body moves; applications calculate derived values before sorting.
+For server pagination use `manual:true`: the callback receives `{column,direction}`
+and the app sorts the entire filtered dataset before selecting a page. Never
+sort only the visible page while implying a full-dataset sort. Call `refresh()`
+after replacing rows; `dispose()` restores the original headings and listeners.
+Use `.ui-color` with the `--ui-color` custom property on any cell or text element
+for an application-supplied colour, for example `style="--ui-color:var(--ui-accent)"`.
+The application owns its meaning and accessible labels; the kit supplies only paint.
+
 ### Adjustable columns and stable lightboxes
+
+`SharedUI.createColumnManager(table, container, {order, hidden, pinFirst, onBeforeChange, onChange})`
+composes shared column dragging with native checkbox fields in an existing disclosure
+body. Its `state` is `{order, hidden}` for application persistence. The first column
+can stay pinned and visible; at least one column remains visible. Dispose a column
+resizer in `onBeforeChange` and recreate it in `onChange`. `dispose()` removes its
+controls/listeners and restores the table; the catalogue demonstrates this pattern.
+
 
 `SharedUI.createColumnDrag(table, {order, pinFirst, onBeforeChange, onChange})`
 lets someone drag a native column heading to reorder the sheet. Give each
@@ -775,3 +800,24 @@ Media viewport hosts can set `keyboard:false` to reserve all keys for transport/
 `SharedUI.createPreviewCatalogue({root,onSelect,onManage,sprite})` uses native media cards, caption actions, the shared grid and selection states. `update(items,selectedId)` accepts `{id,label,image,detail}`; images are contained in 16:9 previews. Stable cards retain focus; `dispose()` releases the owned DOM. The host owns collections, filtering, scene activation, image URLs and source/state identity.
 
 `SharedUI.renderProofSheet({items,title,width:3840,height:2160,background,color,font,signal})` composes loaded image previews onto a canvas, with contained 16:9 cells and measured labels. It returns `{canvas,cells}`. The host must supply real render outputs and label their sampling; the helper never invents data or changes a scene. Callers may supply theme typography/palette values and download the canvas as PNG. The catalogue includes a synthetic interactive fixture.
+
+### Responsive media review and touch intent
+
+Place a `.ui-review-dock.ui-stack[data-ui-position="flow"]` footer after the
+application's bounded media stage. Apps own stage geometry; the bottom controls
+reserve their own space and respect safe areas. The first child holds secondary
+tools and scrolls when expanded on short screens; the final navigation row stays
+visible. Put Previous/Next in the footer's final
+`.ui-actions.ui-fill` row. Keep secondary review controls in a native
+`details.ui-section`. Both packs share this layout; the media catalogue demonstrates it.
+
+`SharedUI.createPressHold(root,{onHold,accept,delay:450,tolerance:10})` recognizes a
+stationary primary touch or pen press. Return false from `onHold(event)` to decline
+it. Native scroll remains available; movement, a second pointer, cancellation,
+hidden views and blur cancel the timer. An accepted hold consumes the following
+pointer click without consuming keyboard activation. `cancel()` clears pending
+intent; `dispose()` removes listeners and timers. Hosts own selection, capture,
+panning, dragging and persistence, and must retain a visible keyboard/tap action.
+Resize handles retain their native target without requiring hover, so they work with touch as well as a pointer.
+
+Open native menus observe their panel size so late field/font reflow remains inside the viewport. Closing menus and disposing a document release that observer.

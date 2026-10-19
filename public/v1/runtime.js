@@ -93,13 +93,14 @@
       else if(event.key===preference&&root.dataset.ui==='postvisual'&&!localTheme)setMode(event.newValue||'system',{persist:false});
     });
     on(doc,'click',event=>{const control=event.target.closest?.('[aria-disabled=true]');if(control?.matches?.('button,a,summary')){event.preventDefault();event.stopImmediatePropagation();}},true);
+    const menuResize=view.ResizeObserver?new view.ResizeObserver(()=>positionMenus()):null;
     function closeMenu(menu,{focus=false}={}){if(!menu.open)return;menu.open=false;openedMenus.delete(menu);if(focus)menu.querySelector(':scope>summary')?.focus();}
-    on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open){openedMenus.add(menu);api.positionMenu?.(menu);}else openedMenus.delete(menu);}},true);
+    on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open){openedMenus.add(menu);api.positionMenu?.(menu);const panel=menu.querySelector(':scope > .ui-menu-panel');if(panel)menuResize?.observe(panel);}else{openedMenus.delete(menu);const panel=menu.querySelector(':scope > .ui-menu-panel');if(panel)menuResize?.unobserve(panel);}}},true);
     on(doc,'click',event=>{for(const menu of openedMenus)if(!menu.contains(event.target))closeMenu(menu);});
     on(doc,'keydown',event=>{if(event.key!=='Escape')return;const menu=event.target.closest?.('details.ui-menu')||[...(doc.querySelectorAll?.('details.ui-menu[open]')||[])].at(-1);if(menu?.open){event.preventDefault();closeMenu(menu,{focus:true});}});
     const positionMenus=()=>{if(doc.visibilityState!=='hidden')for(const menu of openedMenus)api.positionMenu?.(menu);};
     on(view,'resize',positionMenus);on(doc,'scroll',event=>{if(!event.target.closest?.('.ui-menu-panel'))positionMenus();},true);on(doc,'ui:styles',positionMenus);
-    function dispose(){if(stopped)return;stopped=true;view.clearTimeout(timer);cancelStyle?.();requestController?.abort();channel?.close();removeLease();for(const remove of removers)remove();openedMenus.clear();api.disposeActions?.(doc);}
+    function dispose(){if(stopped)return;stopped=true;view.clearTimeout(timer);cancelStyle?.();requestController?.abort();channel?.close();removeLease();for(const remove of removers)remove();menuResize?.disconnect();openedMenus.clear();api.disposeActions?.(doc);}
     on(view,'pagehide',event=>{if(!event.persisted)dispose();else{view.clearTimeout(timer);removeLease();}});
     on(view,'pageshow',event=>{if(event.persisted)schedule(50);});
     schedule(100);
@@ -310,6 +311,67 @@
     setValue(value);out.addEventListener('click',decrease);into.addEventListener('click',increase);view?.addEventListener('pagehide',pagehide);
     return {get value(){return current;},setValue,dispose};
   }
+  // Sort existing native rows, or expose controlled sorting for a paginated app.
+  function createTableSort(table,{column='',direction='desc',manual=false,onChange=()=>{},getValue,sprite='./shared-ui/icons.svg'}={}){
+    const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
+    if(!header||!view||!table.tBodies?.length)throw new TypeError('Sorting requires a native table with a header and body');
+    const heads=[...header.cells],off=[],saved=[];let active=column,order=direction,disposed=false;
+    if(!['asc','desc'].includes(order))throw new TypeError('Sort direction must be asc or desc');
+    const ids=heads.map((head,i)=>head.dataset.column||'column-'+i);
+    if(new Set(ids).size!==ids.length)throw new TypeError('Sort columns must have unique IDs');
+    const buttons=new Map(),labels=new Map();
+    function value(row,head){
+      const cell=row.cells[[...header.cells].indexOf(head)];
+      const raw=getValue?getValue(row,head,cell):cell?.dataset.sortValue??cell?.textContent??'';
+      if(raw==null||String(raw).trim()===''||['—','Unknown','Undated'].includes(String(raw).trim()))return null;
+      if(head.dataset.uiSortType==='number'){
+        const number=Number(String(raw).replace(/−/g,'-').replace(/,/g,'').replace(/\s+[A-Z]{3}$/, '').trim());
+        return Number.isFinite(number)?number:null;
+      }
+      return String(raw).trim();
+    }
+    function draw(){
+      heads.forEach((head,i)=>{
+        if(!buttons.has(ids[i]))return;
+        const selected=ids[i]===active,label=labels.get(ids[i]);
+        head.setAttribute('aria-sort',selected?(order==='asc'?'ascending':'descending'):'none');
+        adoptAction(buttons.get(ids[i]),{label,ariaLabel:'Sort by '+label+(selected?'; '+(order==='asc'?'ascending':'descending'):'')+'; click to '+(selected&&order==='asc'?'sort descending':'sort ascending'),icon:selected?(order==='asc'?'arrow-up':'arrow-down'):'list',sprite});
+      });
+    }
+    function apply(){
+      const head=heads[ids.indexOf(active)];if(!head)return;
+      draw();if(manual)return;
+      for(const body of table.tBodies){
+        const rows=[...body.rows],positions=new Map(rows.map((row,i)=>[row,i]));
+        rows.sort((a,b)=>{
+          const x=value(a,head),y=value(b,head);
+          if(x===null||y===null)return x===y?positions.get(a)-positions.get(b):x===null?1:-1;
+          const compared=typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),undefined,{numeric:true,sensitivity:'base'});
+          return (order==='asc'?compared:-compared)||positions.get(a)-positions.get(b);
+        });
+        body.append(...rows);
+      }
+    }
+    function sort(id,next){
+      if(disposed)return;
+      if(!buttons.has(id)||!['asc','desc'].includes(next))throw new TypeError('Unknown sort column or direction');
+      active=id;order=next;apply();onChange({column:active,direction:order});
+    }
+    heads.forEach((head,i)=>{
+      if(head.dataset.uiSortDisabled!==undefined)return;
+      const nodes=[...head.childNodes],label=head.textContent.trim(),button=doc.createElement('button');
+      if(!label)return;
+      saved.push({head,nodes,aria:head.getAttribute('aria-sort'),tab:head.getAttribute('tabindex')});
+      button.type='button';button.dataset.uiTableSort='';button.dataset.uiVariant='quiet';button.dataset.uiLabel='always';
+      head.removeAttribute('tabindex');head.replaceChildren(button);buttons.set(ids[i],button);labels.set(ids[i],label);
+      const click=()=>sort(ids[i],active===ids[i]&&order==='asc'?'desc':'asc');button.addEventListener('click',click);off.push(()=>button.removeEventListener('click',click));
+    });
+    if(active&&!buttons.has(active))throw new TypeError('Unknown initial sort column');
+    apply();draw();
+    function dispose(){if(disposed)return;disposed=true;for(const remove of off)remove();for(const item of saved){item.head.replaceChildren(...item.nodes);for(const [key,val]of [['aria-sort',item.aria],['tabindex',item.tab]])if(val===null)item.head.removeAttribute(key);else item.head.setAttribute(key,val);}view.removeEventListener('pagehide',pagehide);}
+    function pagehide(event){if(!event.persisted)dispose();}view.addEventListener('pagehide',pagehide);
+    return {get state(){return {column:active,direction:order};},sort,refresh:apply,dispose};
+  }
   function createColumnDrag(table,{order=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{}}={}){
     const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
     if(!header||!view)throw new TypeError('A native table with one header row is required');
@@ -395,6 +457,27 @@
     }
     return {get state(){return {order:[...current]};},reset(){if(!disposed)change([...original],null);},dispose};
   }
+  function createColumnManager(table,container,{order=[],hidden=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{}}={}){
+    const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument;
+    if(!header||!container)throw new TypeError('A native table and column controls container are required');
+    const heads=[...header.cells],ids=heads.map(head=>head.dataset.column),rows=[header,...[...table.tBodies].flatMap(body=>[...body.rows])];
+    const cells=rows.map(row=>new Map(ids.map((id,index)=>[id,row.cells[index]]))),prior=cells.map(row=>new Map([...row].map(([id,cell])=>[id,cell.hidden])));
+    const omitted=new Set((Array.isArray(hidden)?hidden:[]).filter(id=>ids.includes(id)&&(!pinFirst||id!==ids[0])));
+    if(omitted.size===ids.length)omitted.delete(ids[0]);
+    const controls=[],removers=[];let disposed=false;
+    const state=()=>({...drag.state,hidden:[...omitted]});
+    const apply=()=>{for(const row of cells)for(const [id,cell] of row)cell.hidden=omitted.has(id);for(const {id,input} of controls){input.checked=!omitted.has(id);input.disabled=(pinFirst&&id===ids[0])||(!omitted.has(id)&&omitted.size===ids.length-1);}};
+    const drag=createColumnDrag(table,{order,pinFirst,onBeforeChange,onChange:()=>{apply();onChange(state());}});
+    for(const head of heads){
+      const id=head.dataset.column,label=doc.createElement('label'),input=doc.createElement('input'),text=doc.createElement('span');
+      label.className='ui-field';input.type='checkbox';input.setAttribute('aria-label','Show '+(head.querySelector?.('.ui-label')?.textContent||head.textContent));text.className='ui-label';text.textContent=head.querySelector?.('.ui-label')?.textContent||head.textContent;
+      const change=()=>{onBeforeChange();if(input.checked)omitted.delete(id);else omitted.add(id);apply();onChange(state());};
+      input.addEventListener('change',change);removers.push(()=>input.removeEventListener('change',change));label.append(input,text);container.append(label);controls.push({id,input,label});
+    }
+    apply();
+    function dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();for(const {label} of controls)label.remove();drag.dispose();for(const [index,row] of cells.entries())for(const [id,cell] of row)cell.hidden=prior[index].get(id);}
+    return {get state(){return state();},reset(){onBeforeChange();omitted.clear();drag.reset();apply();onChange(state());},dispose};
+  }
   function createColumnResize(table,{min=72,max=1200,widths=[],onChange=()=>{}}={}){
     if(!Number.isFinite(min)||!Number.isFinite(max)||min<24||max<min)throw new TypeError('Column resizing requires finite positive bounds');
     const doc=table.ownerDocument,view=doc.defaultView,heads=[...table.tHead.rows[0].cells].filter(cell=>!cell.hidden);
@@ -450,7 +533,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.12.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.13.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createTableSort,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -464,6 +547,34 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
+  // A stationary touch/pen press; hosts retain selection, geometry and capture.
+  UI.createPressHold=(root,{onHold,delay=450,tolerance=10,accept=()=>true}={})=>{
+    const doc=root.ownerDocument||root,view=doc.defaultView,removers=[];
+    let press=null,timer=null,consumed=null,heldPointer=null,expiry=null,disposed=false;
+    const listen=(target,type,handler,capture=false)=>{target.addEventListener(type,handler,capture);removers.push(()=>target.removeEventListener(type,handler,capture));};
+    function cancel(){if(timer!==null)view.clearTimeout(timer);timer=null;press=null;}
+    function forget(){consumed=null;heldPointer=null;if(expiry!==null)view.clearTimeout(expiry);expiry=null;}
+    listen(doc,'pointerdown',event=>{if(press&&press.pointerId!==event.pointerId)cancel();},true);
+    listen(root,'pointerdown',event=>{
+      if(disposed||!['touch','pen'].includes(event.pointerType)||event.button!==0||event.isPrimary===false||!accept(event))return;
+      cancel();forget();press=event;
+      timer=view.setTimeout(()=>{
+        timer=null;const initial=press;if(!initial||doc.hidden||!root.isConnected)return;
+        if(onHold?.(initial)!==false){consumed=initial.target;heldPointer=initial.pointerId;}
+        press=null;
+      },delay);
+    });
+    listen(doc,'pointermove',event=>{if(press&&event.pointerId===press.pointerId&&Math.hypot(event.clientX-press.clientX,event.clientY-press.clientY)>tolerance)cancel();},true);
+    listen(doc,'pointerup',event=>{if(event.pointerId===heldPointer){heldPointer=null;expiry=view.setTimeout(forget,800);}cancel();},true);
+    for(const type of ['pointercancel','lostpointercapture'])listen(doc,type,event=>{if(event.pointerId===heldPointer)forget();cancel();},true);
+    listen(view,'click',event=>{if(consumed&&event.detail!==0&&(event.target===consumed||consumed.contains?.(event.target))){event.preventDefault();event.stopImmediatePropagation();forget();}},true);
+    listen(root,'contextmenu',event=>{if(press||consumed)event.preventDefault();});
+    listen(doc,'visibilitychange',()=>{if(doc.hidden){cancel();forget();}});
+    listen(view,'blur',()=>{cancel();forget();});
+    function dispose(){if(disposed)return;disposed=true;cancel();forget();removers.splice(0).forEach(remove=>remove());}
+    listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
+    return {cancel,dispose};
+  };
   // Host-owned content, one shared native preview/selection pattern.
   UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite}={})=>{
     const doc=root.ownerDocument,original=root.className,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
@@ -1251,7 +1362,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       }
       const after=item.target.getBoundingClientRect();item.width=after.width;item.height=after.height;
     }
-    function flush(){frame=0;const work=[...pending];pending.clear();for(const group of work){const item=groups.get(group);if(item)fit(group,item);}for(const group of groups.keys())if(!group.isConnected)untrack(group);}
+    function flush(){frame=0;const work=[...pending];pending.clear();for(const group of work){const item=groups.get(group);if(item)fit(group,item);}for(const group of groups.keys())if(!group.isConnected)untrack(group);for(const menu of doc.querySelectorAll?.('details.ui-menu[open]')||[])UI.positionMenu?.(menu);}
     const observer=new view.ResizeObserver(entries=>{
       for(const entry of entries)for(const [group,item]of groups)if(item.target===entry.target){const box=entry.target.getBoundingClientRect();if(box.width!==item.width||box.height!==item.height)queue(group);}
     });

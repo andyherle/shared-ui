@@ -3,6 +3,34 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
+  // A stationary touch/pen press; hosts retain selection, geometry and capture.
+  UI.createPressHold=(root,{onHold,delay=450,tolerance=10,accept=()=>true}={})=>{
+    const doc=root.ownerDocument||root,view=doc.defaultView,removers=[];
+    let press=null,timer=null,consumed=null,heldPointer=null,expiry=null,disposed=false;
+    const listen=(target,type,handler,capture=false)=>{target.addEventListener(type,handler,capture);removers.push(()=>target.removeEventListener(type,handler,capture));};
+    function cancel(){if(timer!==null)view.clearTimeout(timer);timer=null;press=null;}
+    function forget(){consumed=null;heldPointer=null;if(expiry!==null)view.clearTimeout(expiry);expiry=null;}
+    listen(doc,'pointerdown',event=>{if(press&&press.pointerId!==event.pointerId)cancel();},true);
+    listen(root,'pointerdown',event=>{
+      if(disposed||!['touch','pen'].includes(event.pointerType)||event.button!==0||event.isPrimary===false||!accept(event))return;
+      cancel();forget();press=event;
+      timer=view.setTimeout(()=>{
+        timer=null;const initial=press;if(!initial||doc.hidden||!root.isConnected)return;
+        if(onHold?.(initial)!==false){consumed=initial.target;heldPointer=initial.pointerId;}
+        press=null;
+      },delay);
+    });
+    listen(doc,'pointermove',event=>{if(press&&event.pointerId===press.pointerId&&Math.hypot(event.clientX-press.clientX,event.clientY-press.clientY)>tolerance)cancel();},true);
+    listen(doc,'pointerup',event=>{if(event.pointerId===heldPointer){heldPointer=null;expiry=view.setTimeout(forget,800);}cancel();},true);
+    for(const type of ['pointercancel','lostpointercapture'])listen(doc,type,event=>{if(event.pointerId===heldPointer)forget();cancel();},true);
+    listen(view,'click',event=>{if(consumed&&event.detail!==0&&(event.target===consumed||consumed.contains?.(event.target))){event.preventDefault();event.stopImmediatePropagation();forget();}},true);
+    listen(root,'contextmenu',event=>{if(press||consumed)event.preventDefault();});
+    listen(doc,'visibilitychange',()=>{if(doc.hidden){cancel();forget();}});
+    listen(view,'blur',()=>{cancel();forget();});
+    function dispose(){if(disposed)return;disposed=true;cancel();forget();removers.splice(0).forEach(remove=>remove());}
+    listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
+    return {cancel,dispose};
+  };
   // Host-owned content, one shared native preview/selection pattern.
   UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite}={})=>{
     const doc=root.ownerDocument,original=root.className,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
@@ -790,7 +818,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       }
       const after=item.target.getBoundingClientRect();item.width=after.width;item.height=after.height;
     }
-    function flush(){frame=0;const work=[...pending];pending.clear();for(const group of work){const item=groups.get(group);if(item)fit(group,item);}for(const group of groups.keys())if(!group.isConnected)untrack(group);}
+    function flush(){frame=0;const work=[...pending];pending.clear();for(const group of work){const item=groups.get(group);if(item)fit(group,item);}for(const group of groups.keys())if(!group.isConnected)untrack(group);for(const menu of doc.querySelectorAll?.('details.ui-menu[open]')||[])UI.positionMenu?.(menu);}
     const observer=new view.ResizeObserver(entries=>{
       for(const entry of entries)for(const [group,item]of groups)if(item.target===entry.target){const box=entry.target.getBoundingClientRect();if(box.width!==item.width||box.height!==item.height)queue(group);}
     });

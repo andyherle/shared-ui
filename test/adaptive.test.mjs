@@ -107,3 +107,10 @@ test('flexible header metadata reserves its text rather than the allocated empty
  assert.equal(a.hasAttribute('data-ui-compact'),false);assert.equal(b.hasAttribute('data-ui-compact'),false);
  f.resize(160);assert.equal(a.hasAttribute('data-ui-compact'),true);
 });
+
+test('open menu geometry is refreshed after captions change the toolbar layout',()=>{
+ const f=fixture(),a=f.action('Save project'),b=f.action('Import media'),menu={};let fitted=[];
+ f.doc.querySelectorAll=selector=>selector==='details.ui-menu[open]'?[menu]:[];
+ f.UI.positionMenu=value=>{assert.equal(value,menu);fitted.push(a.hasAttribute('data-ui-compact'));};
+ f.row.append(a,b);f.UI.observeActions(f.row);f.flush();f.resize(100);assert.equal(fitted.at(-1),true);f.resize(500);assert.equal(fitted.at(-1),false);
+});

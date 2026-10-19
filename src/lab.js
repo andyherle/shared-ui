@@ -10,8 +10,9 @@ $('sample-selection').addEventListener('change',sampleSelection);
 $('sample-selection').addEventListener('click',event=>{const open=event.target.closest('button');if(!open)return;if(event.shiftKey){const input=open.closest('article').querySelector('input');input.checked=!input.checked;sampleSelection();}else toast('Sample opened');});
 $('sample-clear').addEventListener('click',()=>{for(const input of $('sample-selection').querySelectorAll('input'))input.checked=false;sampleSelection();});
 UI.createBackToTop($('sample-top'),{scrollTarget:$('sample-scroll'),focusTarget:$('sample-scroll'),sprite:'./v1/icons.svg'});
+UI.createTableSort($('resizable-sheet'),{column:'date',direction:'desc',sprite:'./v1/icons.svg'});
 let sampleResize;
-UI.createColumnDrag($('resizable-sheet'),{
+UI.createColumnManager($('resizable-sheet'),$('sample-columns'),{
   pinFirst:true,
   onBeforeChange:()=>sampleResize?.dispose(),
   onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
@@ -124,7 +125,10 @@ $('add-key').addEventListener('click',()=>{const value=Math.floor(frame);if(keys
 $('easing').addEventListener('change',()=>{const paths={linear:'M0 120L300 0',ease:'M0 120C150 120 150 0 300 0',in:'M0 120Q220 120 300 0',out:'M0 120Q80 0 300 0'};$('curve').querySelector('.lab-curve-line').setAttribute('d',paths[$('easing').value]);$('curve').setAttribute('aria-label',$('easing').selectedOptions[0].textContent+' easing curve');});
 const media=[{name:'Reference',file:'reference.svg',alt:'Abstract reference composition'},{name:'Detail',file:'detail.svg',alt:'Abstract detail composition'},{name:'Motion',file:'motion.svg',alt:'Abstract motion composition'}];let current=0;
 function lightbox(){const item=media[current];$('lightbox-name').textContent=item.name;$('lightbox-image').src='./assets/'+item.file;$('lightbox-image').alt=item.alt;delete $('lightbox-image').dataset.zoomed;$('lightbox-count').textContent=`${current+1} / ${media.length}`;}
-const mediaLightbox=UI.createLightbox($('lightbox'),{onNavigate:direction=>{current=(current+direction+media.length)%media.length;lightbox();}});
+const mediaLightbox={open(){ $('lightbox').showModal(); },close(){ $('lightbox').close(); }};
+$('lightbox').addEventListener('keydown',event=>{if(event.target.closest('input,textarea,select')||!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();current=(current+(event.key==='ArrowLeft'?-1:1)+media.length)%media.length;lightbox();});
+const holdExample=$('lightbox-hold'),selectExample=()=>holdExample.setAttribute('aria-pressed',String(holdExample.getAttribute('aria-pressed')!=='true'));
+UI.createPressHold(holdExample,{onHold:selectExample});holdExample.addEventListener('click',selectExample);
 for(const button of document.querySelectorAll('[data-lightbox]'))button.addEventListener('click',()=>{current=Number(button.dataset.lightbox);lightbox();mediaLightbox.open(button);});
 $('lightbox-close').addEventListener('click',()=>mediaLightbox.close());$('lightbox-prev').addEventListener('click',()=>{current=(current-1+media.length)%media.length;lightbox();});$('lightbox-next').addEventListener('click',()=>{current=(current+1)%media.length;lightbox();});$('lightbox-zoom').addEventListener('click',()=>{$('lightbox-image').dataset.zoomed=String($('lightbox-image').dataset.zoomed!=='true');});$('lightbox-reset').addEventListener('click',()=>delete $('lightbox-image').dataset.zoomed);
 for(const button of $('rating').querySelectorAll('[data-rating]'))button.addEventListener('click',()=>{const count=Number(button.dataset.rating);for(const peer of $('rating').querySelectorAll('[data-rating]')){const selected=Number(peer.dataset.rating)<=count;peer.setAttribute('aria-pressed',String(selected));peer.textContent=selected?'★':'☆';}});

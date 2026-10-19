@@ -52,3 +52,5 @@
 }
 
 @layer app{.fixture-media-viewport{position:relative;display:grid;place-items:center;block-size:220px;overflow:hidden;min-inline-size:0;}.fixture-media-viewport>img{inline-size:100%;block-size:100%;object-fit:contain;}}
+
+@layer app { .lab-media-review { display:grid; grid-template-rows:minmax(0,1fr) auto; height:100%; } .lab-media-review > [data-ui-review-stage] { min-height:0; overflow:hidden; } }

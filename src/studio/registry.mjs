@@ -145,7 +145,7 @@ export const COMPONENTS = freeze([
   component('card-container', 'Card with integrated actions', 'composition', '.ui-card-container', ['article'], 'control-fixture', {tokens: surfaceTokens, accessibility: {name: 'Name the main content action and the separate action menu.', keyboard: 'Native Tab/Enter; keep secondary actions outside the primary button.'}}),
   component('file-card', 'File preview card', 'composition', '.ui-card:has(.ui-media-button)', ['article'], 'file-previews', {tokens: surfaceTokens}),
   component('prose', 'Document typography', 'content', '.ui-prose', ['article'], 'content', {tokens: ['--ui-body-size', '--ui-font', '--ui-h1', '--ui-h2', '--ui-h3', '--ui-h4', '--ui-h5', '--ui-h6', '--ui-prose-code-fill', '--ui-prose-code-ink']}),
-  component('text', 'Operational text', 'content', '.ui-meta,.ui-section-title,.ui-value', ['p', 'span', 'strong', 'h3', 'h4'], 'workspace-density', {...editable, props: {label: text, role: choice('body', 'meta', 'heading', 'value')}, tokens: ['--ui-text', '--ui-muted', '--ui-control-size']}),
+  component('text', 'Operational text', 'content', '.ui-meta,.ui-section-title,.ui-value,.ui-color', ['p', 'span', 'strong', 'h3', 'h4'], 'workspace-density', {...editable, props: {label: text, role: choice('body', 'meta', 'heading', 'value')}, tokens: ['--ui-text', '--ui-muted', '--ui-control-size']}),
   component('icon', 'Shared SVG icon', 'content', 'svg.ui-icon', ['svg'], 'icons', {tokens: ['--ui-text']}),
   component('timeline', 'Timeline composition', 'composition', '#timeline', ['section'], 'timeline', {tokens: ['--ui-playhead-color', '--ui-playhead-outline', '--ui-playhead-width']}),
   component('embedded-form', 'Embedded native form', 'composition', '#embedded-form', ['template'], 'embedded', {tokens: surfaceTokens})
@@ -181,5 +181,5 @@ export const ROLE_OWNERS = freeze({'timeline-ticks':'timeline','zoom-feedback':'
   range: 'range', 'resize-handle': 'table', search: 'text-input', section: 'section', 'section-title': 'text', selectable: 'selection',
   skeleton: 'skeleton', split: 'split', 'sr-only': 'text', stack: 'stack', status: 'status', success: 'notice', swatch: 'swatch',
   switch: 'switch', table: 'table', 'table-scroll': 'table', tabs: 'tabs', tag: 'tags', tags: 'tags', 'tag-suggestions': 'tags', 'review-dock': 'review-dock', toggle: 'toggle',
-  toolbar: 'toolbar', truncate: 'text', value: 'text', 'controller-toggle':'controller-toggle', 'effects-inspector':'effects-inspector', 'property-row':'property-row', playhead:'playhead', 'function-value':'function-control', 'value-control': 'value-control', warning: 'notice'
+  toolbar: 'toolbar', truncate: 'text', value: 'text', 'controller-toggle':'controller-toggle', 'effects-inspector':'effects-inspector', 'property-row':'property-row', playhead:'playhead', 'function-value':'function-control', 'value-control': 'value-control', warning: 'notice', color: 'text'
 });

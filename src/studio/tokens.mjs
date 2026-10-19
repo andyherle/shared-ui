@@ -7,7 +7,7 @@ import {freeze, object, requireThat} from './validation.mjs';
 const colorNames = 'prose-code-fill prose-code-ink bg surface surface-raised surface-soft text muted subtle line line-strong control accent accent-hover accent-soft primary on-primary good bad warning note note-text scrim shadow-color media playhead-color playhead-outline';
 const lengthNames = 'menu-width page-width composition-gap composition-aside control-height field-height body-size control-size h1 h2 h3 h4 h5 h6 radius radius-small gap range-thumb control-inset range-width tag-height playhead-width focus-offset popout-width popout-height popout-space grid-min grid-gap aside main switch-width switch-height switch-thumb switch-inset resize-target tag-size tag-radius form-column';
 const expressionNames = 'font font-mono control-font control-padding field-padding tag-font tag-padding fill';
-const contentNames = 'app-color card-fill card-ink swatch-value';
+const contentNames = 'color app-color card-fill card-ink swatch-value';
 export const TOKEN_TYPES = freeze(Object.fromEntries([
   ...colorNames.split(' ').map(name => ['--ui-' + name, {type: 'color', editable: true}]),
   ...lengthNames.split(' ').map(name => ['--ui-' + name, {type: 'length', editable: true}]),
