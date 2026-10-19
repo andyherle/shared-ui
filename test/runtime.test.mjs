@@ -54,9 +54,9 @@ test('untrusted style source and incompatible broadcasts are rejected',async()=>
  const e=environment();e.channels[0].onmessage({data:{protocol:2}});await e.next();assert.equal(e.links.length,0);e.instance.dispose();
 });
 test('a newer bundled contract rejects older remote CSS without touching the working document',async()=>{
- const e=environment({dataset:{uiVersion:'1.1.0',uiRevision:release.revision}});
+ const e=environment({dataset:{uiVersion:'1.15.0',uiRevision:release.revision}});
  assert.equal(await e.instance.applyRelease({...other,version:'1.0.9'}),false);assert.equal(e.links.length,0);assert.equal(e.doc.documentElement.dataset.uiRevision,release.revision);
- const next=e.instance.applyRelease({...other,version:'1.1.1'});e.load();assert.equal(await next,true);e.instance.dispose();
+ const next=e.instance.applyRelease({...other,version:'1.15.1'});e.load();assert.equal(await next,true);e.instance.dispose();
 });
 
 test('a validated replacement retires the marked bundled UI sheet only after load',async()=>{
@@ -109,4 +109,9 @@ test('open menus refit after asynchronous panel reflow and release their observe
  const original=module.exports.positionMenu;let fits=0;module.exports.positionMenu=()=>{fits++;};
  const e=environment({resizeObserver:Observer}),panel={},menu={open:true,matches:()=>true,querySelector:()=>panel};
  try{e.doc.dispatchEvent({type:'toggle',target:menu});assert(observer.nodes.has(panel));assert.equal(fits,1);observer.callback();assert.equal(fits,2);menu.open=false;e.doc.dispatchEvent({type:'toggle',target:menu});assert.equal(observer.nodes.size,0);e.instance.dispose();assert(observer.disconnected);}finally{module.exports.positionMenu=original;}
+});
+
+test('missing or stale page version cannot downgrade the bundled runtime contract',async()=>{
+ for(const dataset of [{},{uiVersion:'1.0.0'}]){const baseline={removed:false,remove(){this.removed=true;}},e=environment({dataset,baselines:[baseline]});
+ assert.equal(await e.instance.applyRelease({...other,version:'1.13.9'}),false);assert.equal(e.links.length,0);assert.equal(baseline.removed,false);e.instance.dispose();}
 });

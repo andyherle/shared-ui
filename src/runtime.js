@@ -39,8 +39,8 @@
     function schedule(delay=PERIOD){view.clearTimeout(timer);if(!stopped&&doc.visibilityState!=='hidden')timer=view.setTimeout(tick,delay);}
     async function apply(value){
       const item=release(value,source);
-      const minimum=/^1\.\d+\.\d+$/.test(root.dataset.uiVersion||'')?root.dataset.uiVersion:'1.0.0';
-      const candidate=item.version.split('.').map(Number),floor=minimum.split('.').map(Number);
+      const bundled=api.version.split('.').map(Number),declared=(/^1\.\d+\.\d+$/.test(root.dataset.uiVersion||'')?root.dataset.uiVersion:api.version).split('.').map(Number);
+      const candidate=item.version.split('.').map(Number),floor=declared[1]>bundled[1]||declared[1]===bundled[1]&&declared[2]>bundled[2]?declared:bundled;
       if(candidate[1]<floor[1]||(candidate[1]===floor[1]&&candidate[2]<floor[2]))return false;
       if(stopped||root.dataset.uiRevision===item.revision||pendingLink?.dataset.uiRevision===item.revision)return false;
       cancelStyle?.();
@@ -270,6 +270,54 @@
     return {next(direction){if(!direction){last=-Infinity;previous=burst=0;return 1;}const time=now();burst=direction===previous&&time-last<=interval?Math.min(2,burst+1):0;last=time;previous=direction;const factor=1+[.1,.15,.2][burst];return direction>0?factor:1/factor;}};
   }
   const zoomDocks=new WeakMap();
+  // Size only: application content and placement retain their existing owners.
+  function createResizablePanel(panel,{container=panel.parentElement,side='right',min=240,max=640,minMain=280,value=352,property='--ui-aside',onChange=()=>{}}={}){
+    if(!['left','right'].includes(side)||!/^--ui-[a-z-]+$/.test(property)||![min,max,minMain,value].every(Number.isFinite)||min<=0||max<min||minMain<0)throw new TypeError('Panel resize needs bounded dimensions and a shared sizing property');
+    const doc=panel.ownerDocument,view=doc.defaultView,handle=doc.createElement('div'),off=[];
+    const previous=container.style.getPropertyValue(property);let size=value,drag=null,disposed=false;
+    handle.className='ui-panel-resize';handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label','Resize panel');
+    Object.assign(handle.style,{position:'absolute',top:'0',bottom:'0',[side==='right'?'left':'right']:'-6px',width:'13px',padding:'0 6px',zIndex:'25',touchAction:'none',cursor:'col-resize'});container.append(handle);
+    const bounds=()=>{const width=container.getBoundingClientRect().width;return {upper:Math.max(min,Math.min(max,width-minMain)),enabled:width>=min+minMain};};
+    const set=(next,final=false)=>{const b=bounds();size=Math.round(Math.max(min,Math.min(b.upper,next)));container.style.setProperty(property,size+'px');handle.hidden=!b.enabled||panel.hidden;const area=container.getBoundingClientRect(),rect=panel.getBoundingClientRect();handle.style.top=Math.max(0,(rect.top||0)-(area.top||0))+'px';handle.style.bottom=Math.max(0,(area.bottom||0)-(rect.bottom||0))+'px';handle.style.left=(side==='right'?'calc(100% - '+size+'px - 6px)':(size-6)+'px');for(const [key,n]of Object.entries({'aria-valuemin':min,'aria-valuemax':b.upper,'aria-valuenow':size}))handle.setAttribute(key,String(n));onChange(size,{final});};
+    const listen=(node,type,fn)=>{node.addEventListener(type,fn);off.push(()=>node.removeEventListener(type,fn));};
+    function finish(cancel=false){if(!drag)return;const start=drag;drag=null;if(cancel)set(start.width,true);else set(size,true);if(handle.hasPointerCapture?.(start.id))handle.releasePointerCapture(start.id);}
+    listen(handle,'pointerdown',event=>{if(event.button!==0||event.isPrimary===false||!bounds().enabled)return;event.preventDefault();event.stopPropagation();drag={id:event.pointerId,x:event.clientX,width:size};handle.setPointerCapture(event.pointerId);handle.focus({preventScroll:true});});
+    listen(handle,'pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();set(drag.width+(event.clientX-drag.x)*(side==='right'?-1:1));});
+    listen(handle,'pointerup',()=>finish());listen(handle,'pointercancel',()=>finish(true));listen(handle,'lostpointercapture',()=>finish(true));
+    listen(handle,'keydown',event=>{if(event.key==='Escape'){finish(true);return;}if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?min:event.key==='End'?bounds().upper:size+(event.key==='ArrowRight'?1:-1)*(side==='right'?-1:1)*(event.shiftKey?40:10);set(next,true);});
+    listen(doc,'visibilitychange',()=>{if(doc.hidden)finish(true);});listen(view,'blur',()=>finish(true));
+    const refresh=()=>{if(!disposed&&!drag)set(size);};const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;observer?.observe(container);observer?.observe(panel);listen(view,'resize',refresh);
+    const api={element:handle,get value(){return size;},setValue:next=>set(next,true),refresh,dispose(){if(disposed)return;finish(true);disposed=true;observer?.disconnect();for(const remove of off)remove();handle.remove();previous?container.style.setProperty(property,previous):container.style.removeProperty(property);}};
+    listen(view,'pagehide',api.dispose);set(value);return api;
+  }
+  // A container owns the coordinate space; the existing native controls stay intact.
+  function createContextToolbar(toolbar,{container=toolbar.ownerDocument.body,zoom=null}={}){
+    const doc=toolbar.ownerDocument,view=doc.defaultView,host=doc.createElement('div');
+    const original={parent:toolbar.parentNode,next:toolbar.nextSibling,style:toolbar.getAttribute('style')};
+    const previousZoom=zoom&&{parent:zoom.parentNode,next:zoom.nextSibling,style:zoom.getAttribute('style')};
+    host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
+    host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto 12px max(12px, env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
+    toolbar.classList.add('ui-toolbar','ui-actions');toolbar.dataset.uiLayout='bar';
+    Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',margin:'0',pointerEvents:'auto'});
+    host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
+    container.append(host);
+    let disposed=false;
+    const refresh=()=>{
+      if(disposed||doc.hidden)return;
+      const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+12:0;
+      const stacked=side>0&&width-2*side<Math.min(240,toolbar.scrollWidth||240);
+      toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow='1';
+      toolbar.style.maxWidth=Math.max(0,stacked?width:width-2*side)+'px';
+      if(zoom){zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow=stacked?'2':'1';}
+      view.SharedUI?.observeActions?.(toolbar);
+    };
+    const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;
+    observer?.observe(container);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
+    view.addEventListener('resize',refresh);doc.addEventListener('visibilitychange',refresh);
+    const restore=(node,record)=>{if(!node||!record)return;record.style===null?node.removeAttribute('style'):node.setAttribute('style',record.style);if(record.parent)record.parent.insertBefore(node,record.next?.parentNode===record.parent?record.next:null);else node.remove();};
+    const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);restore(toolbar,original);restore(zoom,previousZoom);host.remove();}};
+    view.addEventListener('pagehide',api.dispose);refresh();return api;
+  }
   function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
     if(zoomDocks.has(doc))return zoomDocks.get(doc);
     const view=doc.defaultView,node=doc.createElement('div');node.className='ui-zoom-feedback ui-toolbar ui-actions ui-inline';node.setAttribute('role','group');node.setAttribute('aria-label','Content zoom');
@@ -284,7 +332,7 @@
     let visible=true;
     const sync=()=>{node.hidden=!visible||Boolean(doc.querySelector('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open'));};
     doc.addEventListener('toggle',sync,true);doc.addEventListener('close',sync,true);
-    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
+    const api={element:node,show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
     view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);sync();return api;
   }
   function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
@@ -533,7 +581,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.13.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createTableSort,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.14.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

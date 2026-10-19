@@ -20,7 +20,7 @@ Layout CSS may position and size application-specific media, timelines, canvases
 
 Successful pushes to `main` build and publish a v1 manifest and an immutable, integrity-addressed stylesheet through GitHub Pages. Apps retain their bundled baseline and check for compatible style updates in the background every five minutes while visible. Same-origin views coordinate checks with a short storage lease and BroadcastChannel notifications. The browser's shared asset cache handles the stylesheet bytes.
 
-Mark only the bundled UI sheet with `data-ui-baseline` on its `link` or `style` element. An update becomes active only after the replacement stylesheet loads and its integrity check passes; it then removes that marked sheet so deleted rules disappear. Keep app layout in a separate unmarked sheet. A failed fetch or offline session retains the working appearance. Style refresh never rebuilds the page or changes playback, forms, focus, selection, renderer identity or application state. Hidden pages stop checking; closing a page cleans up its listeners and channel. Browser behavior code stays bundled with each app and is upgraded through its normal code release.
+Mark only the bundled UI sheet with `data-ui-baseline` on its `link` or `style` element. An update becomes active only after the replacement stylesheet loads and its integrity check passes; it then removes that marked sheet so deleted rules disappear. Keep app layout in a separate unmarked sheet. A failed fetch or offline session retains the working appearance. Releases older than the bundled runtime contract are rejected even if the page omits its version attribute; a newer declared page version raises that floor. Style refresh never rebuilds the page or changes playback, forms, focus, selection, renderer identity or application state. Hidden pages stop checking; closing a page cleans up its listeners and channel. Browser behavior code stays bundled with each app and is upgraded through its normal code release.
 
 Allow `https://andyherle.github.io` in `style-src` and `connect-src` when using automatic updates. Keep scripts same-origin. No app credentials or user content are sent to the style source; update requests omit credentials and referrers. Use a bundled revision when a deployment must remain visually frozen. A major control-contract change requires a new version channel and an application migration.
 
@@ -673,7 +673,7 @@ The shared `ui-lightbox` shell fills the viewport without a second panel frame. 
 
 `createAvatar(name,{document,size:24})` composes the shared tag tokens into a fixed, passive circular presence indicator. Full names stay in the accessible label/title rather than affecting row geometry.
 
-`installZoomShortcuts(document,{canZoom,onZoom})` shares Command+Up/Right/+ and Command+Down/Left/− with native field, composed-path and IME guards. Apps supply bounded content transforms; never scale chrome. Dispose removes all handlers. `createZoomFeedback(document).show(percent)` updates one persistent, bottom-centered native minus/percentage/plus toolbar per document. It emits `ui:zoom` with direction −1/0/+1; zero resets. Apps own bounds and content geometry. Idle opacity increases on hover or keyboard focus. Native dialogs, menus and popovers suspend it automatically. Apps call `setVisible(false)` for custom overlays or non-content routes and restore it on close; dispose removes its listeners. The unframed `.ui-review-dock.ui-stack` centers review actions and tags without a surrounding panel border.
+`installZoomShortcuts(document,{canZoom,onZoom})` shares Command+Up/Right/+ and Command+Down/Left/− with native field, composed-path and IME guards. Apps supply bounded content transforms; never scale chrome. Dispose removes all handlers. `createZoomFeedback(document).show(percent)` updates one persistent, bottom-centered native minus/percentage/plus toolbar per document. It emits `ui:zoom` with direction −1/0/+1; zero resets. Apps own bounds and content geometry. The zoom group uses the same readable control surface as its context toolbar. Native dialogs, menus and popovers suspend it automatically. Apps call `setVisible(false)` for custom overlays or non-content routes and restore it on close; dispose removes its listeners. The unframed `.ui-review-dock.ui-stack` centers review actions and tags without a surrounding panel border.
 
 `createValueTransition({value,onChange,duration:110,view})` eases content values to a target on animation frames. Read `.target` when accumulating repeated shortcuts; `.value` is the current frame. The callback receives `{final}` so apps persist once at the end. `cancel` stops work for a direct gesture; `dispose` releases listeners. Hidden views settle without background animation; reduced-motion preferences use the final value immediately. Never apply content zoom to UI chrome.
 
@@ -821,3 +821,68 @@ panning, dragging and persistence, and must retain a visible keyboard/tap action
 Resize handles retain their native target without requiring hover, so they work with touch as well as a pointer.
 
 Open native menus observe their panel size so late field/font reflow remains inside the viewport. Closing menus and disposing a document release that observer.
+
+
+### Container context toolbar
+
+`SharedUI.createContextToolbar(toolbar,{container:document.body,zoom:feedback.element})`
+keeps the existing native action row centered in its container and the zoom group
+right aligned with safe-area padding. A body container uses viewport coordinates;
+a positioned element uses its own bounds. Captions compact together through the
+normal shared action fitting. Narrow containers use a second zoom row when a
+centered command row and zoom cannot coexist. No controls are cloned. Call
+`refresh()` after visibility changes and `dispose()` to restore owned nodes and
+release observers/listeners. `createZoomFeedback` exposes `.element` and defaults
+to the same padded bottom-right position. Selected positioned media cards paint
+the shared contrast border above their content; apps must not add selection paint.
+
+
+`SharedUI.createResizablePanel(panel,{container,side:'right',min:240,max:640,minMain:280,value:352,property:'--ui-aside',onChange})` adds one accessible native separator. Drag with mouse/touch or use Left/Right (Shift for larger steps), Home/End and Escape. The container receives the bounded shared sizing property; the application owns panel placement and persistence. Narrow containers disable the horizontal handle. Cancellation, hidden views and disposal release capture/observers and preserve content. This is a resize primitive, not a docking/workspace manager. Positioned panels must establish their existing positioning context.
+
+Composed `.ui-field` textarea controls share the outer field border, fill the available value area and retain native vertical resizing. Hidden tag suggestions reserve no empty rows.
+
+Caption compaction priority is explicitly opt-in: mark only unmistakable actions
+such as Previous/Next arrows with `data-ui-compact-priority="0"`. Lower numeric
+ranks lose captions first, unranked actions last. Equal-fill rows retain natural
+width for those compacted arrows and balance the remaining labelled controls.
+Labels return when space allows; accessible names remain intact. Ordinary groups
+continue to compact together. The Media review example demonstrates this option.
+
+Use `data-ui-align="start"` on an action stack to align its native command
+captions with the same left edge as menu commands. Property rows make tag entry
+fill their value column, preserving the existing native input and chips.
+
+### Compact suggestions and inspector actions
+
+`createSuggestedInput(input,{options,excluded,onCommit,limit:6})` accepts arbitrary
+text with optional prefix suggestions. It preserves the existing input and uses
+a viewport-bounded overlay: focus and suggestion changes never reserve a new row
+or move adjacent controls. Arrow keys select a suggestion; Enter otherwise commits
+the literal entry, Escape dismisses, and IME composition remains native. No ghost
+text or routine draft notice is inserted. Applications retain their commit model.
+`createTagInput` uses this same overlay globally and adds comma-separated commits
+and shared tag choices. Dispose either helper with the owning field.
+
+`adoptPropertyAction(row,{name,action,icon,label:name,sprite})` places the original
+native button/link in the same value column as Aura's inspector inputs, with its
+name at the left and a named icon in a full-width compact action box. Existing
+handlers, native links and shared pending/success/error feedback stay intact.
+The Effects control panel catalogue demonstrates both primitives in both packs.
+
+Panel resize separators follow the panel's actual vertical bounds, so a shared
+full-width workspace footer remains clear. Native builders declare action icons
+and factories retain ownership; consumers must not repaint factory controls with
+legacy post-render label/icon decoration.
+
+`data-ui-layout="wrap"` is an explicit intrinsic wrapping action group. It sizes
+from its controls without size containment, stays bounded by its parent and
+wraps normally. Use it for centered review tools with a tag row aligned below;
+ordinary full-width action groups retain their existing containment.
+
+### Workspace control bars and compact sections
+
+Use the **review dock** (`.ui-review-dock[data-ui-position="flow"]`) for persistent media navigation and its optional review actions. Keep it in a reserved workspace row outside the media/inspector split. Use `createContextToolbar` for selection-dependent canvas tools anchored to a container, with optional zoom controls. Both compose the same native `.ui-actions` controls; the application owns only workspace tracks and media placement. They are separate compositions, not separate button implementations.
+
+Compact inspector groups use native `details.ui-section`: a left disclosure triangle, a bold top-level heading and quieter nested headings (`data-ui-level="2"`). Existing draggable application headings with their own collapse state may adopt `.ui-section-heading` plus `aria-expanded` and keyboard handling; retain their original nodes and handlers. Suggested inputs anchor an overlay to the exact field width, without a new flow row.
+
+`createTagInput(input, {field, chips, ...suggestions})` can retain a native field and selected-chip list on one stable row. The entry keeps its width while the chip strip scrolls horizontally. Pass the existing nodes; the application retains tag persistence and removal handlers. Suggestions remain a field-width overlay and never resize the inspector.

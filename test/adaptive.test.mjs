@@ -114,3 +114,13 @@ test('open menu geometry is refreshed after captions change the toolbar layout',
  f.UI.positionMenu=value=>{assert.equal(value,menu);fitted.push(a.hasAttribute('data-ui-compact'));};
  f.row.append(a,b);f.UI.observeActions(f.row);f.flush();f.resize(100);assert.equal(fitted.at(-1),true);f.resize(500);assert.equal(fitted.at(-1),false);
 });
+
+test('caption priority is opt-in, compacts intuitive navigation first and restores labels',()=>{
+ const f=fixture(),prev=f.action('Previous'),actions=f.action('Actions'),info=f.action('Info'),next=f.action('Next');
+ f.row.className='ui-actions ui-fill';for(const node of [prev,next]){node.setAttribute('data-ui-compact-priority','0');node.dataset.uiCompactPriority='0';}
+ f.row.append(prev,actions,info,next);f.UI.observeActions(f.row);f.flush();f.resize(280);
+ assert.equal(prev.hasAttribute('data-ui-compact'),true);assert.equal(next.hasAttribute('data-ui-compact'),true);
+ assert.equal(actions.hasAttribute('data-ui-compact'),false);assert.equal(info.hasAttribute('data-ui-compact'),false);
+ f.resize(160);assert.equal(actions.hasAttribute('data-ui-compact'),true);f.resize(600);
+ for(const node of [prev,actions,info,next])assert.equal(node.hasAttribute('data-ui-compact'),false);
+});
