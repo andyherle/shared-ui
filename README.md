@@ -675,7 +675,7 @@ The header can wrap into available container space. Controls use native density;
 content zoom never scales application chrome.
 
 Command panels use `.ui-menu-panel`, independently sized from their trigger and
-bounded to the viewport. Forms and filters additionally use `.ui-form-panel`:
+bounded to the viewport (20rem by default; `--ui-menu-width` overrides it). Group long command menus with native `fieldset.ui-group` / `legend` and an inner `.ui-actions` stack. Forms and filters additionally use `.ui-form-panel`:
 fields keep their borders and choices keep their pressed states. Compose native
 `.ui-field`, `fieldset.ui-group`, `.ui-actions.ui-fill` and `.ui-stack`; applications
 own the field values and filtering. No custom filter typography or control paint.
@@ -767,3 +767,5 @@ For native line playheads, load the optional, separately validated `v1/timeline.
 `SharedUI.createSectionActions({root,actions,onChange})` adds native **Expand all** and **Collapse all** actions for `details.ui-section` within a root. Hidden sections remain untouched. It changes only native open state and reports `{open,sections}` for host-owned persistence. `refresh()` updates disabled states after host filtering or insertion; `dispose()` releases buttons/listeners. No section or form field is recreated.
 
 `SharedUI.createMediaViewport({surface,content,minScale:.125,maxScale:32,onChange})` lets a bounded preview inspect existing pixels without changing content dimensions or application state. Two-finger scroll/wheel pans; pinch or Ctrl/Alt/Command-wheel zooms around the pointer; Space + primary drag or middle drag also pans; Shift-wheel pans horizontally; double-click fits. Focus the surface for +/− zoom, arrow-key pan and 0/Escape to fit. Toolbar buttons, fields and editable content retain their native interaction. `zoom(factor,point)`, `pan(x,y)`, `fit()`, `.state` and `dispose()` allow host controls and cleanup. The host owns placement, clipping and existing creative overlays; `onChange` can reproject overlays. Transforms affect only the content node, leaving UI chrome unscaled. The Control fixture demonstrates both helpers with native sections and an SVG image.
+
+Media viewport hosts can set `keyboard:false` to reserve all keys for transport/editors, or `spacePan:false` to reserve Space alone. `setEnabled(false)` cancels an active preview gesture and lets native host scene tools receive pointer/wheel gestures; enabling restores preview inspection without changing its transform.

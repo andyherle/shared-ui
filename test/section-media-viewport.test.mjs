@@ -29,3 +29,12 @@ test('two-finger wheel deltas pan in both axes while pinch and modified wheel zo
  surface.emit('wheel',{deltaMode:0,deltaX:0,deltaY:-100,ctrlKey:true,clientX:110,clientY:70});assert(view.state.scale>1);
  view.fit();surface.emit('gesturestart',{});surface.emit('gesturechange',{scale:2,clientX:110,clientY:70});assert.equal(view.state.scale,2);surface.emit('gestureend',{});view.dispose();
 });
+
+test('hosts can reserve transport keys and hand wheel input to scene tools',()=>{
+ const {UI,node,doc}=fixture(),surface=node(),content=node();let prevented=0;
+ const view=UI.createMediaViewport({surface,content,keyboard:false});surface.emit('pointerenter');surface.focus();
+ for(const key of [' ','ArrowRight','i','o'])doc.emit('keydown',{key,code:key===' '?'Space':key,target:surface,preventDefault(){prevented++;}});
+ assert.equal(prevented,0);assert.equal(view.state.x,0);
+ view.setEnabled(false);surface.emit('wheel',{deltaX:10,deltaY:20,preventDefault(){prevented++;}});assert.equal(prevented,0);assert.equal(view.state.y,0);
+ view.setEnabled(true);surface.emit('wheel',{deltaX:10,deltaY:20});assert.equal(view.state.y,-20);view.dispose();
+});

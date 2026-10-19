@@ -83,7 +83,7 @@
     .ui-menu:not([data-ui-position=overlay]) { position:relative; flex:none; }
     :where(.ui-menu>summary,summary.ui-action) { list-style:none; }
     :where(.ui-menu>summary,summary.ui-action)::-webkit-details-marker { display:none; }
-    .ui-menu-panel { padding:var(--ui-gap); inline-size:12rem; max-inline-size:calc(100vw - 16px); max-block-size:calc(100dvh - 6rem); overflow:auto; }
+    .ui-menu-panel { padding:var(--ui-gap); inline-size:var(--ui-menu-width,20rem); max-inline-size:calc(100vw - 16px); max-block-size:calc(100dvh - 6rem); overflow:auto; }
     .ui-form-panel { inline-size:22rem; }
     .ui-menu:not([data-ui-position=overlay]) > .ui-menu-panel { position:absolute; z-index:60; top:100%; right:0; box-shadow:var(--shadow); }
     .ui-toolbar[data-ui-layout=joined] { flex-wrap:nowrap; gap:0; }
