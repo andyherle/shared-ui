@@ -156,7 +156,6 @@
     .ui-section-heading { display:flex; align-items:center; gap:var(--ui-gap); }
     .ui-section-heading::before { content:"▸"; }
     .ui-section-heading[aria-expanded=true]::before { content:"▾"; }
-    :is(.ui-section > summary,.ui-section-heading) > :where(h2,h3,h4,h5,p,strong) { display:inline; margin:0; font:inherit; }
     :is(.ui-section .ui-section > summary,[data-ui-level="2"]) { font-weight:normal; }
     .ui-section > :not(summary) { margin-block-start:var(--ui-gap); }
     :where(.ui-field) { display:flex; flex:none; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-control-inset); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:#0000; color:var(--ui-text); font:var(--ui-control-font); }
@@ -368,6 +367,7 @@
   }
   .ui-section-title { font-size:calc(var(--ui-control-size) + 2px); font-weight:600; line-height:1.4; margin:0; }
   .ui-chrome { font-size:var(--ui-control-size); line-height:1.45; }
+    :is(.ui-section > summary,.ui-section-heading) > :where(h2,h3,h4,h5,p,strong) { display:inline; margin:0; font:inherit; }
   .ui-meta { font-size:calc(var(--ui-control-size) - 1px); line-height:1.45; font-weight:400; color:var(--ui-muted); }
   .ui-value { font-size:var(--ui-h1); font-weight:600; line-height:1.2; font-variant-numeric:tabular-nums; }
   .ui-chrome :where(h1,h2,h3,h4,h5,h6):where(:not(.ui-prose *,.markdown *,.ui-section-title,.ui-section>summary>*)) { font-size:inherit; line-height:1.4; letter-spacing:0; margin:0; }

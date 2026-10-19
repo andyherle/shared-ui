@@ -247,3 +247,5 @@ $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggesti
 {const panel=document.getElementById('resize-demo-panel');if(panel){const resize=UI.createResizablePanel(panel,{container:document.getElementById('resize-demo'),value:320,min:160,minMain:180});window.addEventListener('pagehide',()=>resize.dispose(),{once:true});}}
 
 {const panel=document.getElementById('fixture-property-panel');if(panel){const row=document.createElement('div'),input=document.createElement('input');input.className='ui-field';input.placeholder='Type anything';panel.append(row);SharedUI.adoptPropertyRow(row,{name:'Suggested text',control:input});const suggestions=SharedUI.createSuggestedInput(input,{options:()=>['Motion','Mood','Monochrome'],onCommit:value=>{input.value=value;}});window.addEventListener('pagehide',()=>suggestions.dispose(),{once:true});}}
+
+UI.createColorWheel({root:$('colour-wheel'),multiple:true});

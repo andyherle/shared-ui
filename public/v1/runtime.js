@@ -1076,6 +1076,39 @@
     on(view,'pagehide',event=>{hide();if(!event.persisted)dispose();});
     return {show,hide,dispose,element:list};
   };
+  // Native, keyboard-operable hue/saturation picker with optional multiple nodes.
+  UI.createColorWheel=({root,values=[],choices=[],multiple=false,label='Colour wheel',onChange=()=>{}}={})=>{
+    if(!root?.ownerDocument)throw new TypeError('Colour wheel needs a native root');
+    const doc=root.ownerDocument,view=doc.defaultView,size=240,button=doc.createElement('button'),canvas=doc.createElement('canvas'),selected=doc.createElement('div'),status=doc.createElement('span');
+    const normalize=value=>/^#[\da-f]{6}$/i.test(String(value))?String(value).toLowerCase():null;
+    const palette=[...new Set(choices.map(normalize).filter(Boolean))];let colors=[],cursor={h:0,s:1},disposed=false;
+    const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+    function hsv(hex){const [r,g,b]=rgb(hex).map(v=>v/255),max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;return{h:!d?0:((max===r?(g-b)/d+(g<b?6:0):max===g?(b-r)/d+2:(r-g)/d+4)*60),s:max?d/max:0};}
+    function hex(h,s){const c=s,x=c*(1-Math.abs(h/60%2-1)),m=1-c,parts=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return '#'+parts.map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');}
+    function nearest(color){if(!palette.length)return color;const a=rgb(color);return palette.reduce((best,next)=>{const distance=value=>rgb(value).reduce((sum,v,i)=>sum+(v-a[i])**2,0);return distance(next)<distance(best)?next:best;});}
+    const background=doc.createElement('canvas');background.width=background.height=size;
+    const paint=background.getContext('2d'),pixels=paint.createImageData(size,size);
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){const dx=(x-size/2)/(size/2-12),dy=(y-size/2)/(size/2-12),s=Math.hypot(dx,dy),i=(y*size+x)*4;if(s>1)continue;const color=rgb(hex((Math.atan2(dy,dx)*180/Math.PI+360)%360,s));pixels.data.set([...color,255],i);}
+    paint.putImageData(pixels,0,0);canvas.width=canvas.height=size;canvas.setAttribute('aria-hidden','true');Object.assign(canvas.style,{display:'block',inlineSize:'100%',aspectRatio:'1'});
+    button.type='button';button.className='ui-action';button.title='Click to add a colour; click a node to remove it. Arrows choose hue/saturation; Enter toggles.';Object.assign(button.style,{display:'block',inlineSize:'100%',maxInlineSize:size+'px'});button.append(canvas);
+    selected.className='ui-actions';selected.setAttribute('aria-label','Selected colours');status.className='ui-sr-only';status.setAttribute('role','status');status.setAttribute('aria-live','polite');root.classList.add('ui-stack');root.dataset.uiComponent='colour-wheel';root.append(button,selected,status);
+    function point(value){const c=hsv(value),a=c.h*Math.PI/180;return{x:size/2+Math.cos(a)*c.s*(size/2-12),y:size/2+Math.sin(a)*c.s*(size/2-12)};}
+    function draw(){
+      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,size,size);ctx.drawImage(background,0,0);
+      const ink=view.getComputedStyle(root).getPropertyValue('--ui-text').trim()||'#fff',accent=view.getComputedStyle(root).getPropertyValue('--ui-accent').trim()||ink;
+      for(const value of colors){const p=point(value);ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle=value;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=ink;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=accent;ctx.stroke();}
+      const p=point(hex(cursor.h,cursor.s));ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.lineWidth=1.5;ctx.strokeStyle=ink;ctx.stroke();
+      button.setAttribute('aria-label',`${label}; ${colors.length} selected; hue ${Math.round(cursor.h)}, saturation ${Math.round(cursor.s*100)} percent`);
+      selected.replaceChildren();for(const color of colors){const remove=doc.createElement('button');remove.type='button';remove.className='ui-tag';remove.textContent=color+' ×';remove.setAttribute('aria-label','Remove colour '+color);remove.onclick=()=>change(colors.filter(v=>v!==color));selected.append(remove);}selected.hidden=!colors.length;
+    }
+    function setValues(next){colors=[...new Set(next.map(normalize).filter(Boolean).map(nearest))].slice(0,multiple?32:1);draw();}
+    function change(next){setValues(next);status.textContent=colors.length?'Selected colours: '+colors.join(', '):'All colours';onChange([...colors]);}
+    function toggle(value){value=nearest(value);change(colors.includes(value)?colors.filter(v=>v!==value):multiple?[...colors,value]:[value]);}
+    function click(event){if(disposed)return;if(!event.detail){toggle(hex(cursor.h,cursor.s));return;}const r=canvas.getBoundingClientRect(),x=(event.clientX-r.left)/r.width*size,y=(event.clientY-r.top)/r.height*size,dx=(x-size/2)/(size/2-12),dy=(y-size/2)/(size/2-12);if(Math.hypot(dx,dy)>1)return;const hit=colors.find(value=>{const p=point(value);return Math.hypot(p.x-x,p.y-y)<=Math.max(12,12*size/r.width);});cursor={h:(Math.atan2(dy,dx)*180/Math.PI+360)%360,s:Math.min(1,Math.hypot(dx,dy))};toggle(hit||hex(cursor.h,cursor.s));}
+    function key(event){if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',' ','Home','Delete','Backspace'].includes(event.key))return;event.preventDefault();event.stopPropagation();const step=event.shiftKey?15:5;if(event.key==='ArrowLeft'||event.key==='ArrowRight')cursor.h=(cursor.h+(event.key==='ArrowRight'?step:-step)+360)%360;else if(event.key==='ArrowUp'||event.key==='ArrowDown')cursor.s=Math.max(0,Math.min(1,cursor.s+(event.key==='ArrowUp'?step:-step)/100));else if(event.key==='Home')cursor={h:0,s:1};else if(event.key==='Delete'||event.key==='Backspace'){change(colors.filter(v=>v!==nearest(hex(cursor.h,cursor.s))));return;}else{toggle(hex(cursor.h,cursor.s));return;}draw();}
+    button.addEventListener('click',click);button.addEventListener('keydown',key);setValues(values);
+    return {element:root,get values(){return [...colors];},setValues,clear:()=>change([]),dispose(){if(disposed)return;disposed=true;button.removeEventListener('click',click);button.removeEventListener('keydown',key);button.remove();selected.remove();status.remove();background.width=background.height=1;canvas.width=canvas.height=1;}};
+  };
   UI.createSuggestedInput=(input,{options=()=>[],excluded=()=>[],onCommit=()=>{},limit=6,label='Suggestions',separator=null,tags=false}={})=>{
     const doc=input.ownerDocument,view=doc.defaultView,list=doc.createElement('div'),slot=doc.createElement('div'),removers=[];
     const attributes=['role','aria-autocomplete','aria-controls','aria-expanded','aria-activedescendant','autocomplete','enterkeyhint'],prior=attributes.map(name=>input.getAttribute(name));
