@@ -185,15 +185,14 @@ for(const input of document.querySelectorAll('.ui-function-value'))window.Shared
  for(const [id,name,kind] of [['colour','Tint','colour'],['number','Rotation','number'],['boolean','Visible','boolean']]){
   const row=doc.getElementById('fixture-property-'+id);if(!row)continue;
   const actions=doc.createElement('div');actions.className='ui-actions ui-inline';
-  const reset=doc.createElement('button');reset.type='button';UI.adoptAction(reset,{label:'Reset '+name,icon:'refresh',iconOnly:true,sprite:'./v1/icons.svg'});actions.append(reset);
-  let control;
-  if(kind==='boolean'){const value=UI.createBooleanControl({label:name,value:true,variant:'controller'});control=value.element;reset.addEventListener('click',()=>value.setValue(true));}
-  else if(kind==='colour'){const value=UI.createColourValue({label:name});value.sync('#7aa8ff');control=value.element;reset.addEventListener('click',()=>value.sync('#7aa8ff'));}
-  else {control=doc.createElement('div');control.className='ui-field';const input=doc.createElement('input');input.type='text';input.value='45';input.setAttribute('aria-label','Rotation base value');control.append(input);UI.createFunctionControl(input);reset.addEventListener('click',()=>{input.value='45';});
-   const editor=UI.createExpressionEditor({label:name,sprite:'./v1/icons.svg',suggestions:[{insert:'base',description:'Keyframed or set base value'},{insert:'sin(time)',description:'Sine motion'},{insert:'noise(time, 0)',description:'Smooth noise'},{insert:'time',description:'Current time in seconds'}],onCommit:async expression=>{UI.setExpressionState(input,{expression,base:input.value,result:input.value});editor.sync({expression,base:input.value,value:input.value});}});
+  let control,onReset;
+  if(kind==='boolean'){const value=UI.createBooleanControl({label:name,value:true,variant:'controller'});control=value.element;onReset=()=>value.setValue(true);}
+  else if(kind==='colour'){const value=UI.createColourValue({label:name});value.sync('#7aa8ff');control=value.element;onReset=()=>value.sync('#7aa8ff');}
+  else {control=doc.createElement('div');control.className='ui-field';const input=doc.createElement('input');input.type='text';input.value='45';input.setAttribute('aria-label','Rotation base value');control.append(input);UI.createFunctionControl(input);onReset=()=>{input.value='45';};
+   const editor=UI.createExpressionEditor({label:name,sprite:'./v1/icons.svg',suggestions:[{insert:'base',description:'Keyframed or set base value'},{insert:'sin(time)',description:'Sine motion'},{insert:'noise(time, 0)',description:'Smooth noise'},{insert:'time',description:'Current time in seconds'}],onCommit:async expression=>{UI.setExpressionState(input,{expression,base:input.value,result:input.value,onActivate:()=>editor.toggle(),controls:editor.element.id,label:name});editor.sync({expression,base:input.value,value:input.value});}});
    actions.prepend(editor.trigger);row.after(editor.element);editor.sync({base:45,value:45});
   }
-  UI.adoptPropertyRow(row,{name,control,actions});
+  UI.adoptPropertyRow(row,{name,control,actions});UI.setPropertyReset(row,{onReset});UI.orderPropertyActions(actions);
  }
 }
 
@@ -222,3 +221,5 @@ for(const action of document.querySelectorAll('[data-keyframe-state]'))window.Sh
 {
  const panel=document.getElementById('fixture-property-panel');if(panel){const row=document.createElement('div'),field=document.createElement('select');field.multiple=true;field.size=3;field.setAttribute('aria-label','Channels');for(const name of ['Colour','Shape','Motion']){const option=document.createElement('option');option.value=option.textContent=name;option.selected=name==='Colour';field.append(option);}panel.append(row);window.SharedUI.adoptPropertyRow(row,{name:'Channels',control:field});}
 }
+
+for(const action of document.querySelectorAll('[data-event-state]'))window.SharedUI.setEventState(action,{present:action.dataset.eventState==='present',label:action.dataset.eventState==='present'?'Tint':'Amount',sprite:'./v1/icons.svg'});

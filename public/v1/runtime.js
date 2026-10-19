@@ -474,23 +474,34 @@
     let label=row.querySelector(':scope > [data-ui-property-label]');
     if(!label){label=doc.createElement('label');label.dataset.uiPropertyLabel='';label.className='ui-label';row.prepend(label);}
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
-    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:hasActions?'minmax(0,30%) minmax(0,1fr) auto':'minmax(0,30%) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
+    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:hasActions?'minmax(0,30%) minmax(0,1fr) minmax(0,min(35%,calc(3 * var(--ui-control-height) + 2 * var(--ui-gap))))':'minmax(0,30%) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(control.style,{minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     Object.assign(actions.style,{minInlineSize:'0',justifyContent:'flex-end'});
     row.append(control,actions);return {element:row,label,control,actions};
   };
-  const propertyNavigation=new WeakMap();
-  UI.setPropertyNavigation=(row,{onActivate,destination='Curves',controls}={})=>{
+  const propertyResets=new WeakMap();
+  UI.setPropertyReset=(row,{onReset}={})=>{
     let label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');if(!label)return;
-    let entry=propertyNavigation.get(row);
-    if(!entry&&typeof onActivate==='function'){
+    let entry=propertyResets.get(row);
+    if(!entry&&typeof onReset==='function'){
       const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';
       button.style.color=label.style.color;Object.assign(button.style,{textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
       const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
-      entry={button,name,activate:onActivate};button.addEventListener('click',()=>entry.activate?.());propertyNavigation.set(row,entry);
+      entry={button,name,reset:onReset,busy:false};
+      const reset=async()=>{if(entry.busy||typeof entry.reset!=='function')return;entry.busy=true;button.disabled=true;button.setAttribute('aria-busy','true');try{await entry.reset();}catch(error){button.title=error.message;}finally{entry.busy=false;button.disabled=typeof entry.reset!=='function';button.setAttribute('aria-busy','false');}};
+      button.addEventListener('dblclick',()=>void reset());
+      button.addEventListener('click',event=>{if(event.detail===0)void reset();});
+      propertyResets.set(row,entry);
     }
-    if(entry){entry.activate=onActivate;entry.button.disabled=typeof onActivate!=='function';entry.button.setAttribute('aria-label',`${entry.name} — show in ${destination}`);entry.button.title=`Show ${entry.name} in ${destination}`;if(controls)entry.button.setAttribute('aria-controls',controls);}
+    if(entry){entry.reset=onReset;entry.button.disabled=entry.busy||typeof onReset!=='function';entry.button.setAttribute('aria-label',`${entry.name} — reset to default`);entry.button.title=`Double-click to reset ${entry.name}; Enter or Space when focused`;}
     return label;
+  };
+  // Canonical property action order, without replacing nodes or disturbing unchanged focus.
+  UI.orderPropertyActions=group=>{
+    if(!group)return;const rank={keyframe:0,fx:1,event:2},children=[...group.children];
+    const ordered=children.slice().sort((a,b)=>(rank[a.dataset.uiPropertyAction]??3)-(rank[b.dataset.uiPropertyAction]??3));
+    if(ordered.some((node,index)=>node!==children[index]))group.append(...ordered);
+    return group;
   };
   // Automation changes the existing label, never inspector geometry or authored values.
   UI.setPropertyState=(row,{active=false,description='',color}={})=>{
@@ -499,8 +510,9 @@
     label.style.color=active?(color||'var(--ui-accent)'):'';
     label.title=description||label.textContent;
   };
-  // Key presence is an icon state; selection keeps the normal shared pressed surface.
+  // The icon marks the playhead; the normal pressed surface means animation exists.
   UI.setKeyframeState=(action,{present=false,keyframed=present,sprite}={})=>{
+    action.dataset.uiPropertyAction='keyframe';
     const icon=present?'keyframe-filled':'keyframe',changed=action.dataset.uiKeyframeIcon!==icon||action.getAttribute('aria-pressed')!==String(Boolean(keyframed));
     if(action.dataset.uiKeyframeIcon!==icon){UI.adoptAction(action,{icon,iconOnly:true,sprite});action.dataset.uiKeyframeIcon=icon;}
     const graphic=action.querySelector?.('svg.ui-icon');if(graphic)graphic.style.color=present?'var(--ui-text)':'';
@@ -521,7 +533,7 @@
     const view=document.defaultView,removers=[];
     const element=document.createElement('form');element.className='ui-stack';element.hidden=true;element.noValidate=true;
     element.id='ui-expression-'+view.crypto.randomUUID();element.setAttribute('aria-label',label+' expression');
-    const trigger=document.createElement('button');trigger.type='button';trigger.className='formula-toggle';
+    const trigger=document.createElement('button');trigger.type='button';trigger.className='formula-toggle';trigger.dataset.uiPropertyAction='fx';
     UI.adoptAction(trigger,{label:label+' expression',icon:'formula',iconOnly:true,sprite});
     trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls',element.id);
     const input=document.createElement('textarea');input.rows=3;input.spellcheck=false;input.autocomplete='off';input.className='ui-mono';input.placeholder='base + sin(time)';input.setAttribute('aria-label',label+' expression');input.style.inlineSize='100%';input.style.minInlineSize='0';
@@ -546,12 +558,13 @@
       choices.hidden=!matches.length;
       for(const [i,item]of matches.entries()){const button=document.createElement('button');button.type='button';button.textContent=String(item.insert??item.value??item.label);button.title=String(item.description||item.label||'');button.addEventListener('mousedown',e=>e.preventDefault());button.addEventListener('click',()=>complete(i));choices.append(button);}
     }
-    function setOpen(open){element.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)input.focus();else hide();}
+    function setOpen(open){open=Boolean(open);element.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)input.focus();else hide();return open;}
+    const toggle=()=>setOpen(element.hidden);
     async function flush(){
       if(pending)return pending;if(!dirty)return;
       const next=input.value.trim();pending=(async()=>{apply.disabled=true;try{await onCommit(next||null);source=next;dirty=input.value.trim()!==next;if(!dirty)delete input.dataset.draft;clear.disabled=!source&&!dirty;input.setCustomValidity('');input.setAttribute('aria-invalid','false');status.textContent='';}catch(error){input.setCustomValidity(error.message);input.setAttribute('aria-invalid','true');status.dataset.state='error';status.textContent=error.message;throw error;}finally{apply.disabled=false;pending=null;}})();return pending;
     }
-    on(trigger,'click',()=>setOpen(element.hidden));
+    on(trigger,'click',toggle);
     on(input,'input',()=>{dirty=true;clear.disabled=false;input.dataset.draft='true';input.setCustomValidity('');input.setAttribute('aria-invalid','false');status.textContent='';suggest();});
     on(input,'compositionstart',()=>{composing=true;hide();});on(input,'compositionend',()=>{composing=false;suggest();});
     on(input,'keydown',event=>{
@@ -567,15 +580,25 @@
     });
     on(element,'submit',event=>{event.preventDefault();void flush().catch(()=>{});});
     on(clear,'click',()=>{input.value='';dirty=true;input.dataset.draft='true';hide();void flush().catch(()=>{});});
-    return {element,trigger,input,flush,setOpen,setSuggestions(next){options=next||[];},sync({expression,base,value,error}={}){source=String(expression||'');if(!dirty&&document.activeElement!==input)input.value=source;trigger.title=(source?'Edit':'Add')+' expression for '+label;if(document.activeElement!==baseValue)baseValue.value=String(base??'');if(document.activeElement!==result)result.value=String(value??'');if(!dirty){status.textContent=error||'';status.dataset.state=error?'error':'';}clear.disabled=!source&&!dirty;},dispose(){if(disposed)return;disposed=true;hide();for(const remove of removers)remove();}};
+    return {element,trigger,input,flush,setOpen,toggle,setSuggestions(next){options=next||[];},sync({expression,base,value,error}={}){source=String(expression||'');if(!dirty&&document.activeElement!==input)input.value=source;trigger.title=(source?'Edit':'Add')+' expression for '+label;if(document.activeElement!==baseValue)baseValue.value=String(base??'');if(document.activeElement!==result)result.value=String(value??'');if(!dirty){status.textContent=error||'';status.dataset.state=error?'error':'';}clear.disabled=!source&&!dirty;},dispose(){if(disposed)return;disposed=true;hide();for(const remove of removers)remove();}};
   };
   const expressionIndicators=new WeakMap();
-  UI.setExpressionState=(input,{expression,result,error,base,keyframed=false}={})=>{
-    let indicator=expressionIndicators.get(input);
-    if(!expression){indicator?.remove();expressionIndicators.delete(input);input.removeAttribute('aria-description');return;}
-    if(!indicator){indicator=input.ownerDocument.createElement('span');indicator.className='ui-meta';indicator.style.color='var(--ui-accent)';indicator.textContent='fx';input.after(indicator);expressionIndicators.set(input,indicator);}
+  UI.setExpressionState=(input,{expression,result,error,base,keyframed=false,onActivate,controls,expanded=false,label='Value'}={})=>{
+    let entry=expressionIndicators.get(input);
+    if(!expression){entry?.element.remove();expressionIndicators.delete(input);input.removeAttribute('aria-description');return;}
+    const interactive=typeof onActivate==='function';
+    if(!entry||interactive!==(entry.element.tagName==='BUTTON')){
+      entry?.element.remove();const element=input.ownerDocument.createElement(interactive?'button':'span');element.className='ui-meta';element.style.color='var(--ui-accent)';
+      entry={element,activate:onActivate};if(interactive){element.type='button';UI.adoptAction(element,{label:'fx'});element.addEventListener('click',()=>{const open=entry.activate?.();if(typeof open==='boolean')element.setAttribute('aria-expanded',String(open));});}else element.textContent='fx';
+      input.after(element);expressionIndicators.set(input,entry);
+    }
+    entry.activate=onActivate;const indicator=entry.element;
     const description=`${keyframed?`Keyframed base ${base} → `:''}Expression: ${expression}. Returns ${result}${error?'. '+error:''}`;
-    indicator.title=description;indicator.setAttribute('aria-label',description);input.setAttribute('aria-description',description);
+    indicator.title=description;indicator.setAttribute('aria-label',interactive?`Edit expression for ${label}`:description);if(interactive){indicator.setAttribute('aria-expanded',String(Boolean(expanded)));if(controls)indicator.setAttribute('aria-controls',controls);}input.setAttribute('aria-description',description);
+  };
+  UI.setEventState=(action,{present=false,label='Control',sprite}={})=>{
+    UI.adoptAction(action,{label:`${present?'Show events':'Add event'} for ${label}`,icon:'event',iconOnly:true,sprite});
+    action.dataset.uiPropertyAction='event';action.dataset.uiEvent=String(Boolean(present));action.setAttribute('aria-pressed',String(Boolean(present)));action.title=present?'Show the event driving this control':'Create a timeline state for this control';return action;
   };
   UI.createColourValue=({label,onSet=()=>{},document=window.document}={})=>{
     const element=document.createElement('div');element.className='ui-field';
@@ -704,7 +727,7 @@
     let current=value,items=options,combo=null,disposed=false;
     const normalized=()=>items.map(item=>typeof item==='string'?{value:item,label:item}:{value:String(item.value),label:String(item.label??item.value)});
     const show=()=>{if(document.activeElement===input)return;const chosen=normalized().find(item=>item.value===String(current));input.value=searchable?(chosen?.label??''):String(current??'');input.setCustomValidity('');};
-    if(searchable){input.type='text';input.autocomplete='off';combo=UI.createCombobox(input,{options:normalized(),onSelect:item=>{current=item.value;input.setCustomValidity('');onChange(current);}});element=combo.element;element.classList.add('ui-field');element.style.display='flex';const open=document.createElement('button');open.type='button';UI.adoptAction(open,{label:'Show '+label+' choices',icon:'chevron-down',iconOnly:true,sprite});open.addEventListener('click',()=>combo.open());element.append(open);}
+    if(searchable){input.type='text';input.autocomplete='off';combo=UI.createCombobox(input,{options:normalized(),onSelect:item=>{current=item.value;input.setCustomValidity('');onChange(current);}});element=combo.element;element.classList.add('ui-field');element.style.display='flex';const open=document.createElement('button');open.type='button';UI.adoptAction(open,{label:'Show '+label+' choices',icon:'chevron-down',iconOnly:true,sprite});open.dataset.uiSurface='graphic';Object.assign(open.style,{display:'inline-flex',minInlineSize:'var(--ui-control-height)',minBlockSize:'calc(var(--ui-field-height) - 2px)',alignItems:'center',justifyContent:'center'});open.addEventListener('click',()=>combo.open());element.append(open);}
     else input.style.textAlignLast='start';
     const change=()=>{if(!searchable){current=input.value;onChange(current);}};
     const blur=()=>{if(searchable)show();};input.addEventListener('change',change);input.addEventListener('blur',blur);
