@@ -21,3 +21,11 @@ test('Space reserves panning only over the preview and fields retain keyboard in
  surface.emit('pointerenter');doc.emit('keydown',{key:' ',code:'Space',target:field,preventDefault(){prevented++;}});assert.equal(prevented,0);
  doc.emit('keydown',{key:' ',code:'Space',preventDefault(){prevented++;}});assert.equal(prevented,1);surface.emit('pointerdown',{button:0,pointerId:2,clientX:0,clientY:0});surface.emit('pointermove',{pointerId:2,clientX:20,clientY:10});surface.emit('pointerup',{pointerId:2});assert.equal(view.state.x,20);view.dispose();
 });
+
+test('two-finger wheel deltas pan in both axes while pinch and modified wheel zoom',()=>{
+ const {UI,node}=fixture(),surface=node(),content=node(),view=UI.createMediaViewport({surface,content});
+ surface.emit('wheel',{deltaMode:0,deltaX:24,deltaY:36,clientX:110,clientY:70});assert.equal(view.state.x,-24);assert.equal(view.state.y,-36);assert.equal(view.state.scale,1);
+ surface.emit('wheel',{deltaMode:0,deltaX:0,deltaY:20,shiftKey:true});assert.equal(view.state.x,-44);assert.equal(view.state.y,-36);
+ surface.emit('wheel',{deltaMode:0,deltaX:0,deltaY:-100,ctrlKey:true,clientX:110,clientY:70});assert(view.state.scale>1);
+ view.fit();surface.emit('gesturestart',{});surface.emit('gesturechange',{scale:2,clientX:110,clientY:70});assert.equal(view.state.scale,2);surface.emit('gestureend',{});view.dispose();
+});
