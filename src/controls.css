@@ -282,6 +282,7 @@
     .ui-choice, .ui-choice > input { margin:0; }
     .ui-pad { padding:calc(2*var(--ui-gap)); }
     .ui-tags { display:flex; flex-wrap:wrap; align-items:center; gap:var(--ui-gap); min-inline-size:0; }
+    .ui-tags:empty { display:none; }
     .ui-tag { display:inline-flex; flex:none; white-space:nowrap; align-items:center; gap:var(--ui-gap); min-block-size:var(--ui-tag-height); max-inline-size:100%; padding:var(--ui-tag-padding,4px 8px); border:1px solid var(--ui-line); border-radius:var(--ui-tag-radius,var(--ui-radius-small)); background:var(--ui-surface-soft); color:var(--ui-text); font:500 var(--ui-tag-size,var(--ui-control-size))/1.4 var(--ui-tag-font,var(--ui-font)); }
     .ui-tag:is([aria-selected=true],[aria-pressed=true]) { background:var(--ui-accent-soft); border-color:var(--ui-accent); }
     .ui-tag > :first-child { min-inline-size:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
