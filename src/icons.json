@@ -164,6 +164,9 @@
   "keyframe": [
     "M12 3l9 9-9 9-9-9z"
   ],
+  "keyframe-filled": [
+    "M12 3l9 9-9 9-9-9z"
+  ],
   "curve": [
     "M3 20C3 3 21 21 21 4M3 20h18M3 20V3"
   ],

@@ -80,7 +80,7 @@ export function buildSite(directory=root){
   const icons=JSON.parse(read('icons.json'));
   const symbols=Object.entries(icons).map(([name,paths])=>{
     if(!/^[a-z][a-z0-9-]*$/.test(name)||!Array.isArray(paths)||paths.some(d=>!/^[-MmLlHhVvCcSsQqTtAaZz0-9.,\s+]+$/.test(d)))throw new Error('Invalid icon path');
-    return `<symbol id="ui-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths.map(d=>`<path d="${d}"/>`).join('')}</symbol>`;
+    return `<symbol id="ui-${name}" viewBox="0 0 24 24" fill="${name==='keyframe-filled'?'currentColor':'none'}" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths.map(d=>`<path d="${d}"/>`).join('')}</symbol>`;
   }).join('');
   // Validate every input before replacing any last-working asset. Publish the manifest last.
   const assets=new Map([

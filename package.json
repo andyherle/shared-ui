@@ -1,6 +1,6 @@
 {
   "name": "@andyherle/shared-ui",
-  "version": "1.11.3",
+  "version": "1.12.0",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Shared native UI controls with Postvisual and Personal style packs.",

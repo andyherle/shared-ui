@@ -45,6 +45,15 @@
       <label class="ui-field"><span class="ui-label">To</span><input type="date" value="2026-10-15" aria-label="Fixture to date"></label>
       <label class="ui-field"><span class="ui-label">Time</span><input type="time" value="13:30" aria-label="Fixture time"></label>
     </div>
+    <header class="ui-toolbar ui-header ui-chrome" data-ui-layout="workspace" aria-label="Adaptive header fixture">
+      <nav class="ui-actions ui-inline" data-ui-header-nav aria-label="Fixture navigation"><a class="ui-action ui-back" data-ui-label="hidden" href="#control-fixture" aria-label="Return home"><svg class="ui-icon" aria-hidden="true"><use href="./v1/icons.svg#ui-home"/></svg><span class="ui-label">Home</span></a></nav>
+      <span class="ui-meta" data-ui-header-context>29 items</span>
+      <div class="ui-actions ui-inline" data-ui-header-actions>
+        <label id="fixtureSecondary" class="ui-field"><span class="ui-label">Sort</span><select aria-label="Fixture sort"><option>Date</option><option>Name</option></select></label>
+        <details class="ui-menu"><summary class="ui-action" data-ui-icon="filter">Filters</summary><section class="ui-menu-panel ui-form-panel ui-stack"><div id="fixtureSecondarySlot" class="ui-stack ui-secondary-slot"></div><label class="ui-field"><span class="ui-label">Search</span><input type="search" aria-label="Fixture filter search"></label><fieldset class="ui-group"><legend>Type</legend><div class="ui-actions ui-fill"><button aria-pressed="true">All</button><button aria-pressed="false">Photos</button><button aria-pressed="false">Video</button></div></fieldset></section></details>
+        <details class="ui-menu" data-ui-header-menu><summary class="ui-action" data-ui-icon="menu" data-ui-label="hidden" aria-label="Fixture application menu">Menu</summary><div class="ui-menu-panel ui-actions" data-ui-layout="vertical"><button data-ui-icon="settings">Settings</button><button data-ui-icon="undo">Reset layout</button></div></details>
+      </div>
+    </header>
     <div class="lab-fixture-pair">
       <section class="ui-menu-panel ui-chrome ui-stack" aria-label="Fixture gallery menu">
         <nav class="ui-actions" data-ui-layout="vertical" aria-label="Fixture gallery actions">
@@ -146,3 +155,16 @@
     <section class="ui-card ui-pad ui-chrome ui-stack" aria-label="Fixture label edge cases"><h3 class="ui-section-title">Long names and pending actions</h3><div class="ui-actions"><button type="button" data-ui-icon="file"><span class="ui-truncate">A very long reference filename for checking compact rows.webp</span></button><button type="button" data-ui-icon="upload" aria-busy="true">Uploading</button><button type="button" data-ui-icon="refresh" disabled>Retry</button></div><div class="ui-tags"><span class="ui-tag"><span>long-tag-name-with-words-and-punctuation</span></span><span class="ui-tag">日本語</span><span class="ui-tag">Café</span><span class="ui-tag">motion / detail</span></div></section>
   </div>
 </section>
+
+<section id="function-control-fixture" class="ui-panel ui-stack"><div class="ui-actions" aria-label="Keyframe states"><button type="button" data-keyframe-state="empty" aria-label="No keyframe">No keyframe</button><button type="button" data-keyframe-state="present" aria-label="Keyframe at playhead">Keyframe at playhead</button><button type="button" data-keyframe-state="selected" aria-label="Selected keyframe">Selected keyframe</button></div>
+<h2>Compact function controls</h2>
+<p>Drag the value horizontally, click to type. Shift ×10 · Alt ÷10 · Escape restores.</p>
+<div id="fixture-property-rotation" class="ui-actions ui-inline" aria-label="Rotation property">
+<label class="ui-field"><span class="ui-label">Rotation</span><input class="ui-function-value" type="text" inputmode="decimal" value="45" step="0.1" aria-label="Rotation value"><span class="ui-meta">°</span></label>
+<button type="button" data-ui-icon="curve" data-ui-label="hidden" aria-label="Rotation curve" data-toast="Curve editor">Curve</button>
+<button type="button" data-ui-icon="keyframe" data-ui-label="hidden" aria-label="Key Rotation" aria-pressed="false" data-toggle>Keyframe</button>
+<button type="button" data-ui-icon="refresh" data-ui-label="hidden" aria-label="Reset Rotation" data-toast="Reset property">Reset</button>
+</div>
+</section>
+
+<section class="ui-panel ui-stack" id="fixture-property-panel" aria-label="Effects inspector" style="max-inline-size:100%"><h2>Shared effects inspector</h2><label class="ui-field"><span class="ui-label">Preview width</span><select id="property-fixture-width"><option value="100%">Full width</option><option value="390px">390px phone</option><option value="260px">260px panel</option></select></label><div id="fixture-property-colour"></div><div id="fixture-property-number"></div><div id="fixture-property-boolean"></div></section>

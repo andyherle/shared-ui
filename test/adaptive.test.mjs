@@ -99,3 +99,11 @@ test('caption fitting reserves the widest state before Save changes, including w
  for(const value of ['Saving…','Saved','Save']){label.textContent=value;f.UI.refreshActions(f.doc);f.flush();assert.equal(save.hasAttribute('data-ui-compact'),true);assert.equal(other.hasAttribute('data-ui-compact'),true);}
  f.resize(220);assert.equal(save.hasAttribute('data-ui-compact'),false);assert.equal(other.hasAttribute('data-ui-compact'),false);
 });
+
+test('flexible header metadata reserves its text rather than the allocated empty space',()=>{
+ const f=fixture(),count=new f.Node('span','ui-meta ui-truncate',420),a=f.action('Filters'),b=f.action('Ingest');
+ count.css={flexGrow:'1',flexBasis:'0px',minWidth:'0px',paddingLeft:'0px',paddingRight:'0px',borderLeftWidth:'0px',borderRightWidth:'0px'};count.textContent='29 media';
+ f.row.append(count,a,b);f.UI.observeActions(f.row);f.flush();
+ assert.equal(a.hasAttribute('data-ui-compact'),false);assert.equal(b.hasAttribute('data-ui-compact'),false);
+ f.resize(160);assert.equal(a.hasAttribute('data-ui-compact'),true);
+});

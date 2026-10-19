@@ -662,3 +662,52 @@ coarse-pointer rules keep the common field height and native text size. Keep
 No extra wrapper or number-stepper runtime is needed. The Fields catalogue
 demonstrates integer, decimal and readonly values. Slider/exact-value rows use
 `.ui-value-control`, which reserves twelve characters for precise values.
+
+## Header navigation, command menus and filters
+
+Use `data-ui-header-nav` for optional Home/Back/Exit navigation on the left and
+`data-ui-header-actions` for commands on the right. Mark the native application
+`details.ui-menu` with `data-ui-header-menu`; it stays last, with a `menu` icon
+and a named, hidden `.ui-label`. A launcher link is navigation, never a menu trigger.
+The header can wrap into available container space. Controls use native density;
+content zoom never scales application chrome.
+
+Command panels use `.ui-menu-panel`, independently sized from their trigger and
+bounded to the viewport. Forms and filters additionally use `.ui-form-panel`:
+fields keep their borders and choices keep their pressed states. Compose native
+`.ui-field`, `fieldset.ui-group`, `.ui-actions.ui-fill` and `.ui-stack`; applications
+own the field values and filtering. No custom filter typography or control paint.
+
+`SharedUI.createAdaptiveSlot(node,{container:header,target:menuSlot})` moves the
+same secondary native control into a menu below the shared 32rem header-container
+threshold, then restores its original position. Keep the target inside the header.
+It preserves values and handlers, defers moves while the control is focused,
+suspends in hidden views and exposes `refresh()`/`dispose()`. Use an empty
+`.ui-secondary-slot` in the menu. The Control fixture demonstrates this with Sort.
+These runtime/markup changes require an explicit complete consumer bundle upgrade.
+Studio MCP discovers the patterns; private document edits do not patch application
+source or install runtime upgrades.
+
+### Compact function controls
+
+Compose a property row with `.ui-actions.ui-inline`, a native labelled `.ui-field` number input and shared curve/keyframe/reset actions. `SharedUI.createFunctionControl(input, {step, min, max})` adds horizontal numeric scrubbing to that same input (a text input may also accept app-validated expressions): drag while unfocused; click or Tab to type; Shift multiplies by ten, Alt divides by ten. Touch retains native numeric entry. Bounds and step can be getters. It emits native `input` samples and one final `change`, leaving live state and History with the app. Escape, pointer cancellation or a hidden document restore the original value; `dispose()` releases capture and listeners. Do not replace authored easing when updating a value. Put undo/redo in the top command bar when History exists; use the right-hand menu for secondary Controls and Present actions.
+
+Open native menu panels use the same viewport fitting in both packs: maintain the trigger edge, flip above when below cannot fit, bound scrolling to available height and restore summary focus on Escape. Keep panel forms on `.ui-form-panel`; command menus and forms share native action controls. Apps keep content and semantic handlers.
+
+### Shared effects inspector
+
+`SharedUI.adoptPropertyRow(row,{name,control,actions})` owns the native inspector row: a stable name column, value column and right-aligned action slot. It moves the original controls once, preserving their IDs, handlers and focused drafts. Use `createBooleanControl` for a native checkbox field with explicit On/Off value and `createColourValue` for one native colour/hex field. Numeric/expression fields use `createFunctionControl`; applications validate expressions through their existing engine. The kit owns control paint and row geometry; applications own values, keyframes, formulas, resets and History. The catalogue demonstrates all three types together in both packs.
+
+`SharedUI.setExpressionState(input,{expression,result,error,base,keyframed})` adds an accent `fx` marker beside the original value. When keyframes coexist, supply their evaluated base so the description explains the base → expression result. Keep result text readable; muted text is reserved for metadata, rather than implying the value is disabled. The visible field shows the result while unfocused; native hover/accessibility text exposes the expression and return value. The kit never evaluates expressions.
+
+`createBooleanControl({label,value,variant:'controller',onChange})` is the compact Controller toggle. It uses the conventional shared switch with visible On/Off text and native checkbox keyboard/accessibility states. The regular variant retains the same established switch; inspector row geometry stays consistent.
+
+`createExpressionEditor({label,suggestions,onCommit,sprite})` returns a named native `trigger`, multiline `input`, and `element` form. Put the trigger in the property action slot and the form beneath the row. It owns completion at the caret, composition-safe typing, native Base/Result read-only fields and a right-aligned Clear/Apply group, retryable validation, Ctrl/Command+Enter apply, Tab completion, Escape cancellation and draft-preserving `sync({expression,base,value,error})`. Use `setSuggestions` for live vocabularies and `flush` before Save/exit; `dispose` removes listeners. The application owns evaluation and History. Display the live result in the compact field, show the independent base on focus/scrub, and keep the fx indicator while driven. Comfortable scrub bounds can grow after explicit typed entry; genuine input limits remain application-owned.
+
+`setKeyframeState(action,{present,selected,sprite})` separates key presence from selection: hollow/solid shared diamond icons indicate absence/presence at the playhead; `aria-pressed` supplies the ordinary blue selected surface. Clicking an existing key should select it for editing, with deletion in the timeline. Read-only fields and their composed `.ui-field` shells use the grey semantic surface while retaining native selection/copy.
+
+`createChoiceControl({label,options,value,searchable,onChange})` composes a native select or the shared searchable combobox in one field. `sync(value,options)` preserves focused entry; arbitrary search text never becomes an enum value. Dispose it with its row. The combobox handles IME composition, arrows, Enter, Escape and outside dismissal.
+
+`createCurveControl({label,points,defaults,onChange})` presents a normalized cubic response in the compact inspector. Four coordinates define the handles; optional fifth/sixth coordinates enable editable endpoints. Native exact fields, presets, pointer capture, keyboard adjustment and Escape/hidden-view cancellation share the same control paint. `sync({points,defaults,available})` leaves an active drag intact; `dispose()` releases listeners. Applications map coordinates to scalar targets and commit through their existing History.
+
+`createResponseControl` and `createIntervalControl` share power-response and two-endpoint controls. They accept descriptor metadata, app-supplied numerical model functions and callbacks; the kit owns DOM, theme, focus and pointer/keyboard interaction while the consumer owns accepted values and state. They are demonstrated alongside native choice, text, read-only and action controls in the effects inspector catalogue.

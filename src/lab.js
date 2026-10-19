@@ -175,3 +175,46 @@ void openSource();timeline();
 })();
 
 document.getElementById('group-width')?.addEventListener('input',event=>{document.querySelector('.lab-fit-sample').style.inlineSize=`min(100%,${event.target.value}px)`;});
+
+{const node=document.getElementById('fixtureSecondary');if(node)window.SharedUI.createAdaptiveSlot(node,{container:node.closest('.ui-header'),target:document.getElementById('fixtureSecondarySlot')});}
+
+for(const input of document.querySelectorAll('.ui-function-value'))window.SharedUI.createFunctionControl(input);
+
+{
+ const UI=window.SharedUI,doc=document;
+ for(const [id,name,kind] of [['colour','Tint','colour'],['number','Rotation','number'],['boolean','Visible','boolean']]){
+  const row=doc.getElementById('fixture-property-'+id);if(!row)continue;
+  const actions=doc.createElement('div');actions.className='ui-actions ui-inline';
+  const reset=doc.createElement('button');reset.type='button';UI.adoptAction(reset,{label:'Reset '+name,icon:'refresh',iconOnly:true,sprite:'./v1/icons.svg'});actions.append(reset);
+  let control;
+  if(kind==='boolean'){const value=UI.createBooleanControl({label:name,value:true,variant:'controller'});control=value.element;reset.addEventListener('click',()=>value.setValue(true));}
+  else if(kind==='colour'){const value=UI.createColourValue({label:name});value.sync('#7aa8ff');control=value.element;reset.addEventListener('click',()=>value.sync('#7aa8ff'));}
+  else {control=doc.createElement('div');control.className='ui-field';const input=doc.createElement('input');input.type='text';input.value='45';input.setAttribute('aria-label','Rotation base value');control.append(input);UI.createFunctionControl(input);reset.addEventListener('click',()=>{input.value='45';});
+   const editor=UI.createExpressionEditor({label:name,sprite:'./v1/icons.svg',suggestions:[{insert:'base',description:'Keyframed or set base value'},{insert:'sin(time)',description:'Sine motion'},{insert:'noise(time, 0)',description:'Smooth noise'},{insert:'time',description:'Current time in seconds'}],onCommit:async expression=>{UI.setExpressionState(input,{expression,base:input.value,result:input.value});editor.sync({expression,base:input.value,value:input.value});}});
+   actions.prepend(editor.trigger);row.after(editor.element);editor.sync({base:45,value:45});
+  }
+  UI.adoptPropertyRow(row,{name,control,actions});
+ }
+}
+
+document.getElementById('property-fixture-width')?.addEventListener('change',event=>document.getElementById('fixture-property-panel').style.inlineSize=event.target.value);
+
+for(const action of document.querySelectorAll('[data-keyframe-state]'))window.SharedUI.setKeyframeState(action,{present:action.dataset.keyframeState!=='empty',selected:action.dataset.keyframeState==='selected',sprite:'./v1/icons.svg'});
+
+// The compact inspector uses the same controls as application schema adapters.
+{
+ const UI=window.SharedUI,panel=document.getElementById('fixture-property-panel');
+ if(panel){
+  for(const [name,control] of [['Geometry',UI.createChoiceControl({label:'Geometry',options:['Cube','Sphere','Torus'],value:'Cube'})],['Palette',UI.createChoiceControl({label:'Palette',options:['Aurora','Ember','Lagoon','Orchid','Citrus','Glacier','Rose','Copper'],value:'Aurora'})]]){const row=document.createElement('div'),actions=document.createElement('div');actions.className='ui-actions ui-inline';panel.append(row);UI.adoptPropertyRow(row,{name,control:control.element,actions});}
+  for(const [name,multiline,readonly,value] of [['Title',false,false,'Control / Motion'],['Caption',true,false,'A shared language\nfor live controls'],['Active events',false,true,'3']]){const row=document.createElement('div'),field=document.createElement('div'),input=document.createElement(multiline?'textarea':'input'),actions=document.createElement('div');field.className='ui-field';input.value=value;input.readOnly=readonly;if(multiline)input.rows=2;field.append(input);actions.className='ui-actions ui-inline';panel.append(row);UI.adoptPropertyRow(row,{name,control:field,actions});}
+  const actionRow=document.createElement('div'),action=document.createElement('button'),slot=document.createElement('div');action.type='button';UI.adoptAction(action,{label:'Burst now',icon:'add',sprite:'./v1/icons.svg'});slot.className='ui-actions ui-inline';action.addEventListener('click',()=>UI.setActionState(action,{state:'success',sprite:'./v1/icons.svg'}));panel.append(actionRow);UI.adoptPropertyRow(actionRow,{name:'Trigger',control:action,actions:slot});
+  const title=document.createElement('h3');title.textContent='Event envelope';panel.append(title,UI.createCurveControl({label:'Event envelope'}).element);
+  const response=UI.createResponseControl({spec:{label:'Response',default:1,curve:'power-in',inputMin:.05,inputMax:12,step:.01},model:{powerCurve:(v,x)=>Math.pow(x,v),curveExponent:(x,y)=>Math.log(Math.max(.0001,Math.min(.9999,y)))/Math.log(Math.max(.0001,Math.min(.9999,x))),numberStep:s=>s.step,steppedNumber:(v,d,s)=>Math.max(s.inputMin,Math.min(s.inputMax,v+d*s.step))},onSet:()=>{}});panel.append(response.element);
+ }
+}
+{
+ const UI=window.SharedUI,panel=document.getElementById('fixture-property-panel');if(panel){
+  const spec={key:'start',label:'Colour interval',min:0,max:1,step:.01,rangeControl:{end:'end',mode:'absolute',spectrum:'hue'}};
+  const editor=UI.createIntervalControl({spec,onSet:()=>{},onError:console.error,model:{sliderBounds:(s,v)=>({min:Math.min(s.min,v),max:Math.max(s.max,v)}),rangeEndpoint:(s,e)=>e,rangeValue:(s,e)=>e,typedNumber:value=>{if(String(value).trim()===''||!Number.isFinite(Number(value)))throw new Error('Enter a finite number');return Number(value);},numberStep:s=>s.step||.01,steppedNumber:(v,d,s)=>v+d*(s.step||.01),wireNumberInput:()=>{}}});panel.append(editor.element);editor.sync(.1,spec,[{key:'end',value:.8,step:.01}]);
+ }
+}

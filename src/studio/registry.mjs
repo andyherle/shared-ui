@@ -28,7 +28,7 @@ function component(id, name, family, selector, tags, fixture, options = {}) {
     props: {}, variants: ['default'], states: [], tokens: [], slots: {}, bindings: {},
     accessibility: {name: 'Use native semantics and an accessible name for interactive content.', keyboard: 'Preserve native focus order and keyboard behavior.'},
     renderer: {id: 'style-lab-native', status: 'catalogue-only'},
-    fixtures: [{file: ['control-fixture','floating-review'].includes(fixture) ? 'src/fixture.html' : 'src/index.html', anchor: fixture}],
+    fixtures: [{file: ['control-fixture','floating-review','function-control-fixture'].includes(fixture) ? 'src/fixture.html' : 'src/index.html', anchor: fixture}],
     lifecycle: {status: 'stable', since: 1, replacement: null}, audit: null,
     ...options};
 }
@@ -51,6 +51,15 @@ export const COMPONENTS = freeze([
   component('switch', 'Standalone switch', 'field', '.ui-switch', ['label'], 'fields', {...editable, props: {label: text, disabled: flag}, states: ['checked', 'disabled'], tokens: [...paint, '--ui-switch-width', '--ui-switch-height', '--ui-switch-thumb', '--ui-switch-inset'], bindings: {checked: 'boolean'}}),
   component('toggle', 'Inline toggle', 'field', '.ui-toggle', ['label'], 'control-fixture', {...editable, props: actionProps, states: ['checked', 'disabled'], tokens: [...paint, '--ui-switch-width', '--ui-switch-height', '--ui-switch-thumb', '--ui-switch-inset'], bindings: {checked: 'boolean'}}),
   component('range', 'Range input', 'field', 'input[type="range"]', ['input'], 'choice', {props: {label: text, min: {type: 'number'}, max: {type: 'number'}, step: {type: 'number', min: 0}}, tokens: ['--ui-range-thumb', '--ui-range-width', '--ui-control-height', '--ui-accent'], bindings: {value: 'value'}}),
+  component('playhead', 'Draggable timeline playhead', 'action', '.ui-playhead', ['div'], 'timeline', {tokens:['--ui-playhead-color','--ui-playhead-outline','--ui-playhead-width'],accessibility:{name:'Name the time slider and expose its current frame.',keyboard:'Arrow keys step frames; Home/End seek bounds.'}}),
+  component('curve-control', 'Inline response curve', 'field', '.ui-curve-control', ['div'], 'function-control-fixture', {tokens:fieldTokens,accessibility:{name:'Labelled native handle sliders and exact coordinate fields.',keyboard:'Arrow keys move handles, Shift is coarse, Alt is fine and Escape cancels a drag.'}}),
+  component('response-control', 'Power response control', 'field', '.ui-response-control', ['div'], 'function-control-fixture', {tokens:fieldTokens}),
+  component('interval-control', 'Dual endpoint interval', 'field', '.ui-interval-control', ['div'], 'function-control-fixture', {tokens:fieldTokens}),
+  component('controller-toggle', 'Controller On/Off toggle', 'field', '.ui-controller-toggle', ['label'], 'function-control-fixture', {tokens:fieldTokens,accessibility:{name:'Native checkbox has a complete name and explicit On/Off state.',keyboard:'Tab and Space use native checkbox behavior.'}}),
+  component('expression-editor', 'Multiline property expression editor', 'field', 'form.ui-stack[aria-label$=" expression"]', ['form'], 'function-control-fixture', {tokens:fieldTokens,accessibility:{name:'Named native textarea, completion buttons, Apply, Clear and evaluated result.',keyboard:'Enter inserts lines; arrows and Tab complete symbols; Ctrl or Command Enter applies; Escape cancels.'}}),
+  component('property-row', 'Effects property inspector row', 'layout', '.ui-property-row', ['div'], 'function-control-fixture', {tokens:['--ui-gap','--ui-control-height'],accessibility:{name:'Native label names the value field; booleans expose On or Off.',keyboard:'Native fields, switches and named actions; no panel state belongs to the kit.'}}),
+  component('keyframe-control', 'Keyframe presence and selection', 'action', '[data-ui-keyframe-icon]', ['button'], 'function-control-fixture', {tokens:fieldTokens,accessibility:{name:'Hollow means no key; solid means a key exists. Pressed state denotes selection independently.',keyboard:'Native button supports Enter and Space; deletion stays in the owning timeline.'}}),
+  component('function-control', 'Compact interactive property', 'field', '.ui-function-value', ['input'], 'function-control-fixture', {tokens: fieldTokens, accessibility:{name:'Label the native number input and each animation action.',keyboard:'Tab to type; arrows step; horizontal drag, Shift coarse, Alt fine, Escape cancels.'}}),
   component('value-control', 'Range with exact value', 'field', '.ui-value-control', ['div'], 'adaptive-groups', {tokens: fieldTokens}),
   component('file-input', 'File picker', 'field', 'input[type="file"]', ['input'], 'fields', {props: {label: text, multiple: flag, disabled: flag}, tokens: fieldTokens}),
   component('color-input', 'Authored color picker', 'field', 'input[type="color"]', ['input'], 'choice', {tokens: fieldTokens}),
@@ -72,6 +81,8 @@ export const COMPONENTS = freeze([
   component('disclosure', 'Native disclosure', 'disclosure', '.ui-disclosure', ['details'], 'responsive', {props: {label: text, open: flag}, tokens: paint, slots: flow, accessibility: {name: 'Use a native summary.', keyboard: 'Enter/Space toggle; preserve the same content nodes.'}}),
   component('section', 'Record detail section', 'disclosure', '.ui-section', ['details'], 'control-fixture', {props: {label: text, context: text, open: flag}, tokens: surfaceTokens, slots: flow}),
   component('menu', 'Native command menu', 'disclosure', '.ui-menu', ['details'], 'navigation', {variants: ['default', 'overlay'], tokens: surfaceTokens, accessibility: {name: 'Name the native summary.', keyboard: 'Native toggle and focus order; Escape dismisses enhanced menus.'}}),
+  component('form-menu', 'Native filter and form menu', 'disclosure', '.ui-menu-panel.ui-form-panel', ['section', 'div', 'form'], 'control-fixture', {tokens: surfaceTokens, accessibility:{name:'Name the native menu summary and every field.',keyboard:'Native controls; Escape closes and returns focus to the summary.'}}),
+  component('adaptive-slot', 'Toolbar secondary controls', 'layout', '.ui-toolbar-secondary', ['div', 'label'], 'control-fixture', {tokens:['--ui-gap'], accessibility:{name:'Preserve the same named native controls when they move into a menu.',keyboard:'Focused controls stay in place until focus leaves.'}}),
   component('overflow', 'Priority action disclosure', 'disclosure', '.ui-overflow', ['details'], 'adaptive-groups', {props: {priority: {type: 'number', min: 0, max: 100}}, tokens: paint, accessibility: {name: 'Name the summary even when its label compacts.', keyboard: 'Escape closes and restores summary focus.'}}),
   component('tabs', 'Tabs', 'navigation', '.ui-tabs', ['div', 'nav'], 'navigation', {states: ['selected', 'disabled'], tokens: paint, accessibility: {name: 'Connect tab and panel IDs; expose selected state.', keyboard: 'Arrow/Home/End navigation with one tab stop.'}}),
   component('breadcrumb', 'Breadcrumb', 'navigation', 'nav[aria-label="Breadcrumb"]', ['nav'], 'navigation', {tokens: ['--ui-text', '--ui-muted']}),
@@ -164,10 +175,10 @@ export const ROLE_OWNERS = freeze({'zoom-feedback':'zoom-feedback',avatar:'avata
   error: 'notice', field: 'field', fill: 'actions', form: 'form', 'graphic-action': 'drag-handle', grid: 'grid', group: 'group',
   guide: 'drag-handle', header: 'toolbar', icon: 'icon', 'icon-button': 'icon-action', 'icon-choice': 'checkbox', inline: 'actions',
   'editable-heading': 'text', 'inline-field': 'textarea', item: 'action', label: 'action', listbox: 'combobox', 'media-button': 'media-action',
-  menu: 'menu', 'menu-panel': 'menu', meta: 'text', mono: 'prose', muted: 'text', notice: 'notice', number: 'table',
+  menu: 'menu', 'menu-panel': 'menu', 'form-panel':'form-menu', 'toolbar-secondary':'adaptive-slot', 'secondary-slot':'adaptive-slot', meta: 'text', mono: 'prose', muted: 'text', notice: 'notice', number: 'table',
   option: 'combobox', overflow: 'overflow', pad: 'panel', panel: 'panel', popout: 'popout', primary: 'action', prose: 'prose',
   range: 'range', 'resize-handle': 'table', search: 'text-input', section: 'section', 'section-title': 'text', selectable: 'selection',
   skeleton: 'skeleton', split: 'split', 'sr-only': 'text', stack: 'stack', status: 'status', success: 'notice', swatch: 'swatch',
   switch: 'switch', table: 'table', 'table-scroll': 'table', tabs: 'tabs', tag: 'tags', tags: 'tags', 'tag-suggestions': 'tags', 'review-dock': 'review-dock', toggle: 'toggle',
-  toolbar: 'toolbar', truncate: 'text', value: 'text', 'value-control': 'value-control', warning: 'notice'
+  toolbar: 'toolbar', truncate: 'text', value: 'text', 'controller-toggle':'controller-toggle', 'property-row':'property-row', playhead:'playhead', 'function-value':'function-control', 'value-control': 'value-control', warning: 'notice'
 });

@@ -94,9 +94,11 @@
     });
     on(doc,'click',event=>{const control=event.target.closest?.('[aria-disabled=true]');if(control?.matches?.('button,a,summary')){event.preventDefault();event.stopImmediatePropagation();}},true);
     function closeMenu(menu,{focus=false}={}){if(!menu.open)return;menu.open=false;openedMenus.delete(menu);if(focus)menu.querySelector(':scope>summary')?.focus();}
-    on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open)openedMenus.add(menu);else openedMenus.delete(menu);}},true);
+    on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open){openedMenus.add(menu);api.positionMenu?.(menu);}else openedMenus.delete(menu);}},true);
     on(doc,'click',event=>{for(const menu of openedMenus)if(!menu.contains(event.target))closeMenu(menu);});
-    on(doc,'keydown',event=>{if(event.key!=='Escape')return;const menu=event.target.closest?.('details.ui-menu');if(menu?.open){event.preventDefault();closeMenu(menu,{focus:true});}});
+    on(doc,'keydown',event=>{if(event.key!=='Escape')return;const menu=event.target.closest?.('details.ui-menu')||[...(doc.querySelectorAll?.('details.ui-menu[open]')||[])].at(-1);if(menu?.open){event.preventDefault();closeMenu(menu,{focus:true});}});
+    const positionMenus=()=>{if(doc.visibilityState!=='hidden')for(const menu of openedMenus)api.positionMenu?.(menu);};
+    on(view,'resize',positionMenus);on(doc,'scroll',event=>{if(!event.target.closest?.('.ui-menu-panel'))positionMenus();},true);on(doc,'ui:styles',positionMenus);
     function dispose(){if(stopped)return;stopped=true;view.clearTimeout(timer);cancelStyle?.();requestController?.abort();channel?.close();removeLease();for(const remove of removers)remove();openedMenus.clear();api.disposeActions?.(doc);}
     on(view,'pagehide',event=>{if(!event.persisted)dispose();else{view.clearTimeout(timer);removeLease();}});
     on(view,'pageshow',event=>{if(event.persisted)schedule(50);});
@@ -448,7 +450,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.11.3',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.12.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
