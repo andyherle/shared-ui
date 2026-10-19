@@ -890,3 +890,7 @@ Compact inspector groups use native `details.ui-section`: a left disclosure tria
 `SharedUI.createColorWheel({root, values:[], choices:[], multiple:false, label, onChange})` supplies a native colour-wheel action, visible selection nodes and individually named removal actions. Click adds a node or removes a selected node. Arrow keys choose hue/saturation, Enter toggles and Delete removes. `multiple:true` allows up to 32 nodes; an optional hex `choices` palette snaps selections for categorical filters. Omitting choices permits arbitrary hue/saturation values for picker integrations. `setValues` updates without emitting; `clear` emits; `dispose` releases listeners and drawing buffers. The hue/saturation graphic is generated locally and sends no content or telemetry.
 
 Search bars use the existing native `.ui-field.ui-search` pattern with a decorative shared search SVG, a named `input[type=search]`, and the browser's native clear/search keyboard behavior. Adopt the existing input instead of replacing it.
+
+Native menus evaluate the original composed click path when dismissing outside
+clicks. Removing a selected tag or colour during its click does not close its
+containing menu; a real outside click and Escape retain normal dismissal.

@@ -115,3 +115,5 @@ test('missing or stale page version cannot downgrade the bundled runtime contrac
  for(const dataset of [{},{uiVersion:'1.0.0'}]){const baseline={removed:false,remove(){this.removed=true;}},e=environment({dataset,baselines:[baseline]});
  assert.equal(await e.instance.applyRelease({...other,version:'1.13.9'}),false);assert.equal(e.links.length,0);assert.equal(baseline.removed,false);e.instance.dispose();}
 });
+
+test('removing an inside action keeps its menu open using the original composed click path',()=>{const e=environment(),menu={open:true,matches:()=>true,contains:()=>false,querySelector:()=>null},removed={closest:()=>null};e.doc.dispatchEvent({type:'toggle',target:menu});e.doc.dispatchEvent({type:'click',target:removed,composedPath:()=>[removed,menu,e.doc]});assert.equal(menu.open,true);e.doc.dispatchEvent({type:'click',target:removed,composedPath:()=>[removed,e.doc]});assert.equal(menu.open,false);e.instance.dispose();});
