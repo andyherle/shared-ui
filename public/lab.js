@@ -236,6 +236,8 @@ $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggesti
 {const root=document.getElementById('fixture-section-root'),actions=document.getElementById('fixture-section-actions');if(root&&actions)window.SharedUI.createSectionActions({root,actions});}
 {const surface=document.getElementById('fixture-preview-stage'),content=document.getElementById('fixture-preview-media');if(surface&&content){const view=window.SharedUI.createMediaViewport({surface,content,onChange({scale}){document.getElementById('fixture-preview-scale').textContent=Math.round(scale*100)+'%';}});document.getElementById('fixture-preview-in').onclick=()=>view.zoom(1.2);document.getElementById('fixture-preview-out').onclick=()=>view.zoom(1/1.2);document.getElementById('fixture-preview-fit').onclick=()=>view.fit();window.addEventListener('pagehide',()=>view.dispose(),{once:true});}}
 
+{const root=document.getElementById('fixture-preview-catalogue');if(root){const image=new URL('assets/reference.svg',location.href).href,items=['Geometry','Response','Network','Material'].map((label,i)=>({id:String(i),label,image,detail:'Synthetic scene · 16:9'}));const catalogue=window.SharedUI.createPreviewCatalogue({root,onSelect:id=>catalogue.update(items,id)});catalogue.update(items,'0');document.getElementById('fixture-proof-sheet').onclick=async()=>{const {canvas}=await window.SharedUI.renderProofSheet({items,title:'Synthetic proof sheet'}),link=document.getElementById('fixture-proof-download');link.href=canvas.toDataURL('image/png');link.hidden=false;};}}
+
 /* Generic synthetic composition fixture. Uses the same native factory as consumers. */
 (() => {
   'use strict';

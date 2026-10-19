@@ -3,6 +3,42 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
+  // Host-owned content, one shared native preview/selection pattern.
+  UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite}={})=>{
+    const doc=root.ownerDocument,original=root.className,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
+    function update(items,selectedId){
+      const keep=new Set(items.map(item=>String(item.id)));
+      for(const [id,card]of cards)if(!keep.has(id)){card.element.remove();cards.delete(id);}
+      for(const item of items){const id=String(item.id);let card=cards.get(id);
+        if(!card){const element=doc.createElement('article');element.className='ui-card ui-stack ui-selectable';element.dataset.itemId=id;
+          const media=doc.createElement('button');media.type='button';media.className='ui-media-button';media.style.aspectRatio='16 / 9';
+          const image=doc.createElement('img');image.alt='';image.loading='lazy';Object.assign(image.style,{inlineSize:'100%',blockSize:'100%',objectFit:'contain'});media.append(image);
+          const caption=doc.createElement('div');caption.className='ui-pad ui-stack';const action=doc.createElement('button');action.type='button';action.className='ui-item';action.dataset.uiVariant='quiet';UI.adoptAction(action,{label:item.label,icon:'scenes',sprite});
+          const detail=doc.createElement('small');detail.className='ui-meta';caption.append(action,detail);
+          const select=()=>onSelect(id);media.addEventListener('click',select);action.addEventListener('click',select);
+          if(onManage){const manage=doc.createElement('button');manage.type='button';UI.adoptAction(manage,{label:'Manage '+item.label,icon:'more',sprite});manage.addEventListener('click',()=>onManage(id));caption.append(manage);}
+          element.append(media,caption);card={element,media,image,action,detail};cards.set(id,card);
+        }
+        card.media.setAttribute('aria-label','Open '+item.label);card.media.setAttribute('aria-pressed',String(id===String(selectedId)));card.element.dataset.uiSelected=String(id===String(selectedId));
+        UI.setActionLabel(card.action,item.label);card.detail.textContent=item.detail||'';card.detail.hidden=!item.detail;
+        if(item.image){if(card.image.getAttribute('src')!==item.image)card.image.src=item.image;card.image.hidden=false;}else{card.image.removeAttribute('src');card.image.hidden=true;}
+        const position=items.findIndex(row=>String(row.id)===id);if(root.children[position]!==card.element)root.insertBefore(card.element,root.children[position]||null);
+      }
+    }
+    return {update,dispose(){root.replaceChildren();root.className=original;delete root.dataset.uiGrid;cards.clear();}};
+  };
+  UI.renderProofSheet=async({items,width=3840,height=2160,title='Proof sheet',background='#101419',color='#f4f5f7',font='sans-serif',signal}={})=>{
+    if(!Array.isArray(items)||!items.length||items.length>48)throw Error('Choose 1–48 proof images');
+    if(!Number.isInteger(width)||!Number.isInteger(height)||width<640||height<360||width>7680||height>4320)throw Error('Invalid proof sheet size');
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const c=canvas.getContext('2d'),unit=width/3840,pad=64*unit,gap=24*unit,top=144*unit,caption=28*unit;
+    let best;for(let cols=1;cols<=Math.min(items.length,10);cols++){const rows=Math.ceil(items.length/cols),w=Math.min((width-pad*2-gap*(cols-1))/cols,((height-top-pad-gap*(rows-1))/rows-caption)*16/9);if(w>0&&(!best||w>best.w))best={cols,rows,w};}
+    if(!best)throw Error('Proof images do not fit');
+    c.fillStyle=background;c.fillRect(0,0,width,height);c.fillStyle=color;c.font=`700 ${38*unit}px ${font}`;c.fillText(title,pad,64*unit);c.font=`${20*unit}px ${font}`;c.fillText(`${items.length} previews · 16:9 · ${width} × ${height}`,pad,100*unit);
+    const cells=[];for(let i=0;i<items.length;i++){signal?.throwIfAborted();const item=items[i],image=new Image();image.src=item.image;await image.decode();signal?.throwIfAborted();const row=Math.floor(i/best.cols),count=Math.min(best.cols,items.length-row*best.cols),x=(width-count*best.w-(count-1)*gap)/2+(i%best.cols)*(best.w+gap),y=top+row*(best.w*9/16+caption+gap),h=best.w*9/16;
+      c.fillStyle=color;c.font=`${18*unit}px ${font}`;c.fillText(item.label,x,y+20*unit,best.w);const scale=Math.min(best.w/image.naturalWidth,h/image.naturalHeight),iw=image.naturalWidth*scale,ih=image.naturalHeight*scale;c.drawImage(image,x+(best.w-iw)/2,y+caption+(h-ih)/2,iw,ih);cells.push({id:item.id,x,y:y+caption,width:best.w,height:h});
+    }
+    return {canvas,cells};
+  };
   // Bulk controls retain native details, text, and the host's persistence owner.
   UI.createSectionActions=({root,actions,selector='details.ui-section',sprite,onChange=()=>{}}={})=>{
     if(!root||!actions||root.ownerDocument!==actions.ownerDocument)throw new TypeError('Section actions need a root and native action group in one document');
