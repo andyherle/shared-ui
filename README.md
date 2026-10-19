@@ -704,7 +704,7 @@ Open native menu panels use the same viewport fitting in both packs: maintain th
 
 `createExpressionEditor({label,suggestions,onCommit,sprite})` returns a named native `trigger`, multiline `input`, and `element` form. Put the trigger in the property action slot and the form beneath the row. It owns completion at the caret, composition-safe typing, native Base/Result read-only fields and a right-aligned Clear/Apply group, retryable validation, Ctrl/Command+Enter apply, Tab completion, Escape cancellation and draft-preserving `sync({expression,base,value,error})`. Use `setSuggestions` for live vocabularies and `flush` before Save/exit; `dispose` removes listeners. The application owns evaluation and History. Display the live result in the compact field, show the independent base on focus/scrub, and keep the fx indicator while driven. Comfortable scrub bounds can grow after explicit typed entry; genuine input limits remain application-owned.
 
-`setKeyframeState(action,{present,keyframed,sprite})` separates the current frame from animation: the ordinary blue pressed surface means the property has keys anywhere; a solid foreground-colour diamond means a key exists at the playhead, and a hollow diamond means it does not. Clicking an existing key selects its editable base; deletion stays in the timeline. Editable and read-only fields share the same semantic fill; read-only text uses the shared monospace font and retains native selection/copy.
+`setKeyframeState(action,{present,keyframed,sprite})` separates the current frame from animation: the ordinary blue pressed surface means the property has keys anywhere; a solid foreground-colour diamond means a key exists at the playhead, and a hollow diamond means it does not. Clicking an existing key selects its editable base; deletion stays in the timeline. Editable and read-only fields share the same unfilled surface; read-only text uses the shared monospace font and retains native selection/copy.
 
 `createChoiceControl({label,options,value,searchable,onChange})` composes a native select or the shared searchable combobox in one field. `sync(value,options)` preserves focused entry; arbitrary search text never becomes an enum value. Dispose it with its row. The combobox handles IME composition, arrows, Enter, Escape and outside dismissal.
 
@@ -741,7 +741,7 @@ navigation belongs on the name; no separate Event, curve or reset button is used
 The inline fx indicator accepts `onActivate`, `controls`, `expanded` and `label`;
 use the editor’s `toggle()` so either FX trigger opens/closes the same draft.
 
-Editable and read-only fields share the same fill in both packs. Read-only fields
+Editable and read-only fields are unfilled in both packs. Read-only fields
 and native outputs use `--ui-font-mono`, preserving native selection and copy.
 Content-oriented inline editing retains its explicit role.
 

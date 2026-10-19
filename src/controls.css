@@ -38,7 +38,7 @@
     :where(button:disabled,[aria-disabled=true]) { opacity:.45; cursor:default; }
     :where(input:not([type=range],[type=checkbox],[type=radio],[type=color],[type=hidden],[type=file]),select,textarea) {
       min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding:var(--ui-field-padding);
-      border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface-soft);
+      border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:#0000;
       font:var(--ui-control-font);
     }
     option { background:var(--ui-surface); color:var(--ui-text); }
@@ -156,7 +156,7 @@
     .ui-section > summary::after { position:absolute; inset-block-start:8px; inset-inline-end:4px; }
     .ui-section > summary > :where(h3,h4,p) { margin:0; }
     .ui-section > :not(summary) { margin-block-start:var(--ui-gap); }
-    :where(.ui-field) { display:flex; flex:none; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-control-inset); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:var(--ui-surface-soft); color:var(--ui-text); font:var(--ui-control-font); }
+    :where(.ui-field) { display:flex; flex:none; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-control-inset); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:#0000; color:var(--ui-text); font:var(--ui-control-font); }
 .ui-field {
   & > :where(input,select) { margin:0; flex:1 1 0; inline-size:0; min-block-size:calc(var(--ui-field-height) - 2px); padding-inline:0; border:0; background:#0000; }
   & > :is(select,input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])) { flex:1 1 auto; inline-size:auto; }
