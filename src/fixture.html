@@ -166,3 +166,10 @@
 </section>
 
 <section class="ui-effects-inspector ui-panel ui-stack" id="fixture-property-panel" aria-label="Effects inspector" style="max-inline-size:100%"><h2>Shared effects inspector</h2><label class="ui-field"><span class="ui-label">Preview width</span><select id="property-fixture-width"><option value="100%">Full width</option><option value="390px">390px phone</option><option value="260px">260px panel</option></select></label><div id="fixture-property-colour"></div><div id="fixture-property-number"></div><div id="fixture-property-boolean"></div></section>
+
+<section class="ui-card ui-pad ui-stack" aria-label="Independent workspace panels"><h3>Workspace panels</h3><div id="fixture-panel-toggles" class="ui-actions ui-inline" role="group" aria-label="Visible panels"><button type="button" data-panel="timeline" data-ui-icon="timeline">Timeline</button><button type="button" data-panel="activity" data-ui-icon="terminal">Activity</button><button type="button" data-panel="debug" data-ui-icon="code">Debug</button></div><section id="fixture-panel-timeline" class="ui-card ui-pad">Timeline panel</section><section id="fixture-panel-activity" class="ui-card ui-pad">Activity panel</section><section id="fixture-panel-debug" class="ui-card ui-pad">Debug panel</section></section>
+<section class="ui-stack" aria-label="Native timeline playhead">
+ <h5>Native timeline playhead</h5>
+ <label class="ui-field"><span class="ui-label">Frame</span><input class="ui-range" data-ui-timeline type="range" min="0" max="100" step="1" value="30" aria-label="Timeline frame"></label>
+ <div class="ui-timeline-ticks ui-actions" aria-hidden="true"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70</span><span>80</span><span>90</span><span>100</span></div>
+</section>

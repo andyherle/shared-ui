@@ -755,3 +755,9 @@ Content-oriented inline editing retains its explicit role.
 ## Optional debug console
 
 The reusable [debug console](docs/DEBUG.md) provides evaluated-state tables, sampled all-channel plots, lane views and machine-style diagnostic traces. It is a separate reviewed add-on, with a portable packet/adapter API and no application state or transport. Open `public/debug.html` for the interactive synthetic fixtures.
+
+### Independent workspace panels and timeline scrubber
+
+`SharedUI.createPanelToggles({items, selected, maxSelected:2, onChange})` connects native buttons and existing panel elements. Each item is `{id,button,panel}`. Buttons retain independent `aria-pressed` states; a second press closes a panel. At most two panels are visible, replacing the oldest selection when a third opens. `show(id)` reveals a panel without toggling it closed; `dispose()` releases listeners. Host layout owns panel placement.
+
+For native line playheads, load the optional, separately validated `v1/timeline.css` with `scripts/install-timeline.mjs`, then add `data-ui-timeline` to `.ui-range`. `.ui-timeline-ticks` shares tick typography and line paint; hosts position ticks using actual frame bounds. The base CSS budget is unchanged.

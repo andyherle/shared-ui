@@ -161,7 +161,7 @@ export function listComponents({text = '', family, pack, status, authorable} = {
 }
 // Roles that are parts, modifiers or helpers rather than independent components.
 // This explicit classification makes newly introduced catalogue roles fail coverage.
-export const ROLE_OWNERS = freeze({'zoom-feedback':'zoom-feedback',avatar:'avatar',lightbox:'lightbox',
+export const ROLE_OWNERS = freeze({'timeline-ticks':'timeline','zoom-feedback':'zoom-feedback',avatar:'avatar',lightbox:'lightbox',
   'composition':'review-workspace', 'composition-layout':'review-workspace', 'composition-main':'review-workspace',
   'composition-header':'review-workspace', 'composition-toolbar':'review-workspace', 'composition-filters':'review-workspace',
   'composition-body':'review-workspace', 'composition-aside':'review-workspace', 'composition-footer':'review-workspace',

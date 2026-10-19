@@ -1,0 +1,11 @@
+{
+  "component": "timeline",
+  "version": 1,
+  "files": {
+    "timeline.css": "c65beed50619dd67024336d5dbbaabed57210f0635a12312c2e2765adb3875a6"
+  },
+  "sizes": {
+    "css": 838,
+    "cssGzip": 306
+  }
+}

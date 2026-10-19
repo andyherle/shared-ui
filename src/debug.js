@@ -98,7 +98,7 @@
     const raw=make('pre','ui-debug-raw');raw.tabIndex=0;raw.setAttribute('aria-label','Normalized raw debug packet');
     body.append(metrics,graphs,trace,raw);
     const foot=make('footer','ui-debug-foot'),status=make('output','ui-debug-status'),prev=action('Previous page','chevron-left'),next=action('Next page','chevron-right'),pagination=make('div','ui-actions');pagination.append(prev,next);
-    const info=make('details','ui-disclosure'),infoTitle=make('summary','','Provenance / limits'),infoBody=make('pre','ui-debug-info');info.append(infoTitle,infoBody);foot.append(status,pagination,info);
+    foot.append(status,pagination);
     root.append(head,filters,body,foot,colorProbe);
     const nodes=new Map();let channelSignature='',groupSignature='',dirty=true;
     function report(error){status.textContent=String(error?.message||error);onError(error);}
@@ -172,7 +172,6 @@
       if(!raw.hidden){const serialized=JSON.stringify(packet,null,2);raw.textContent=serialized.slice(0,524288)+(serialized.length>524288?'\n[View truncated at 512 KiB; Copy snapshot includes the normalized packet.]':'');}
       status.textContent=[packet.status,channels.length+'/'+packet.channels.length+' channels',records.length+' records','page '+(page+1)+'/'+Math.max(1,Math.ceil(count/per))].filter(Boolean).join(' · ');
       prev.disabled=page===0;next.disabled=(page+1)*per>=count;pagination.hidden=['scope','raw'].includes(mode);
-      infoBody.textContent=[...packet.provenance,...packet.notices,'Bounds: '+LIMITS.channels+' channels; '+LIMITS.samples+' points/channel; '+LIMITS.traces+' records. No invented samples.'].join('\n');
       if(plugin)try{plugin.update?.(packet,{channels,format});}catch(error){report(error);}
     }
     function setView(id){if(!modeLabels[id]&&!custom.has(id))throw new Error('Unknown debug view: '+id);plugin?.destroy?.();plugin=null;body.querySelector('.ui-debug-custom')?.remove();modes.value=id;page=0;hover=null;if(custom.has(id)){const container=make('section','ui-debug-custom');body.append(container);plugin=custom.get(id).mount(container,{document:doc,format});}mark();}

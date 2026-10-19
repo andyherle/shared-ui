@@ -230,3 +230,5 @@ const textSuggestions=UI.createTextSuggestions($('text-suggestions'),{label:'Fil
 $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggestions'),before=input.value.slice(0,input.selectionStart),start=before.lastIndexOf('[[');if(start<0||before.slice(start+2).includes(']')){textSuggestions.hide();return;}const query=before.slice(start+2).toLowerCase();textSuggestions.show(['Projects/Proposal.md','People/Example.md','Files/Reference.pdf'].filter(path=>path.toLowerCase().includes(query)).map(path=>({label:path,value:'[['+path.replace(/\.md$/,'')+']]'})));});
 
 }
+
+{const group=document.getElementById('fixture-panel-toggles');if(group)window.SharedUI.createPanelToggles({items:[...group.querySelectorAll('button')].map(button=>({id:button.dataset.panel,button,panel:document.getElementById('fixture-panel-'+button.dataset.panel)})),selected:['timeline']});}

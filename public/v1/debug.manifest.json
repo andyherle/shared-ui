@@ -3,15 +3,15 @@
   "version": 1,
   "requiresSharedUI": "1.12.0",
   "files": {
-    "debug.js": "383e294bd4d2784fee8fb8971c5556e08044a2c2c2d808978eb59cbe17d6dcc2",
-    "debug.css": "f3d49c9623aad0ef7a3ce09d09bd44141363466a5ed70c3f73762af1c7998d6f",
+    "debug.js": "9b7ada5aaa688d16e92d5696bbfa7f97ae397a7b9efcf08bfb073728e564f477",
+    "debug.css": "287c5e1702cfa0d25ff9c7c4e95e8cf4b723df05f4e8decef89ccde951afc3ce",
     "debug.d.ts": "589bbe8cac2ee41354b847c7577bcdf0951a44ca30cc208415ec17f10bc61246"
   },
   "sizes": {
-    "css": 4225,
-    "cssGzip": 1254,
-    "js": 24247,
-    "jsGzip": 8271
+    "css": 4071,
+    "cssGzip": 1228,
+    "js": 23876,
+    "jsGzip": 8165
   },
   "budget": {
     "css": 6144,

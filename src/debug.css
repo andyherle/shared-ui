@@ -28,11 +28,10 @@
  .ui-debug-trace{grid-column:1/-1}.ui-debug-trace>strong{color:var(--ui-debug-muted)}
  .ui-debug-foot{border-block:1px solid var(--ui-debug-line);font-size:var(--ui-debug-size)}
  .ui-debug-status{flex:1;color:var(--ui-debug-muted);min-inline-size:12ch}
- .ui-debug-foot>.ui-disclosure{margin:0;max-inline-size:100%}.ui-debug-info{white-space:pre-wrap;overflow-wrap:anywhere;max-block-size:200px;overflow:auto}
  .ui-debug[data-debug-view=scope] .ui-debug-body,.ui-debug[data-debug-view=lanes] .ui-debug-body,.ui-debug[data-debug-view=metrics] .ui-debug-body,.ui-debug[data-debug-view=program] .ui-debug-body,.ui-debug[data-debug-view=raw] .ui-debug-body{grid-template-columns:minmax(0,1fr)}
  .ui-debug[data-debug-view=overwhelm]{--ui-debug-size:10px;--ui-debug-plot-height:210px}
  .ui-debug[data-debug-view=overwhelm] .ui-debug-body{gap:6px}
  .ui-debug-custom{grid-column:1/-1}
- @container ui-debug (max-width:650px){.ui-debug-body{grid-template-columns:minmax(0,1fr)}.ui-debug-head>.ui-actions{margin-inline-start:0}.ui-debug-grid{grid-template-columns:minmax(8ch,1fr) minmax(4ch,.7fr)}.ui-debug-legend{max-block-size:3em}}
+ @container ui-debug (max-width:520px){.ui-debug-body{grid-template-columns:minmax(0,1fr)}.ui-debug-head>.ui-actions{margin-inline-start:0}.ui-debug-grid{grid-template-columns:minmax(8ch,1fr) minmax(4ch,.7fr)}.ui-debug-legend{max-block-size:3em}}
  @media(forced-colors:active){.ui-debug-plot{forced-color-adjust:none}.ui-debug{--ui-debug-channel-1:CanvasText;--ui-debug-channel-2:LinkText;--ui-debug-channel-3:Highlight;--ui-debug-channel-4:GrayText;--ui-debug-text:CanvasText;--ui-debug-line:GrayText}}
 }
