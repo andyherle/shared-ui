@@ -464,9 +464,8 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
-  // Inspector rows share stable label/value/action columns; original controls stay alive.
+  // Inspector rows share name/action/value columns; original controls stay alive.
   UI.adoptPropertyRow=(row,{name,control,actions}={})=>{
-    const hasActions=Boolean(actions);
     if(!row||!control||row.ownerDocument!==control.ownerDocument||actions&&row.ownerDocument!==actions.ownerDocument)throw new TypeError('Property rows require controls from one document');
     const doc=row.ownerDocument;
     if(!actions){actions=doc.createElement('div');actions.className='ui-actions ui-inline';actions.hidden=true;}
@@ -474,10 +473,12 @@
     let label=row.querySelector(':scope > [data-ui-property-label]');
     if(!label){label=doc.createElement('label');label.dataset.uiPropertyLabel='';label.className='ui-label';row.prepend(label);}
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
-    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:hasActions?'minmax(0,30%) minmax(0,1fr) minmax(0,min(35%,calc(2 * var(--ui-control-height) + var(--ui-gap))))':'minmax(0,30%) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
-    Object.assign(control.style,{minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
-    Object.assign(actions.style,{minInlineSize:'0',justifyContent:'flex-end'});
-    row.append(control,actions);return {element:row,label,control,actions};
+    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto minmax(0,clamp(45%,calc(100% - 2 * var(--ui-control-height) - 10ch),60%))',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
+    Object.assign(label.style,{gridColumn:'1',gridRow:'1',minInlineSize:'0',overflowWrap:'anywhere'});
+    Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'0',justifyContent:'flex-end'});
+    control.dataset.uiPropertyValue='';
+    Object.assign(control.style,{gridColumn:'3',gridRow:'1',minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
+    row.append(actions,control);return {element:row,label,control,actions};
   };
   const propertyActions=new WeakMap();
   UI.setPropertyAction=(row,options={})=>{
@@ -485,7 +486,7 @@
     let entry=propertyActions.get(row);
     if(!entry&&(typeof options.onReset==='function'||typeof options.onActivate==='function')){
       const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';
-      button.style.color=label.style.color;Object.assign(button.style,{textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
+      button.style.color=label.style.color;Object.assign(button.style,{gridColumn:'1',gridRow:'1',textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
       const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
       entry={button,name,busy:false};
       const reset=async()=>{if(entry.busy||typeof entry.onReset!=='function')return;entry.busy=true;button.disabled=true;button.setAttribute('aria-busy','true');try{await entry.onReset();}catch(error){button.title=error.message;}finally{entry.busy=false;button.disabled=!entry.onReset&&!entry.onActivate;button.setAttribute('aria-busy','false');}};

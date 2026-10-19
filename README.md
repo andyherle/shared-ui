@@ -696,7 +696,7 @@ Open native menu panels use the same viewport fitting in both packs: maintain th
 
 ### Shared effects inspector
 
-`SharedUI.adoptPropertyRow(row,{name,control,actions})` owns the native inspector row: a stable name column, value column and right-aligned action slot. It moves the original controls once, preserving their IDs, handlers and focused drafts. Use `createBooleanControl` for a native checkbox field with explicit On/Off value and `createColourValue` for one native colour/hex field. Numeric/expression fields use `createFunctionControl`; applications validate expressions through their existing engine. The kit owns control paint and row geometry; applications own values, keyframes, formulas, resets and History. The catalogue demonstrates all three types together in both packs.
+`SharedUI.adoptPropertyRow(row,{name,control,actions})` owns the native inspector row: a flexible name, its adjacent action slot and an aligned value column. It moves the original controls once, preserving their IDs, handlers and focused drafts. Use `createBooleanControl` for a native checkbox field with explicit On/Off value and `createColourValue` for one native colour/hex field. Numeric/expression fields use `createFunctionControl`; applications validate expressions through their existing engine. The kit owns control paint and row geometry; applications own values, keyframes, formulas, resets and History. The catalogue demonstrates all three types together in both packs.
 
 `SharedUI.setExpressionState(input,{expression,result,error,base,keyframed})` adds an accent `fx` marker beside the original value. When keyframes coexist, supply their evaluated base so the description explains the base → expression result. Keep result text readable; muted text is reserved for metadata, rather than implying the value is disabled. The visible field shows the result while unfocused; native hover/accessibility text exposes the expression and return value. The kit never evaluates expressions.
 
@@ -712,11 +712,12 @@ Open native menu panels use the same viewport fitting in both packs: maintain th
 
 `createResponseControl` and `createIntervalControl` share power-response and two-endpoint controls. They accept descriptor metadata, app-supplied numerical model functions and callbacks; the kit owns DOM, theme, focus and pointer/keyboard interaction while the consumer owns accepted values and state. They are demonstrated alongside native choice, text, read-only and action controls in the effects inspector catalogue.
 
-Inspector fields share a fixed name column, flexible value column and a common
-two-action rail. Actual actions align to the right of that rail; absent actions
-do not change the value width. The rail is capped at 35% of a narrow row so native
-touch targets can wrap while values remain readable. Omit `actions` from
-`adoptPropertyRow` for read-only output rows to fill the remaining width.
+Inspector rows use name → Keyframe → FX → value in both visual and keyboard
+order. Value fields share a start column and extend to the right edge. Actions
+consume only their actual width inside the name area, so names without actions
+can use that space instead of leaving a reserved rail. Narrow rows give the
+name/action area a larger share while retaining usable value fields. Omit
+`actions` for read-only output rows; their names use the full name area too.
 `setPropertyState(row,{active,description,color})` colours the existing name and
 updates its native hover description; automation never inserts a status line or
 moves neighbouring rows. The owning app supplies the sampled value.
