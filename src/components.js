@@ -489,7 +489,7 @@
     if(!root?.ownerDocument)throw new TypeError('Colour wheel needs a native root');
     const doc=root.ownerDocument,view=doc.defaultView,size=240,button=doc.createElement('button'),canvas=doc.createElement('canvas'),selected=doc.createElement('div'),status=doc.createElement('span');
     const normalize=value=>/^#[\da-f]{6}$/i.test(String(value))?String(value).toLowerCase():null;
-    const palette=[...new Set(choices.map(normalize).filter(Boolean))];let colors=[],cursor={h:0,s:1},disposed=false;
+    const palette=[...new Set(choices.map(normalize).filter(Boolean))];let colors=[],cursor={h:0,s:1},disposed=false,selectionSignature=null;
     const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
     function hsv(hex){const [r,g,b]=rgb(hex).map(v=>v/255),max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;return{h:!d?0:((max===r?(g-b)/d+(g<b?6:0):max===g?(b-r)/d+2:(r-g)/d+4)*60),s:max?d/max:0};}
     function hex(h,s){const c=s,x=c*(1-Math.abs(h/60%2-1)),m=1-c,parts=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return '#'+parts.map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');}
@@ -507,10 +507,10 @@
       for(const value of colors){const p=point(value);ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle=value;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=ink;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=accent;ctx.stroke();}
       const p=point(hex(cursor.h,cursor.s));ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.lineWidth=1.5;ctx.strokeStyle=ink;ctx.stroke();
       button.setAttribute('aria-label',`${label}; ${colors.length} selected; hue ${Math.round(cursor.h)}, saturation ${Math.round(cursor.s*100)} percent`);
-      selected.replaceChildren();for(const color of colors){const remove=doc.createElement('button');remove.type='button';remove.className='ui-tag';remove.textContent=color+' ×';remove.setAttribute('aria-label','Remove colour '+color);remove.onclick=()=>change(colors.filter(v=>v!==color));selected.append(remove);}selected.hidden=!colors.length;
+      const signature=colors.join(',');if(signature!==selectionSignature){selectionSignature=signature;selected.replaceChildren();for(const color of colors){const remove=doc.createElement('button');remove.type='button';remove.className='ui-tag';remove.textContent=color+' ×';remove.setAttribute('aria-label','Remove colour '+color);remove.onclick=()=>{change(colors.filter(v=>v!==color));button.focus({preventScroll:true});};selected.append(remove);}}selected.hidden=!colors.length;
     }
-    function setValues(next){colors=[...new Set(next.map(normalize).filter(Boolean).map(nearest))].slice(0,multiple?32:1);draw();}
-    function change(next){setValues(next);status.textContent=colors.length?'Selected colours: '+colors.join(', '):'All colours';onChange([...colors]);}
+    function setValues(next){if(disposed)return;colors=[...new Set(next.map(normalize).filter(Boolean).map(nearest))].slice(0,multiple?32:1);draw();}
+    function change(next){if(disposed)return;setValues(next);status.textContent=colors.length?'Selected colours: '+colors.join(', '):'All colours';onChange([...colors]);}
     function toggle(value){value=nearest(value);change(colors.includes(value)?colors.filter(v=>v!==value):multiple?[...colors,value]:[value]);}
     function click(event){if(disposed)return;if(!event.detail){toggle(hex(cursor.h,cursor.s));return;}const r=canvas.getBoundingClientRect(),x=(event.clientX-r.left)/r.width*size,y=(event.clientY-r.top)/r.height*size,dx=(x-size/2)/(size/2-12),dy=(y-size/2)/(size/2-12);if(Math.hypot(dx,dy)>1)return;const hit=colors.find(value=>{const p=point(value);return Math.hypot(p.x-x,p.y-y)<=Math.max(12,12*size/r.width);});cursor={h:(Math.atan2(dy,dx)*180/Math.PI+360)%360,s:Math.min(1,Math.hypot(dx,dy))};toggle(hit||hex(cursor.h,cursor.s));}
     function key(event){if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',' ','Home','Delete','Backspace'].includes(event.key))return;event.preventDefault();event.stopPropagation();const step=event.shiftKey?15:5;if(event.key==='ArrowLeft'||event.key==='ArrowRight')cursor.h=(cursor.h+(event.key==='ArrowRight'?step:-step)+360)%360;else if(event.key==='ArrowUp'||event.key==='ArrowDown')cursor.s=Math.max(0,Math.min(1,cursor.s+(event.key==='ArrowUp'?step:-step)/100));else if(event.key==='Home')cursor={h:0,s:1};else if(event.key==='Delete'||event.key==='Backspace'){change(colors.filter(v=>v!==nearest(hex(cursor.h,cursor.s))));return;}else{toggle(hex(cursor.h,cursor.s));return;}draw();}
@@ -533,7 +533,7 @@
       matches.forEach((tag,index)=>{const button=doc.createElement('button');button.type='button';button.className=tags?'ui-tag':'ui-action';button.textContent=tag;if(!tags)UI.adoptAction(button,{label:tag});button.id=`${list.id}-${index}`;button.setAttribute('role','option');button.setAttribute('aria-selected',String(index===active));button.tabIndex=-1;
         button.addEventListener('pointerdown',event=>event.preventDefault());button.addEventListener('click',()=>{commit(tag);input.focus();});list.append(button);});
       slot.hidden=!matches.length;list.hidden=!matches.length;
-      if(matches.length){const rect=input.getBoundingClientRect(),width=Math.min(rect.width,view.innerWidth-16);slot.style.width=width+'px';slot.style.left=Math.max(8,Math.min(rect.left,view.innerWidth-width-8))+'px';slot.style.top=(view.innerHeight-rect.bottom>=Math.min(slot.offsetHeight,160)?rect.bottom+4:Math.max(8,rect.top-slot.offsetHeight-4))+'px';}input.setAttribute('aria-expanded',String(Boolean(matches.length)));
+      if(matches.length){const rect=(input.closest('.ui-field')||input).getBoundingClientRect(),width=Math.min(rect.width,view.innerWidth-16);slot.style.width=width+'px';slot.style.left=Math.max(8,Math.min(rect.left,view.innerWidth-width-8))+'px';slot.style.top=(view.innerHeight-rect.bottom>=Math.min(slot.offsetHeight,160)?rect.bottom+4:Math.max(8,rect.top-slot.offsetHeight-4))+'px';}input.setAttribute('aria-expanded',String(Boolean(matches.length)));
       if(matches.length&&active>=0)input.setAttribute('aria-activedescendant',`${list.id}-${active}`);else input.removeAttribute('aria-activedescendant');
     }
     function commit(value){if(!value.trim())return;input.value='';active=-1;hide();onCommit(value);}

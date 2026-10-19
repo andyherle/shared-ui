@@ -20,3 +20,5 @@ test('tag choices share the overlay and retain comma commits without an extra fl
 });
 
 test('inline tag field retains a single entry row and scrolls committed chips',()=>{const f=fixture(),chips=f.doc.createElement('div');f.parent.append(chips);const control=f.UI.createTagInput(f.input,{field:f.parent,chips});assert.equal(f.parent.children[0],f.input);assert.equal(f.parent.style.gridTemplateColumns,'minmax(0,14ch) minmax(0,1fr)');assert.equal(chips.style.flexWrap,'nowrap');assert.equal(chips.style.overflowX,'auto');control.dispose();});
+
+test('suggestions align to the outer native field rather than its text inset',()=>{const f=fixture();f.input.closest=selector=>selector==='.ui-field'?{getBoundingClientRect:()=>({left:10,top:30,bottom:62,width:200})}:null;const control=f.UI.createSuggestedInput(f.input,{options:()=>['Motion']});f.input.fire('focus');assert.equal(f.doc.body.children[0].style.width,'200px');assert.equal(f.doc.body.children[0].style.left,'10px');control.dispose();});
