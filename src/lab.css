@@ -50,3 +50,5 @@
   @media (max-width:48rem) { [data-ui-page-host] > [data-ui-page-root] { inline-size:calc(100% - 32px); } }
   [data-ui-page-root][data-ui-page-mode=full] { inline-size:calc(100% - 32px); }
 }
+
+@layer app{.fixture-media-viewport{position:relative;display:grid;place-items:center;block-size:220px;overflow:hidden;min-inline-size:0;}.fixture-media-viewport>img{inline-size:100%;block-size:100%;object-fit:contain;}}

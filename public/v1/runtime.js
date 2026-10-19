@@ -464,6 +464,47 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
+  // Bulk controls retain native details, text, and the host's persistence owner.
+  UI.createSectionActions=({root,actions,selector='details.ui-section',onChange=()=>{}}={})=>{
+    if(!root||!actions||root.ownerDocument!==actions.ownerDocument)throw new TypeError('Section actions need a root and native action group in one document');
+    const doc=root.ownerDocument,buttons=[true,false].map(open=>{const button=doc.createElement('button');button.type='button';UI.adoptAction(button,{label:open?'Expand all':'Collapse all',icon:open?'chevron-down':'chevron-up'});actions.append(button);return button;});
+    const sections=()=>[...root.querySelectorAll(selector)].filter(node=>!node.closest('[hidden]'));
+    const refresh=()=>{const nodes=sections();actions.hidden=!nodes.length;buttons[0].disabled=!nodes.some(node=>!node.open);buttons[1].disabled=!nodes.some(node=>node.open);};
+    const set=open=>{const nodes=sections();for(const node of nodes)node.open=open;onChange({open,sections:nodes});refresh();};
+    const expand=()=>set(true),collapse=()=>set(false);buttons[0].addEventListener('click',expand);buttons[1].addEventListener('click',collapse);root.addEventListener('toggle',refresh,true);UI.observeActions?.(actions);refresh();
+    return {refresh,expand,collapse,dispose(){buttons[0].removeEventListener('click',expand);buttons[1].removeEventListener('click',collapse);root.removeEventListener('toggle',refresh,true);UI.releaseActions?.(actions);for(const button of buttons)button.remove();}};
+  };
+  // Inspect presented media without changing its dimensions or creative state.
+  UI.createMediaViewport=({surface,content,minScale=.125,maxScale=32,onChange=()=>{}}={})=>{
+    if(!surface||!content||surface.ownerDocument!==content.ownerDocument)throw new TypeError('Media viewport requires native nodes from one document');
+    const doc=surface.ownerDocument,view=doc.defaultView,off=[],original={transform:content.style.transform,origin:content.style.transformOrigin,cursor:surface.style.cursor,tab:surface.getAttribute('tabindex')};
+    if(!Number.isFinite(minScale)||!Number.isFinite(maxScale)||minScale<=0||maxScale<minScale)throw new TypeError('Use a positive bounded zoom range');
+    let state={scale:1,x:0,y:0},space=false,hover=false,drag=null,disposed=false;
+    const listen=(node,type,fn,options)=>{node.addEventListener(type,fn,options);off.push(()=>node.removeEventListener(type,fn,options));};
+    const interactive=target=>target?.closest?.('button,a,input,select,textarea,summary,dialog,[contenteditable=true],.ui-actions,.cm-editor');
+    const apply=next=>{if(disposed)return;state={...next};content.style.transformOrigin='center center';content.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;onChange({...state});};
+    const zoom=(factor,point)=>{if(!Number.isFinite(factor)||factor<=0)return;const rect=surface.getBoundingClientRect(),x=Number.isFinite(point?.x)?point.x-rect.left-rect.width/2:0,y=Number.isFinite(point?.y)?point.y-rect.top-rect.height/2:0,scale=Math.max(minScale,Math.min(maxScale,state.scale*factor)),ratio=scale/state.scale;apply({scale,x:x-(x-state.x)*ratio,y:y-(y-state.y)*ratio});};
+    const fit=()=>apply({scale:1,x:0,y:0});
+    const finish=cancel=>{if(!drag)return;const prior=drag;drag=null;if(cancel)apply(prior.state);if(surface.hasPointerCapture?.(prior.id))surface.releasePointerCapture(prior.id);surface.style.cursor=space?'grab':original.cursor;};
+    const resetGesture=()=>{space=false;finish(true);surface.style.cursor=original.cursor;};
+    if(original.tab===null)surface.tabIndex=0;
+    listen(surface,'pointerenter',()=>{hover=true;});listen(surface,'pointerleave',()=>{hover=false;});
+    listen(surface,'wheel',event=>{if(interactive(event.target))return;event.preventDefault();event.stopImmediatePropagation();const unit=event.deltaMode===1?16:event.deltaMode===2?surface.clientHeight:1;if(event.shiftKey)apply({...state,x:state.x-(event.deltaX||event.deltaY)*unit});else zoom(Math.exp(-Math.max(-1000,Math.min(1000,event.deltaY*unit))*.0015),{x:event.clientX,y:event.clientY});},{capture:true,passive:false});
+    listen(surface,'pointerdown',event=>{if(interactive(event.target)||!(event.button===1||event.button===0&&space))return;event.preventDefault();event.stopImmediatePropagation();surface.focus({preventScroll:true});drag={id:event.pointerId,x:event.clientX,y:event.clientY,state:{...state}};surface.setPointerCapture(event.pointerId);surface.style.cursor='grabbing';},true);
+    listen(surface,'pointermove',event=>{if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopImmediatePropagation();apply({...state,x:drag.state.x+event.clientX-drag.x,y:drag.state.y+event.clientY-drag.y});},true);
+    listen(surface,'pointerup',event=>{if(drag?.id!==event.pointerId)return;event.preventDefault();event.stopImmediatePropagation();finish(false);},true);
+    for(const type of ['pointercancel','lostpointercapture'])listen(surface,type,()=>finish(true));
+    listen(surface,'dblclick',event=>{if(interactive(event.target)||event.button!==0)return;event.preventDefault();event.stopImmediatePropagation();fit();},true);
+    listen(doc,'keydown',event=>{if(event.defaultPrevented||interactive(event.target)||!hover&&!surface.contains(doc.activeElement))return;if(event.code==='Space'||event.key===' '){space=true;surface.style.cursor='grab';event.preventDefault();event.stopImmediatePropagation();}else if(event.target===surface){if(['0','+','=','-','Escape','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();if(event.key.startsWith('Arrow')){const step=event.shiftKey?200:40;apply({...state,x:state.x+({ArrowLeft:-step,ArrowRight:step}[event.key]||0),y:state.y+({ArrowUp:-step,ArrowDown:step}[event.key]||0)});}else if(event.key==='Escape'&&drag)finish(true);else if(['0','Escape'].includes(event.key))fit();else zoom(event.key==='-'?1/1.2:1.2);}}},true);
+    listen(doc,'keyup',event=>{if((event.code==='Space'||event.key===' ')&&space){space=false;surface.style.cursor=drag?'grabbing':original.cursor;event.preventDefault();event.stopImmediatePropagation();}},true);
+    listen(view,'blur',resetGesture);listen(doc,'visibilitychange',()=>{if(doc.hidden)resetGesture();});
+    // Safari exposes a native pinch instead of Ctrl-wheel.
+    let pinch=1;
+    listen(surface,'gesturestart',event=>{if(interactive(event.target))return;event.preventDefault();event.stopImmediatePropagation();pinch=1;},{capture:true,passive:false});
+    listen(surface,'gesturechange',event=>{if(interactive(event.target))return;event.preventDefault();event.stopImmediatePropagation();zoom(event.scale/pinch,{x:event.clientX,y:event.clientY});pinch=event.scale;},{capture:true,passive:false});
+    listen(surface,'gestureend',event=>{if(interactive(event.target))return;event.preventDefault();event.stopImmediatePropagation();pinch=1;},{capture:true,passive:false});
+    return {fit,zoom,pan:(x,y)=>apply({...state,x:state.x+x,y:state.y+y}),get state(){return {...state};},dispose(){resetGesture();disposed=true;for(const remove of off)remove();content.style.transform=original.transform;content.style.transformOrigin=original.origin;surface.style.cursor=original.cursor;if(original.tab===null)surface.removeAttribute('tabindex');}};
+  };
   // Independent native panel toggles. Selection never recreates panel contents.
   UI.createPanelToggles=({items,selected=[],maxSelected=2,onChange=()=>{}}={})=>{
     if(!Array.isArray(items)||!items.length||items.some(x=>!x.id||!x.button||!x.panel))throw new TypeError('Panel toggles need named native buttons and panels');

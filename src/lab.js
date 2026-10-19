@@ -232,3 +232,6 @@ $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggesti
 }
 
 {const group=document.getElementById('fixture-panel-toggles');if(group)window.SharedUI.createPanelToggles({items:[...group.querySelectorAll('button')].map(button=>({id:button.dataset.panel,button,panel:document.getElementById('fixture-panel-'+button.dataset.panel)})),selected:['timeline']});}
+
+{const root=document.getElementById('fixture-section-root'),actions=document.getElementById('fixture-section-actions');if(root&&actions)window.SharedUI.createSectionActions({root,actions});}
+{const surface=document.getElementById('fixture-preview-stage'),content=document.getElementById('fixture-preview-media');if(surface&&content){const view=window.SharedUI.createMediaViewport({surface,content,onChange({scale}){document.getElementById('fixture-preview-scale').textContent=Math.round(scale*100)+'%';}});document.getElementById('fixture-preview-in').onclick=()=>view.zoom(1.2);document.getElementById('fixture-preview-out').onclick=()=>view.zoom(1/1.2);document.getElementById('fixture-preview-fit').onclick=()=>view.fit();window.addEventListener('pagehide',()=>view.dispose(),{once:true});}}
