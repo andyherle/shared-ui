@@ -690,7 +690,7 @@ source or install runtime upgrades.
 
 ### Compact function controls
 
-Compose a property row with `.ui-actions.ui-inline`, a native labelled `.ui-field` number input and shared keyframe/expression/event actions. `SharedUI.createFunctionControl(input, {step, min, max})` adds horizontal numeric scrubbing to that same input (a text input may also accept app-validated expressions): drag while unfocused; click or Tab to type; Shift multiplies by ten, Alt divides by ten. Touch retains native numeric entry. Bounds and step can be getters. It emits native `input` samples and one final `change`, leaving live state and History with the app. Escape, pointer cancellation or a hidden document restore the original value; `dispose()` releases capture and listeners. Do not replace authored easing when updating a value. Put undo/redo in the top command bar when History exists; use the right-hand menu for secondary Controls and Present actions.
+Compose a property row with `.ui-actions.ui-inline`, a native labelled `.ui-field` number input and shared keyframe/expression actions. `SharedUI.createFunctionControl(input, {step, min, max})` adds horizontal numeric scrubbing to that same input (a text input may also accept app-validated expressions): drag while unfocused; click or Tab to type; Shift multiplies by ten, Alt divides by ten. Touch retains native numeric entry. Bounds and step can be getters. It emits native `input` samples and one final `change`, leaving live state and History with the app. Escape, pointer cancellation or a hidden document restore the original value; `dispose()` releases capture and listeners. Do not replace authored easing when updating a value. Put undo/redo in the top command bar when History exists; use the right-hand menu for secondary Controls and Present actions.
 
 Open native menu panels use the same viewport fitting in both packs: maintain the trigger edge, flip above when below cannot fit, bound scrolling to available height and restore summary focus on Escape. Keep panel forms on `.ui-form-panel`; command menus and forms share native action controls. Apps keep content and semantic handlers.
 
@@ -704,7 +704,7 @@ Open native menu panels use the same viewport fitting in both packs: maintain th
 
 `createExpressionEditor({label,suggestions,onCommit,sprite})` returns a named native `trigger`, multiline `input`, and `element` form. Put the trigger in the property action slot and the form beneath the row. It owns completion at the caret, composition-safe typing, native Base/Result read-only fields and a right-aligned Clear/Apply group, retryable validation, Ctrl/Command+Enter apply, Tab completion, Escape cancellation and draft-preserving `sync({expression,base,value,error})`. Use `setSuggestions` for live vocabularies and `flush` before Save/exit; `dispose` removes listeners. The application owns evaluation and History. Display the live result in the compact field, show the independent base on focus/scrub, and keep the fx indicator while driven. Comfortable scrub bounds can grow after explicit typed entry; genuine input limits remain application-owned.
 
-`setKeyframeState(action,{present,keyframed,sprite})` separates the current frame from animation: the ordinary blue pressed surface means the property has keys anywhere; a solid foreground-colour diamond means a key exists at the playhead, and a hollow diamond means it does not. Clicking an existing key selects its editable base; deletion stays in the timeline. Editable fields use the filled semantic surface; read-only fields and composed shells are unfilled while retaining native selection/copy.
+`setKeyframeState(action,{present,keyframed,sprite})` separates the current frame from animation: the ordinary blue pressed surface means the property has keys anywhere; a solid foreground-colour diamond means a key exists at the playhead, and a hollow diamond means it does not. Clicking an existing key selects its editable base; deletion stays in the timeline. Editable and read-only fields share the same semantic fill; read-only text uses the shared monospace font and retains native selection/copy.
 
 `createChoiceControl({label,options,value,searchable,onChange})` composes a native select or the shared searchable combobox in one field. `sync(value,options)` preserves focused entry; arbitrary search text never becomes an enum value. Dispose it with its row. The combobox handles IME composition, arrows, Enter, Escape and outside dismissal.
 
@@ -713,7 +713,7 @@ Open native menu panels use the same viewport fitting in both packs: maintain th
 `createResponseControl` and `createIntervalControl` share power-response and two-endpoint controls. They accept descriptor metadata, app-supplied numerical model functions and callbacks; the kit owns DOM, theme, focus and pointer/keyboard interaction while the consumer owns accepted values and state. They are demonstrated alongside native choice, text, read-only and action controls in the effects inspector catalogue.
 
 Inspector fields share a fixed name column, flexible value column and a common
-three-action rail. Actual actions align to the right of that rail; absent actions
+two-action rail. Actual actions align to the right of that rail; absent actions
 do not change the value width. The rail is capped at 35% of a narrow row so native
 touch targets can wrap while values remain readable. Omit `actions` from
 `adoptPropertyRow` for read-only output rows to fill the remaining width.
@@ -730,24 +730,21 @@ selects, with shared choices, switches, colours, curves and expression fields.
 Use an existing named section or group; no application state or second wrapper
 is required. State evaluation, validation and undo remain consumer-owned.
 
-`setPropertyReset(row,{onReset})` makes the existing property name a native
-reset action: double-click with a pointer, or press Enter/Space when focused.
-A single pointer click never resets or navigates. The callback uses the owning
-application's default/History operation; the shared helper prevents concurrent
-resets and follows live capability changes. Omit it for read-only/action rows.
-There is no separate per-property Reset button or name-to-curve navigation.
-`orderPropertyActions(group)` retains the original native actions in the canonical
-Keyframe → FX → Event order, using their `data-ui-property-action` roles.
+`setPropertyAction(row,{onReset,onActivate})` makes the existing property name a
+native action. Double-click resets through the owning application's default and
+History operation. An optional `onActivate` reveals an associated timeline event:
+the name is blue and a single click or focused Enter/Space navigates. Names without events do nothing
+on a single pointer click; focused Enter/Space resets. Callback updates preserve
+the same node and prevent concurrent resets. Omit both callbacks for read-only rows.
+`orderPropertyActions(group)` retains the native Keyframe → FX order. Event
+navigation belongs on the name; no separate Event, curve or reset button is used.
+The inline fx indicator accepts `onActivate`, `controls`, `expanded` and `label`;
+use the editor’s `toggle()` so either FX trigger opens/closes the same draft.
 
-`setEventState(action,{present,label,sprite})` is the shared property Event action.
-Its blue pressed surface indicates associated timeline events; the consumer
-navigates to that event or opens a new state for the property. The expression
-value's small fx indicator also accepts `onActivate`, `controls`, `expanded` and
-`label`, becoming a native accessible button that toggles the same expression editor.
-Use the editor’s `toggle()` from both triggers; closing preserves its draft.
-The semantic `event` icon is a lightning bolt; date pickers retain `calendar`.
+Editable and read-only fields share the same fill in both packs. Read-only fields
+and native outputs use `--ui-font-mono`, preserving native selection and copy.
+Content-oriented inline editing retains its explicit role.
 
-Field fill communicates editability in both packs: editable native inputs,
-text areas, selects and composed fields use `--ui-surface-soft`; read-only
-fields and their composed shells are transparent. Focus, text selection and
-copy remain native. Content-oriented inline editing retains its explicit role.
+### Inline text suggestions
+
+`SharedUI.createTextSuggestions(input, {label, onSelect})` attaches the shared listbox to an existing native input or textarea without wrapping or replacing it. Call `show([{label, ...data}])` with application-ranked results and `hide()` when the caret leaves the completion. The helper owns viewport fitting, pointer selection, arrows, Enter/Tab selection, Escape, IME guards, dismissal and accessible active options. The application owns triggers, asynchronous retrieval, stale-response checks and text replacement. Call `dispose()` when removing the field. The Selectors & search catalogue demonstrates file mentions.

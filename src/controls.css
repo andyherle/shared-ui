@@ -333,7 +333,7 @@
     :where(.ui-icon-choice,.ui-choice):has(input:focus-visible) { outline:2px solid var(--ui-accent); outline-offset:2px; }
     .ui-icon-choice input { position:absolute; inline-size:1px; block-size:1px; opacity:0; }
     :where(input,select,textarea):disabled { opacity:.5; cursor:default; }
-    [readonly],.ui-field:has([readonly]) { background:#0000; }
+    [readonly],output { font-family:var(--ui-font-mono); }
     :where(input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week],[type=file])) { inline-size:100%; min-inline-size:0; max-inline-size:100%; }
     /* WebKit 301648: iOS date/time width includes input padding. Keep the native picker,
        move that padding to its displayed value instead. */

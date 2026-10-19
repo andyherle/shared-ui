@@ -13,31 +13,37 @@
     let label=row.querySelector(':scope > [data-ui-property-label]');
     if(!label){label=doc.createElement('label');label.dataset.uiPropertyLabel='';label.className='ui-label';row.prepend(label);}
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
-    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:hasActions?'minmax(0,30%) minmax(0,1fr) minmax(0,min(35%,calc(3 * var(--ui-control-height) + 2 * var(--ui-gap))))':'minmax(0,30%) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
+    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:hasActions?'minmax(0,30%) minmax(0,1fr) minmax(0,min(35%,calc(2 * var(--ui-control-height) + var(--ui-gap))))':'minmax(0,30%) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(control.style,{minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     Object.assign(actions.style,{minInlineSize:'0',justifyContent:'flex-end'});
     row.append(control,actions);return {element:row,label,control,actions};
   };
-  const propertyResets=new WeakMap();
-  UI.setPropertyReset=(row,{onReset}={})=>{
+  const propertyActions=new WeakMap();
+  UI.setPropertyAction=(row,options={})=>{
     let label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');if(!label)return;
-    let entry=propertyResets.get(row);
-    if(!entry&&typeof onReset==='function'){
+    let entry=propertyActions.get(row);
+    if(!entry&&(typeof options.onReset==='function'||typeof options.onActivate==='function')){
       const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';
       button.style.color=label.style.color;Object.assign(button.style,{textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
       const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
-      entry={button,name,reset:onReset,busy:false};
-      const reset=async()=>{if(entry.busy||typeof entry.reset!=='function')return;entry.busy=true;button.disabled=true;button.setAttribute('aria-busy','true');try{await entry.reset();}catch(error){button.title=error.message;}finally{entry.busy=false;button.disabled=typeof entry.reset!=='function';button.setAttribute('aria-busy','false');}};
+      entry={button,name,busy:false};
+      const reset=async()=>{if(entry.busy||typeof entry.onReset!=='function')return;entry.busy=true;button.disabled=true;button.setAttribute('aria-busy','true');try{await entry.onReset();}catch(error){button.title=error.message;}finally{entry.busy=false;button.disabled=!entry.onReset&&!entry.onActivate;button.setAttribute('aria-busy','false');}};
       button.addEventListener('dblclick',()=>void reset());
-      button.addEventListener('click',event=>{if(event.detail===0)void reset();});
-      propertyResets.set(row,entry);
+      button.addEventListener('click',event=>{if(entry.busy)return;if(event.detail<=1&&entry.onActivate)entry.onActivate();else if(event.detail===0)void reset();});
+      propertyActions.set(row,entry);
     }
-    if(entry){entry.reset=onReset;entry.button.disabled=entry.busy||typeof onReset!=='function';entry.button.setAttribute('aria-label',`${entry.name} — reset to default`);entry.button.title=`Double-click to reset ${entry.name}; Enter or Space when focused`;}
+    if(entry){
+      for(const key of ['onReset','onActivate'])if(Object.hasOwn(options,key))entry[key]=options[key];
+      entry.button.disabled=entry.busy||!entry.onReset&&!entry.onActivate;
+      entry.button.setAttribute('aria-label',entry.onActivate?`${entry.name} — show events`:`${entry.name} — reset to default`);
+      entry.button.title=entry.onActivate?`Click to show events for ${entry.name}; double-click to reset`:`Double-click to reset ${entry.name}; Enter or Space when focused`;
+      if(entry.onActivate)entry.button.style.color='var(--ui-accent)';
+    }
     return label;
   };
   // Canonical property action order, without replacing nodes or disturbing unchanged focus.
   UI.orderPropertyActions=group=>{
-    if(!group)return;const rank={keyframe:0,fx:1,event:2},children=[...group.children];
+    if(!group)return;const rank={keyframe:0,fx:1},children=[...group.children];
     const ordered=children.slice().sort((a,b)=>(rank[a.dataset.uiPropertyAction]??3)-(rank[b.dataset.uiPropertyAction]??3));
     if(ordered.some((node,index)=>node!==children[index]))group.append(...ordered);
     return group;
@@ -45,8 +51,9 @@
   // Automation changes the existing label, never inspector geometry or authored values.
   UI.setPropertyState=(row,{active=false,description='',color}={})=>{
     const label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');
-    row.dataset.uiDriven=String(Boolean(active));if(!label)return;
-    label.style.color=active?(color||'var(--ui-accent)'):'';
+    const driven=active||Boolean(propertyActions.get(row)?.onActivate);
+    row.dataset.uiDriven=String(Boolean(driven));if(!label)return;
+    label.style.color=driven?(color||'var(--ui-accent)'):'';
     label.title=description||label.textContent;
   };
   // The icon marks the playhead; the normal pressed surface means animation exists.
@@ -134,10 +141,6 @@
     entry.activate=onActivate;const indicator=entry.element;
     const description=`${keyframed?`Keyframed base ${base} → `:''}Expression: ${expression}. Returns ${result}${error?'. '+error:''}`;
     indicator.title=description;indicator.setAttribute('aria-label',interactive?`Edit expression for ${label}`:description);if(interactive){indicator.setAttribute('aria-expanded',String(Boolean(expanded)));if(controls)indicator.setAttribute('aria-controls',controls);}input.setAttribute('aria-description',description);
-  };
-  UI.setEventState=(action,{present=false,label='Control',sprite}={})=>{
-    UI.adoptAction(action,{label:`${present?'Show events':'Add event'} for ${label}`,icon:'event',iconOnly:true,sprite});
-    action.dataset.uiPropertyAction='event';action.dataset.uiEvent=String(Boolean(present));action.setAttribute('aria-pressed',String(Boolean(present)));action.title=present?'Show the event driving this control':'Create a timeline state for this control';return action;
   };
   UI.createColourValue=({label,onSet=()=>{},document=window.document}={})=>{
     const element=document.createElement('div');element.className='ui-field';
@@ -309,6 +312,52 @@
     on(list,'pointerdown',event=>event.preventDefault());on(list,'click',event=>{const item=event.target.closest('[data-option]');if(item)commit(Number(item.dataset.option));});
     on(wrapper,'focusout',event=>{if(!wrapper.contains(event.relatedTarget))close();});
     setOptions(options);return control;
+  };
+  // Suggestions for part of an existing text field; the app owns text and retrieval.
+  UI.createTextSuggestions=(input,{onSelect=()=>{},label='Suggestions'}={})=>{
+    const doc=input.ownerDocument,view=doc.defaultView,list=doc.createElement('div'),removers=[];
+    list.className='ui-listbox';list.id='ui-text-options-'+view.crypto.randomUUID();list.setAttribute('role','listbox');list.setAttribute('aria-label',label);list.hidden=true;
+    Object.assign(list.style,{position:'fixed',zIndex:'2147483647',maxBlockSize:'min(16rem,40vh)',overflow:'auto',margin:'0'});
+    (input.closest?.('dialog')||doc.body).append(list);
+    const attributes=['role','aria-autocomplete','aria-controls','aria-expanded','aria-activedescendant'],prior=attributes.map(key=>input.getAttribute(key));
+    input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls',list.id);input.setAttribute('aria-expanded','false');
+    let items=[],active=0,disposed=false;
+    function on(node,type,fn,options){node.addEventListener(type,fn,options);removers.push(()=>node.removeEventListener(type,fn,options));}
+    function hide(){items=[];list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');}
+    function draw(){
+      list.replaceChildren();
+      for(const [index,item] of items.entries()){
+        const option=doc.createElement('span');option.className='ui-option ui-truncate';option.id=list.id+'-'+index;option.dataset.option=String(index);option.setAttribute('role','option');option.setAttribute('aria-selected',String(index===active));option.textContent=item.label;option.title=item.label;list.append(option);
+      }
+      list.hidden=!items.length;input.setAttribute('aria-expanded',String(Boolean(items.length)));
+      if(items.length){input.setAttribute('aria-activedescendant',list.id+'-'+active);list.children[active]?.scrollIntoView?.({block:'nearest'});}
+    }
+    function show(next){
+      if(disposed||doc.visibilityState==='hidden')return;
+      items=next.slice(0,20);active=0;draw();
+      const rect=input.getBoundingClientRect(),width=Math.min(Math.max(rect.width,240),view.innerWidth-16);
+      list.style.width=width+'px';list.style.left=Math.max(8,Math.min(rect.left,view.innerWidth-width-8))+'px';
+      const below=view.innerHeight-rect.bottom;
+      list.style.top=(below>=Math.min(list.offsetHeight,160)?rect.bottom+4:Math.max(8,rect.top-list.offsetHeight-4))+'px';
+    }
+    function choose(index){const item=items[index];if(!item)return;hide();onSelect(item);}
+    on(input,'keydown',event=>{
+      if(event.isComposing||list.hidden||event.shiftKey||event.ctrlKey||event.metaKey||event.altKey)return;
+      if(!['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(event.key))return;
+      event.preventDefault();event.stopImmediatePropagation();
+      if(event.key==='Escape')hide();
+      else if(event.key==='Enter'||event.key==='Tab')choose(active);
+      else{active=(active+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;draw();}
+    },true);
+    on(list,'pointerdown',event=>event.preventDefault());
+    on(list,'click',event=>{const option=event.target.closest('[data-option]');if(option)choose(Number(option.dataset.option));});
+    on(input,'blur',hide);on(input,'compositionstart',hide);
+    on(doc,'pointerdown',event=>{if(event.target!==input&&!list.contains(event.target))hide();});
+    on(doc,'visibilitychange',()=>{if(doc.visibilityState==='hidden')hide();});
+    on(view,'resize',hide);on(doc,'scroll',event=>{if(!list.contains(event.target))hide();},true);
+    function dispose(){if(disposed)return;hide();disposed=true;for(const remove of removers)remove();list.remove();attributes.forEach((key,i)=>prior[i]===null?input.removeAttribute(key):input.setAttribute(key,prior[i]));}
+    on(view,'pagehide',event=>{hide();if(!event.persisted)dispose();});
+    return {show,hide,dispose,element:list};
   };
   UI.createTagInput=(input,{options=()=>[],excluded=()=>[],onCommit=()=>{},limit=6}={})=>{
     const doc=input.ownerDocument,list=doc.createElement('div'),slot=doc.createElement('div'),removers=[];

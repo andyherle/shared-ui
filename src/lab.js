@@ -192,7 +192,7 @@ for(const input of document.querySelectorAll('.ui-function-value'))window.Shared
    const editor=UI.createExpressionEditor({label:name,sprite:'./v1/icons.svg',suggestions:[{insert:'base',description:'Keyframed or set base value'},{insert:'sin(time)',description:'Sine motion'},{insert:'noise(time, 0)',description:'Smooth noise'},{insert:'time',description:'Current time in seconds'}],onCommit:async expression=>{UI.setExpressionState(input,{expression,base:input.value,result:input.value,onActivate:()=>editor.toggle(),controls:editor.element.id,label:name});editor.sync({expression,base:input.value,value:input.value});}});
    actions.prepend(editor.trigger);row.after(editor.element);editor.sync({base:45,value:45});
   }
-  UI.adoptPropertyRow(row,{name,control,actions});UI.setPropertyReset(row,{onReset});UI.orderPropertyActions(actions);
+  UI.adoptPropertyRow(row,{name,control,actions});UI.setPropertyAction(row,{onReset});UI.orderPropertyActions(actions);
  }
 }
 
@@ -222,4 +222,6 @@ for(const action of document.querySelectorAll('[data-keyframe-state]'))window.Sh
  const panel=document.getElementById('fixture-property-panel');if(panel){const row=document.createElement('div'),field=document.createElement('select');field.multiple=true;field.size=3;field.setAttribute('aria-label','Channels');for(const name of ['Colour','Shape','Motion']){const option=document.createElement('option');option.value=option.textContent=name;option.selected=name==='Colour';field.append(option);}panel.append(row);window.SharedUI.adoptPropertyRow(row,{name:'Channels',control:field});}
 }
 
-for(const action of document.querySelectorAll('[data-event-state]'))window.SharedUI.setEventState(action,{present:action.dataset.eventState==='present',label:action.dataset.eventState==='present'?'Tint':'Amount',sprite:'./v1/icons.svg'});
+
+const textSuggestions=UI.createTextSuggestions($('text-suggestions'),{label:'Files',onSelect:item=>{const input=$('text-suggestions'),start=input.value.lastIndexOf('[[');input.setRangeText(item.value,start,input.selectionStart,'end');input.dispatchEvent(new Event('input',{bubbles:true}));}});
+$('text-suggestions').addEventListener('input',()=>{const input=$('text-suggestions'),before=input.value.slice(0,input.selectionStart),start=before.lastIndexOf('[[');if(start<0||before.slice(start+2).includes(']')){textSuggestions.hide();return;}const query=before.slice(start+2).toLowerCase();textSuggestions.show(['Projects/Proposal.md','People/Example.md','Files/Reference.pdf'].filter(path=>path.toLowerCase().includes(query)).map(path=>({label:path,value:'[['+path.replace(/\.md$/,'')+']]'})));});
