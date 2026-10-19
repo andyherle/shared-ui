@@ -224,5 +224,9 @@ for(const action of document.querySelectorAll('[data-keyframe-state]'))window.Sh
 }
 
 
+{
+const UI=window.SharedUI,$=id=>document.getElementById(id);
 const textSuggestions=UI.createTextSuggestions($('text-suggestions'),{label:'Files',onSelect:item=>{const input=$('text-suggestions'),start=input.value.lastIndexOf('[[');input.setRangeText(item.value,start,input.selectionStart,'end');input.dispatchEvent(new Event('input',{bubbles:true}));}});
 $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggestions'),before=input.value.slice(0,input.selectionStart),start=before.lastIndexOf('[[');if(start<0||before.slice(start+2).includes(']')){textSuggestions.hide();return;}const query=before.slice(start+2).toLowerCase();textSuggestions.show(['Projects/Proposal.md','People/Example.md','Files/Reference.pdf'].filter(path=>path.toLowerCase().includes(query)).map(path=>({label:path,value:'[['+path.replace(/\.md$/,'')+']]'})));});
+
+}

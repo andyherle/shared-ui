@@ -151,10 +151,9 @@
     :is(.ui-disclosure,.ui-section) > summary::-webkit-details-marker { display:none; }
     :is(.ui-disclosure,.ui-section) > summary::after { content:""; inline-size:7px; block-size:7px; flex:none; margin-inline-start:auto; border-block-end:1.5px solid currentColor; border-inline-end:1.5px solid currentColor; transform:rotate(45deg); }
     :is(.ui-disclosure,.ui-section)[open] > summary::after { transform:rotate(225deg); }
-    .ui-section { border-block-start:1px solid var(--ui-line); padding-block:var(--ui-gap); }
-    .ui-section > summary { position:relative; padding-inline-end:20px; list-style:none; cursor:pointer; }
+    .ui-section > summary { position:relative; min-block-size:var(--ui-control-height); padding:var(--ui-gap) 20px var(--ui-gap) 0; border-block-end:1px solid var(--ui-line); list-style:none; cursor:pointer; }
     .ui-section > summary::after { position:absolute; inset-block-start:8px; inset-inline-end:4px; }
-    .ui-section > summary > :where(h3,h4,p) { margin:0; }
+    .ui-section > summary > :where(h2,h3,h4,h5,p) { margin:0; }
     .ui-section > :not(summary) { margin-block-start:var(--ui-gap); }
     :where(.ui-field) { display:flex; flex:none; margin:0; align-items:center; gap:var(--ui-gap); min-inline-size:0; max-inline-size:100%; min-block-size:var(--ui-field-height); padding-inline:var(--ui-control-inset); border:1px solid var(--ui-control); border-radius:var(--ui-radius-small); background:#0000; color:var(--ui-text); font:var(--ui-control-font); }
 .ui-field {
@@ -378,7 +377,7 @@
   .ui-chrome { font-size:var(--ui-control-size); line-height:1.45; }
   .ui-meta { font-size:calc(var(--ui-control-size) - 1px); line-height:1.45; font-weight:400; color:var(--ui-muted); }
   .ui-value { font-size:var(--ui-h1); font-weight:600; line-height:1.2; font-variant-numeric:tabular-nums; }
-  .ui-chrome :where(h1,h2,h3,h4,h5,h6):where(:not(.ui-prose *,.markdown *,.ui-section-title)) { font-size:inherit; line-height:1.4; letter-spacing:0; margin:0; }
+  .ui-chrome :where(h1,h2,h3,h4,h5,h6):where(:not(.ui-prose *,.markdown *,.ui-section-title,.ui-section>summary>*)) { font-size:inherit; line-height:1.4; letter-spacing:0; margin:0; }
   :where(.markdown,.ui-prose) { line-height:1.5; overflow-wrap:anywhere;
   & >:first-child { margin-block-start:0; }
   & >:last-child { margin-block-end:0; }

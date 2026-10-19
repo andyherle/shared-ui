@@ -224,8 +224,12 @@ for(const action of document.querySelectorAll('[data-keyframe-state]'))window.Sh
 }
 
 
+{
+const UI=window.SharedUI,$=id=>document.getElementById(id);
 const textSuggestions=UI.createTextSuggestions($('text-suggestions'),{label:'Files',onSelect:item=>{const input=$('text-suggestions'),start=input.value.lastIndexOf('[[');input.setRangeText(item.value,start,input.selectionStart,'end');input.dispatchEvent(new Event('input',{bubbles:true}));}});
 $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggestions'),before=input.value.slice(0,input.selectionStart),start=before.lastIndexOf('[[');if(start<0||before.slice(start+2).includes(']')){textSuggestions.hide();return;}const query=before.slice(start+2).toLowerCase();textSuggestions.show(['Projects/Proposal.md','People/Example.md','Files/Reference.pdf'].filter(path=>path.toLowerCase().includes(query)).map(path=>({label:path,value:'[['+path.replace(/\.md$/,'')+']]'})));});
+
+}
 
 /* Generic synthetic composition fixture. Uses the same native factory as consumers. */
 (() => {
@@ -281,8 +285,8 @@ $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggesti
   const thead=mk('thead');const thRow=mk('tr');
   for(const name of ['ID','Title','State']){const th=mk('th',null,name);th.scope='col';thRow.append(th);}
   thead.append(thRow);const tbody=mk('tbody');table.append(caption,thead,tbody);tableScroll.append(table);
-  const details=mk('details','ui-disclosure');
-  const detailsSummary=mk('summary',null,'Additional native details');
+  const details=mk('details','ui-section');
+  const detailsSummary=mk('summary');detailsSummary.append(mk('h5',null,'Additional native details'));
   const extra=mk('p',null,'Retains open state, focus and selection across layout changes.');
   details.append(detailsSummary,extra);
   const message=mk('output','ui-status');message.setAttribute('role','status');message.textContent='Ready for synthetic review';

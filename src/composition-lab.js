@@ -52,8 +52,8 @@
   const thead=mk('thead');const thRow=mk('tr');
   for(const name of ['ID','Title','State']){const th=mk('th',null,name);th.scope='col';thRow.append(th);}
   thead.append(thRow);const tbody=mk('tbody');table.append(caption,thead,tbody);tableScroll.append(table);
-  const details=mk('details','ui-disclosure');
-  const detailsSummary=mk('summary',null,'Additional native details');
+  const details=mk('details','ui-section');
+  const detailsSummary=mk('summary');detailsSummary.append(mk('h5',null,'Additional native details'));
   const extra=mk('p',null,'Retains open state, focus and selection across layout changes.');
   details.append(detailsSummary,extra);
   const message=mk('output','ui-status');message.setAttribute('role','status');message.textContent='Ready for synthetic review';
