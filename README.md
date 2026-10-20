@@ -942,4 +942,6 @@ Context toolbars accept an existing `status` node: `createContextToolbar(toolbar
 
 The card palette places neutral/transparent first, then approval colours in one five-swatch group, followed by ten pastels. Pickers omit group headings and separate groups with padding. Responsive swatch grids share equal columns across groups and choose balanced row counts; native hit targets remain bounded by the container.
 
-Swatches cap both dimensions at the shared control height; extra container width never enlarges colour targets. The panel retains its full container width with consistent gaps and left-aligned rows.
+Swatches cap both dimensions at the shared control height; extra container width never enlarges colour targets. The panel retains its full container width with consistent gaps and centered rows.
+
+Colour pickers inherit their trigger sprite for inline Apply actions, including nested application routes. Callers may supply `sprite` explicitly.
