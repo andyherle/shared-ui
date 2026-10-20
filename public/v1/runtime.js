@@ -379,11 +379,11 @@
     return {get value(){return current;},setValue,dispose};
   }
   // Sort existing native rows, or expose controlled sorting for a paginated app.
-  function createTableSort(table,{column='',direction='desc',manual=false,onChange=()=>{},getValue,sprite='./shared-ui/icons.svg'}={}){
+  function createTableSort(table,{column='',direction='asc',defaultColumn=column,defaultDirection=direction,cycle:initialCycle=0,manual=false,onChange=()=>{},getValue,sprite='./shared-ui/icons.svg'}={}){
     const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
     if(!header||!view||!table.tBodies?.length)throw new TypeError('Sorting requires a native table with a header and body');
-    const heads=[...header.cells],off=[],saved=[];let active=column,order=direction,disposed=false;
-    if(!['asc','desc'].includes(order))throw new TypeError('Sort direction must be asc or desc');
+    const heads=[...header.cells],off=[],saved=[];let active=column,order=direction,disposed=false,cycle=initialCycle,baseline;
+    if(!['asc','desc'].includes(order)||!['asc','desc'].includes(defaultDirection)||![0,1,2].includes(initialCycle))throw new TypeError('Sort direction must be asc or desc and cycle must be 0, 1 or 2');
     const ids=heads.map((head,i)=>head.dataset.column||'column-'+i);
     if(new Set(ids).size!==ids.length)throw new TypeError('Sort columns must have unique IDs');
     const buttons=new Map(),labels=new Map();
@@ -402,7 +402,7 @@
         if(!buttons.has(ids[i]))return;
         const selected=ids[i]===active,label=labels.get(ids[i]);
         head.setAttribute('aria-sort',selected?(order==='asc'?'ascending':'descending'):'none');
-        adoptAction(buttons.get(ids[i]),{label,ariaLabel:'Sort by '+label+(selected?'; '+(order==='asc'?'ascending':'descending'):'')+'; click to '+(selected&&order==='asc'?'sort descending':'sort ascending'),icon:selected?(order==='asc'?'arrow-up':'arrow-down'):'list',sprite});
+        adoptAction(buttons.get(ids[i]),{label,ariaLabel:'Sort by '+label+(selected?'; '+(order==='asc'?'ascending':'descending'):'')+'; click to '+(selected&&cycle===2?'restore default order':selected&&cycle===1?'sort descending':'sort ascending'),icon:selected?(order==='asc'?'arrow-up':'arrow-down'):'list',sprite});
       });
     }
     function apply(){
@@ -431,13 +431,14 @@
       saved.push({head,nodes,aria:head.getAttribute('aria-sort'),tab:head.getAttribute('tabindex')});
       button.type='button';button.dataset.uiTableSort='';button.dataset.uiVariant='quiet';button.dataset.uiLabel='always';
       head.removeAttribute('tabindex');head.replaceChildren(button);buttons.set(ids[i],button);labels.set(ids[i],label);
-      const click=()=>sort(ids[i],active===ids[i]&&order==='asc'?'desc':'asc');button.addEventListener('click',click);off.push(()=>button.removeEventListener('click',click));
+      const click=()=>{const next=active===ids[i]?cycle+1:1;if(next===3){cycle=0;sort(baseline.column,baseline.direction);}else{cycle=next;sort(ids[i],next===2?'desc':'asc');}};button.addEventListener('click',click);off.push(()=>button.removeEventListener('click',click));
     });
     if(active&&!buttons.has(active))throw new TypeError('Unknown initial sort column');
+    active ||= buttons.keys().next().value||'';baseline={column:defaultColumn||buttons.keys().next().value||'',direction:defaultDirection};
     apply();draw();
     function dispose(){if(disposed)return;disposed=true;for(const remove of off)remove();for(const item of saved){item.head.replaceChildren(...item.nodes);for(const [key,val]of [['aria-sort',item.aria],['tabindex',item.tab]])if(val===null)item.head.removeAttribute(key);else item.head.setAttribute(key,val);}view.removeEventListener('pagehide',pagehide);}
     function pagehide(event){if(!event.persisted)dispose();}view.addEventListener('pagehide',pagehide);
-    return {get state(){return {column:active,direction:order};},sort,refresh:apply,dispose};
+    return {get state(){return {column:active,direction:order};},get cycle(){return cycle;},sort,reset(){cycle=0;sort(baseline.column,baseline.direction);},refresh:apply,dispose};
   }
   function createColumnDrag(table,{order=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{}}={}){
     const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
@@ -524,18 +525,18 @@
     }
     return {get state(){return {order:[...current]};},reset(){if(!disposed)change([...original],null);},dispose};
   }
-  function createColumnManager(table,container,{order=[],hidden=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{}}={}){
+  function createColumnManager(table,container,{order=[],hidden=[],pinFirst=false,renderControls=true,onBeforeChange=()=>{},onChange=()=>{}}={}){
     const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument;
     if(!header||!container)throw new TypeError('A native table and column controls container are required');
     const heads=[...header.cells],ids=heads.map(head=>head.dataset.column),rows=[header,...[...table.tBodies].flatMap(body=>[...body.rows])];
     const cells=rows.map(row=>new Map(ids.map((id,index)=>[id,row.cells[index]]))),prior=cells.map(row=>new Map([...row].map(([id,cell])=>[id,cell.hidden])));
     const omitted=new Set((Array.isArray(hidden)?hidden:[]).filter(id=>ids.includes(id)&&(!pinFirst||id!==ids[0])));
     if(omitted.size===ids.length)omitted.delete(ids[0]);
-    const controls=[],removers=[];let disposed=false;
+    const controls=[],removers=[];let disposed=false,resetting=false;
     const state=()=>({...drag.state,hidden:[...omitted]});
     const apply=()=>{for(const row of cells)for(const [id,cell] of row)cell.hidden=omitted.has(id);for(const {id,input} of controls){input.checked=!omitted.has(id);input.disabled=(pinFirst&&id===ids[0])||(!omitted.has(id)&&omitted.size===ids.length-1);}};
-    const drag=createColumnDrag(table,{order,pinFirst,onBeforeChange,onChange:()=>{apply();onChange(state());}});
-    for(const head of heads){
+    const drag=createColumnDrag(table,{order,pinFirst,onBeforeChange:()=>{if(!resetting)onBeforeChange();},onChange:()=>{apply();if(!resetting)onChange(state());}});
+    for(const head of (renderControls?heads:[])){
       const id=head.dataset.column,label=doc.createElement('label'),input=doc.createElement('input'),text=doc.createElement('span');
       label.className='ui-check';input.type='checkbox';input.setAttribute('aria-label','Show '+(head.querySelector?.('.ui-label')?.textContent||head.textContent));text.className='ui-label';text.textContent=head.querySelector?.('.ui-label')?.textContent||head.textContent;
       const change=()=>{onBeforeChange();if(input.checked)omitted.delete(id);else omitted.add(id);apply();onChange(state());};
@@ -543,7 +544,32 @@
     }
     apply();
     function dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();for(const {label} of controls)label.remove();drag.dispose();for(const [index,row] of cells.entries())for(const [id,cell] of row)cell.hidden=prior[index].get(id);}
-    return {get state(){return state();},reset(){onBeforeChange();omitted.clear();drag.reset();apply();onChange(state());},dispose};
+    return {get state(){return state();},setVisible(id,visible){if(disposed)return;if(!ids.includes(id))throw new TypeError('Unknown column');if(!visible&&(pinFirst&&id===ids[0]||omitted.size===ids.length-1&&!omitted.has(id)))return;onBeforeChange();if(visible)omitted.delete(id);else omitted.add(id);apply();onChange(state());},reset(){if(disposed)return;onBeforeChange();omitted.clear();resetting=true;try{drag.reset();}finally{resetting=false;}apply();onChange(state());},dispose};
+  }
+  function createTableToolbar(table,container,{sprite='./shared-ui/icons.svg',search=true,sorting=true,onChange=()=>{}}={}){
+    const doc=table.ownerDocument,view=doc.defaultView,heads=[...table.tHead.rows[0].cells],original=new Map(),off=[],toggles=[];
+    let resize,disposed=false;
+    const bar=doc.createElement('div');bar.className='ui-toolbar ui-actions';bar.dataset.uiDensity='dense';bar.setAttribute('aria-label','Table controls');
+    const field=doc.createElement('label');field.className='ui-field ui-search';
+    const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Search';
+    const input=doc.createElement('input');input.type='search';input.setAttribute('aria-label','Search rows');input.placeholder='Search rows…';field.append(caption,input);
+    const count=doc.createElement('output');count.className='ui-meta';count.setAttribute('role','status');count.setAttribute('aria-live','polite');
+    const columns=doc.createElement('div');columns.className='ui-actions ui-inline';columns.setAttribute('role','group');columns.setAttribute('aria-label','Visible columns');
+    const empty=doc.createElement('p');empty.className='ui-meta';empty.textContent='No matching rows.';empty.hidden=true;
+    const sort=sorting?createTableSort(table,{sprite}):null;
+    function filter(){let shown=0,total=0;const query=input.value.trim().toLocaleLowerCase();for(const body of table.tBodies)for(const row of body.rows){if(!original.has(row))original.set(row,row.hidden);if(original.get(row))continue;total++;row.hidden=!row.textContent.toLocaleLowerCase().includes(query);if(!row.hidden)shown++;}count.textContent=shown+' of '+total+' rows';empty.hidden=shown!==0;}
+    function drawColumns(){const hidden=new Set(manager.state.hidden);for(const {id,button,label}of toggles){const visible=!hidden.has(id);button.setAttribute('aria-pressed',String(visible));button.disabled=visible&&hidden.size===heads.length-1;adoptAction(button,{label,icon:visible?'check':'plus',ariaLabel:(visible?'Hide ':'Show ')+label+' column',sprite});}onChange(manager.state);}
+    const manager=createColumnManager(table,columns,{renderControls:false,onBeforeChange:()=>resize?.dispose(),onChange:()=>{resize=createColumnResize(table);drawColumns();}});
+    for(const head of heads){const id=head.dataset.column,label=head.querySelector('.ui-label')?.textContent||head.textContent.trim(),button=doc.createElement('button');button.type='button';button.dataset.uiLabel='always';const click=()=>manager.setVisible(id,manager.state.hidden.includes(id));button.addEventListener('click',click);off.push(()=>button.removeEventListener('click',click));columns.append(button);toggles.push({id,button,label});}
+    const reset=doc.createElement('button');reset.type='button';adoptAction(reset,{label:'Reset view',icon:'refresh',sprite});
+    const restore=()=>{input.value='';manager.reset();sort?.reset();resize?.reset();filter();};reset.addEventListener('click',restore);input.addEventListener('input',filter);
+    const menu=doc.createElement('details');menu.className='ui-menu';
+    const trigger=doc.createElement('summary');trigger.className='ui-action';trigger.dataset.uiVariant='quiet';trigger.dataset.uiLabel='hidden';adoptAction(trigger,{label:'Table options',ariaLabel:'Table options',icon:'settings',iconOnly:true,sprite});
+    const panel=doc.createElement('div');panel.className='ui-menu-panel ui-stack';const title=doc.createElement('strong');title.className='ui-section-title';title.textContent='Visible columns';panel.append(title,columns,reset);menu.append(trigger,panel);
+    if(search)bar.append(field);bar.append(count,menu);container.append(bar,empty);resize=createColumnResize(table);drawColumns();filter();
+    function dispose(){if(disposed)return;disposed=true;input.removeEventListener('input',filter);reset.removeEventListener('click',restore);for(const remove of off)remove();resize?.dispose();manager.dispose();sort?.dispose();for(const [row,hidden]of original)row.hidden=hidden;bar.remove();empty.remove();view.removeEventListener('pagehide',pagehide);}
+    function pagehide(event){if(!event.persisted)dispose();}view.addEventListener('pagehide',pagehide);
+    return {element:bar,input,columns,sort,manager,refresh(){sort?.refresh();filter();},dispose};
   }
   function createColumnResize(table,{min=72,max=1200,widths=[],onChange=()=>{}}={}){
     if(!Number.isFinite(min)||!Number.isFinite(max)||min<24||max<min)throw new TypeError('Column resizing requires finite positive bounds');
@@ -600,7 +626,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.14.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.14.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};

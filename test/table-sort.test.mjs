@@ -49,3 +49,21 @@ test('controlled sorting reports the entire dataset sort without rearranging a v
  f.head.cells[0].querySelector('button').fire('click');assert.equal(sort.state.direction,'asc');assert.deepEqual(f.body.rows,original);assert.equal(changes[0].column,'date');
  const button=f.head.cells[0].querySelector('button');sort.dispose();assert.equal(button.listeners.get('click').size,0);
 });
+
+test('default is first column ascending and third click restores it',()=>{
+ const f=fixture(),changes=[],sort=module.exports.createTableSort(f.table,{onChange:state=>changes.push(state)});
+ assert.equal(sort.state.column,'date');assert.equal(sort.state.direction,'asc');
+ const button=f.head.cells[1].querySelector('button');button.fire('click');assert.equal(sort.state.direction,'asc');
+ button.fire('click');assert.equal(sort.state.direction,'desc');button.fire('click');
+ assert.equal(sort.state.column,'date');assert.equal(sort.state.direction,'asc');assert.equal(changes.length,3);sort.dispose();
+});
+test('third click restores an app supplied default and reset clears its cycle',()=>{
+ const f=fixture(),sort=module.exports.createTableSort(f.table,{column:'date',direction:'desc'}),button=f.head.cells[2].querySelector('button');
+ for(let i=0;i<3;i++)button.fire('click');assert.equal(sort.state.column,'date');assert.equal(sort.state.direction,'desc');
+ sort.reset();button.fire('click');assert.equal(sort.state.column,'name');assert.equal(sort.state.direction,'asc');sort.dispose();
+});
+
+test('manual sorting resumes a cycle across server navigation with a fixed default',()=>{
+ const f=fixture(),sort=module.exports.createTableSort(f.table,{column:'amount',direction:'asc',cycle:1,defaultColumn:'date',defaultDirection:'desc',manual:true});
+ const button=f.head.cells[1].querySelector('button');button.fire('click');assert.equal(sort.cycle,2);assert.equal(sort.state.direction,'desc');button.fire('click');assert.equal(sort.cycle,0);assert.equal(sort.state.column,'date');assert.equal(sort.state.direction,'desc');sort.dispose();
+});

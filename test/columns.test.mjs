@@ -100,3 +100,9 @@ test('column manager composes visibility and keyboard reordering without replaci
   assert.deepEqual(order(f.heading),['entry','amount','documents']);assert.equal(f.heads.documents.hidden,false);
   assert.equal(changes.length,2);
 });
+
+test('resetting reordered hidden columns notifies resize owners once',()=>{
+ const f=fixture(),container=f.doc.createElement('div');let changes=0,before=0;
+ const manager=module.exports.createColumnManager(f.table,container,{order:['entry','documents','amount'],hidden:['amount'],onBeforeChange:()=>before++,onChange:()=>changes++});
+ manager.reset();assert.equal(changes,1);assert.equal(before,1);assert.deepEqual(order(f.heading),['entry','amount','documents']);assert.equal(f.heads.amount.hidden,false);manager.dispose();
+});

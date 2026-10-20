@@ -10,14 +10,7 @@ $('sample-selection').addEventListener('change',sampleSelection);
 $('sample-selection').addEventListener('click',event=>{const open=event.target.closest('button');if(!open)return;if(event.shiftKey){const input=open.closest('article').querySelector('input');input.checked=!input.checked;sampleSelection();}else toast('Sample opened');});
 $('sample-clear').addEventListener('click',()=>{for(const input of $('sample-selection').querySelectorAll('input'))input.checked=false;sampleSelection();});
 UI.createBackToTop($('sample-top'),{scrollTarget:$('sample-scroll'),focusTarget:$('sample-scroll'),sprite:'./v1/icons.svg'});
-UI.createTableSort($('resizable-sheet'),{column:'date',direction:'desc',sprite:'./v1/icons.svg'});
-let sampleResize;
-UI.createColumnManager($('resizable-sheet'),$('sample-columns'),{
-  pinFirst:true,
-  onBeforeChange:()=>sampleResize?.dispose(),
-  onChange:()=>{sampleResize=UI.createColumnResize($('resizable-sheet'));}
-});
-sampleResize=UI.createColumnResize($('resizable-sheet'));
+UI.createTableToolbar($('resizable-sheet'),$('sample-table-controls'),{sprite:'./v1/icons.svg'});
 const colourPicker=UI.createColorPicker($('fixture-colour'),{onChange:value=>UI.setCardColor($('fixture-colour-card'),value)});
 $('fixture-colour').addEventListener('click',()=>colourPicker.open());
 const pack=$('pack'),mode=$('mode'),density=$('density');
