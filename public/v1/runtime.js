@@ -993,28 +993,29 @@
   };
   UI.cardColors=Object.freeze([
     ['Neutral','#ffffff'],['Changes','#c44c53'],['Review','#f3d376'],['Approved','#22c55e'],['Translucent','transparent'],
-    ['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8']
+    ['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8'],['Sand','#e7cbb4']
   ]);
   // Native swatches share one container-sized grid in pickers, filters and inspectors.
   UI.cardColorGroups=Object.freeze([
-    {label:'Default',choices:[UI.cardColors[0],UI.cardColors[4]]},
-    {label:'Approval',choices:UI.cardColors.slice(1,4)},
-    {label:'Everyday',choices:UI.cardColors.slice(5)}
+    {label:'Default colours',choices:[UI.cardColors[0],UI.cardColors[4],...UI.cardColors.slice(1,4)]},
+    {label:'Pastel colours',choices:UI.cardColors.slice(5)}
   ]);
   UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,groups=null,headings=true,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
-    const element=root||document.createElement('div'),buttons=[],listeners=[];let values=new Set();
+    const element=root||document.createElement('div'),buttons=[],listeners=[],grids=[];let values=new Set(),largest=choices.length;
+    const layout=()=>{const width=element.getBoundingClientRect().width;if(!width)return;const view=document.defaultView,min=Math.max(30,parseFloat(view.getComputedStyle(element).getPropertyValue('--ui-control-height'))||30),available=Math.max(1,Math.floor((width+6)/(min+6))),limit=Math.min(5,available);let columns=limit;for(let n=limit;n>=Math.ceil(limit/2);n--)if(largest%n===0){columns=n;break;}for(const grid of grids)grid.style.gridTemplateColumns=`repeat(${columns},minmax(0,1fr))`;};
+    const observer=document.defaultView.ResizeObserver?new document.defaultView.ResizeObserver(layout):null;observer?.observe(element);
     element.setAttribute('role','group');element.setAttribute('aria-label',label);
     const setValue=next=>{values=new Set((Array.isArray(next)?next:next==null?[]:[next]).map(String));for(const b of buttons)b.setAttribute('aria-pressed',String(values.has(b.dataset.uiColorValue)));};
-    function render(sections){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;element.replaceChildren();element.classList.remove('ui-stack','ui-color-palette');element.classList.add(sections?'ui-stack':'ui-color-palette');
-      for(const section of sections||[{choices}]){let grid=element;if(sections){const group=document.createElement('section'),heading=document.createElement('h3');group.className='ui-stack';heading.className='ui-meta';heading.textContent=section.label;grid=document.createElement('div');grid.className='ui-color-palette';grid.setAttribute('role','group');grid.setAttribute('aria-label',section.label);if(headings)group.append(heading);else if(element.children.length)element.append(document.createElement('hr'));group.append(grid);element.append(group);}
-        for(const entry of section.choices){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
+    function render(sections){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;grids.length=0;largest=Math.max(...(sections||[{choices}]).map(s=>s.choices.length));element.replaceChildren();element.classList.remove('ui-stack','ui-color-palette');element.classList.add(sections?'ui-stack':'ui-color-palette');
+      for(const section of sections||[{choices}]){let grid=element;if(sections){const group=document.createElement('section'),heading=document.createElement('h3');group.className='ui-stack';heading.className='ui-meta';heading.textContent=section.label;grid=document.createElement('div');grid.className='ui-color-palette';grid.setAttribute('role','group');grid.setAttribute('aria-label',section.label);if(headings)group.append(heading);else if(element.children.length)group.style.paddingBlockStart='var(--ui-space-3,12px)';group.append(grid);element.append(group);}
+        grids.push(grid);for(const entry of section.choices){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
           const fill=UI.resolveCardColor(color);b.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);
           const click=()=>{const v=String(color);if(multiple){values.has(v)?values.delete(v):values.add(v);}else values=new Set([v]);setValue([...values]);onChange(multiple?[...values]:v);};b.addEventListener('click',click);listeners.push([b,click]);buttons.push(b);grid.append(b);
         }
-      }setValue([...values]);
+      }setValue([...values]);layout();
     }
     const setChoices=next=>{choices=next;render(null);},setGroups=next=>render(next);
-    render(groups);setValue(value);return {element,buttons,setValue,setChoices,setGroups,dispose(){for(const [b,fn]of listeners)b.removeEventListener('click',fn);}};
+    render(groups);setValue(value);return {element,buttons,setValue,setChoices,setGroups,dispose(){observer?.disconnect();for(const [b,fn]of listeners)b.removeEventListener('click',fn);}};
   };
   UI.createConfirmAction=(trigger,{label='Confirm',message='Continue?',onConfirm=()=>{},sprite}={})=>{
     const doc=trigger.ownerDocument,view=doc.defaultView,panel=doc.createElement('div');panel.className='ui-panel ui-pad ui-stack';panel.popover='auto';panel.id='ui-confirm-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');panel.setAttribute('aria-label',message);
