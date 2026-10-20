@@ -250,6 +250,8 @@ $('text-suggestions').addEventListener('input',()=>{const input=$('text-suggesti
 
 window.SharedUI.createColorWheel({root:document.getElementById('colour-wheel'),multiple:true});
 
+{const root=document.getElementById('review-controls-demo');if(root){const UI=window.SharedUI,review=UI.createReviewControls(root,{iconOnly:true,sprite:'./v1/icons.svg'}),input=root.querySelector('input'),chips=root.querySelector('[aria-label="Selected review tags"]');const control=UI.createTagInput(input,{field:review.slots.tags,chips,layout:'stacked',options:()=>['Motion','Reference','Texture'],onCommit:tag=>{const button=document.createElement('button');button.type='button';button.className='ui-tag';UI.adoptAction(button,{label:tag,ariaLabel:'Remove '+tag});button.addEventListener('click',()=>button.remove());chips.append(button);}});root.querySelector('form').addEventListener('submit',event=>{event.preventDefault();control.flush();});window.addEventListener('pagehide',()=>{control.dispose();review.dispose();},{once:true});}}
+
 /* Generic synthetic composition fixture. Uses the same native factory as consumers. */
 (() => {
   'use strict';

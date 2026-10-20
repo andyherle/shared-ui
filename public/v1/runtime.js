@@ -290,6 +290,22 @@
     const api={element:handle,get value(){return size;},setValue:next=>set(next,true),refresh,dispose(){if(disposed)return;finish(true);disposed=true;observer?.disconnect();for(const remove of off)remove();handle.remove();previous?container.style.setProperty(property,previous):container.style.removeProperty(property);}};
     listen(view,'pagehide',api.dispose);set(value);return api;
   }
+  // Declared native review slots; domains retain commands, values and persistence.
+  function createReviewControls(root,{rating=root.querySelector('[data-ui-review-slot=rating]'),actions=root.querySelector('[data-ui-review-slot=actions]'),tags=root.querySelector('[data-ui-review-slot=tags]'),iconOnly=false,sprite='./shared-ui/icons.svg'}={}){
+    const slots=[rating,actions,tags].filter(Boolean);
+    if(!actions||new Set(slots).size!==slots.length||slots.some(node=>!root.contains(node)))throw new TypeError('Review controls require unique native slots inside their root');
+    const attributes=['style','class','data-ui-layout','data-ui-align'],records=[root,...slots].map(node=>({node,values:attributes.map(name=>node.getAttribute(name))}));let disposed=false;
+    root.classList.add('ui-review-controls');
+    Object.assign(root.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr)',justifyItems:'center',gap:'calc(2 * var(--ui-gap))',inlineSize:'100%',maxInlineSize:'52rem',minInlineSize:'0',marginInline:'auto',paddingBlock:'var(--ui-gap) calc(2 * var(--ui-gap))'});
+    for(const row of [rating,actions].filter(Boolean)){
+      row.classList.add('ui-actions','ui-inline');row.dataset.uiLayout='bar';row.dataset.uiAlign='center';
+      Object.assign(row.style,{inlineSize:'max-content',maxInlineSize:'100%',minInlineSize:'0',margin:'0'});
+    }
+    if(tags)Object.assign(tags.style,{inlineSize:'100%',maxInlineSize:'42rem',minInlineSize:'0',margin:'0'});
+    function adopt(action,compact=iconOnly){api.adoptAction(action,{sprite,...(action.dataset.uiIcon?{icon:action.dataset.uiIcon}:{}),...(compact?{iconOnly:true}:{})});}
+    function refresh(){if(disposed)return;for(const action of actions.querySelectorAll('button,a,summary'))adopt(action);api.observeActions?.(actions);if(rating){for(const action of rating.querySelectorAll('button,a,summary'))adopt(action,false);api.observeActions?.(rating);}}
+    refresh();return {element:root,slots:{rating,actions,tags},refresh,addAction(action){if(disposed)throw new Error('Review controls disposed');adopt(action);actions.append(action);refresh();return action;},dispose(){if(disposed)return;disposed=true;api.releaseActions?.(root);for(const {node,values}of records)attributes.forEach((name,index)=>values[index]===null?node.removeAttribute(name):node.setAttribute(name,values[index]));}};
+  }
   // A container owns the coordinate space; the existing native controls stay intact.
   function createContextToolbar(toolbar,{container=toolbar.ownerDocument.body,zoom=null}={}){
     const doc=toolbar.ownerDocument,view=doc.defaultView,host=doc.createElement('div');
@@ -584,7 +600,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.14.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.14.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -1154,10 +1170,19 @@
     function dispose(){if(disposed)return;disposed=true;hide();for(const remove of removers)remove();slot.remove();attributes.forEach((name,i)=>prior[i]===null?input.removeAttribute(name):input.setAttribute(name,prior[i]));}
     hide();return {element:list,hide,draw,handleKey,flush:()=>commit(input.value),dispose};
   };
-  UI.createTagInput=(input,{field, chips,...options}={})=>{
-    // Keep the native entry and selected tags on one stable row; only chips scroll.
-    if(field&&chips){const entry=input.closest('.ui-field')||input;Object.assign(field.style,{display:'flex',flexWrap:'nowrap',gap:'var(--ui-gap)',minInlineSize:'0'});Object.assign(entry.style,{minInlineSize:'0',inlineSize:'100%',flex:'1 1 14ch'});Object.assign(chips.style,{flex:'0 1 auto',maxInlineSize:'50%',flexWrap:'nowrap',overflowX:'auto',minInlineSize:'0'});field.prepend(entry);}
-    return UI.createSuggestedInput(input,{...options,tags:true,separator:',',label:'Suggested tags'});
+  UI.createTagInput=(input,{field, chips,layout='inline',...options}={})=>{
+    if(!['inline','stacked'].includes(layout))throw new TypeError('Unknown tag field layout');
+    // Keep declared tag slots stable; suggestions retain their overlay ownership.
+    let layoutState=[];
+    if(field&&chips){const entry=input.closest('.ui-field')||input;layoutState=[field,entry,chips].map(node=>({node,style:node.getAttribute('style')}));Object.assign(field.style,{display:'flex',flexWrap:'nowrap',gap:'var(--ui-gap)',minInlineSize:'0'});Object.assign(entry.style,{minInlineSize:'0',inlineSize:'100%',flex:'1 1 14ch'});Object.assign(chips.style,{flex:'0 1 auto',maxInlineSize:'50%',flexWrap:'nowrap',overflowX:'auto',minInlineSize:'0'});field.prepend(entry);
+      if(layout==='stacked'){
+        Object.assign(field.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr)',gridTemplateRows:'var(--ui-field-height) calc(max(var(--ui-tag-height), var(--ui-control-height)) + 18px)',alignItems:'start'});
+        Object.assign(entry.style,{gridRow:'1',flex:'none',blockSize:'var(--ui-field-height)'});
+        Object.assign(chips.style,{display:'flex',gridRow:'2',inlineSize:'100%',maxInlineSize:'100%',blockSize:'100%',alignItems:'start',flex:'none'});
+      }
+    }
+    const control=UI.createSuggestedInput(input,{...options,tags:true,separator:',',label:'Suggested tags'}),dispose=control.dispose;let restored=false;
+    control.dispose=()=>{if(restored)return;restored=true;dispose();for(const {node,style}of layoutState)style===null?node.removeAttribute('style'):node.setAttribute('style',style);};return control;
   };
   function activate(tab){const group=tab.closest('[data-ui-tabs]');if(!group)return;
     for(const item of group.querySelectorAll('[role=tab]')){const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;const panel=document.getElementById(item.getAttribute('aria-controls'));if(panel)panel.hidden=!selected;}
