@@ -37,7 +37,7 @@ test('shared panel resize retains content, supports keyboard bounds and cancels 
 });
 
 test('context tools stay centered and bounded while a container shrinks and grows',()=>{
- const f=fixture();assert.equal(f.toolbar.classes.has('ui-inline'),true);assert.equal(f.toolbar.style.width,'max-content');assert.equal(f.toolbar.style.justifySelf,'center');
+ const f=fixture();assert.equal(f.toolbar.style.position,'static');assert.equal(f.toolbar.style.inset,'auto');assert.equal(f.toolbar.classes.has('ui-inline'),true);assert.equal(f.toolbar.style.width,'max-content');assert.equal(f.toolbar.style.justifySelf,'center');
  f.dock.element.width=320;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'320px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridRow,'2');assert.equal(f.zoom.style.justifySelf,'center');
  f.dock.element.width=1100;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'828px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridColumn,'2');assert.equal(f.zoom.style.justifySelf,'end');f.dock.dispose();
 });

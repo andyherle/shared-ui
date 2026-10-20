@@ -298,7 +298,7 @@
     host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
     host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
     toolbar.classList.add('ui-toolbar','ui-actions','ui-inline');toolbar.dataset.uiLayout='bar';
-    Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto'});
+    Object.assign(toolbar.style,{position:'static',inset:'auto',translate:'none',gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto'});
     host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',width:'max-content',maxWidth:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
     container.append(host);
     let disposed=false;

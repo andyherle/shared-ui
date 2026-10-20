@@ -7,6 +7,7 @@ function sample(pack){
  const container=section.querySelector('.sample'),toolbar=section.querySelector('nav'),zoom=container.lastElementChild;
  [...toolbar.querySelectorAll('button')].forEach((button,i)=>UI.adoptAction(button,{icon:['edit','image','search','columns'][i],sprite:'/v1/icons.svg'}));
  [...zoom.children].forEach((button,i)=>UI.adoptAction(button,{...(i===1?{}:{icon:i===0?'minus':'plus'}),iconOnly:i!==1,sprite:'/v1/icons.svg'}));zoom.children[1].dataset.uiLabel='always';
+ toolbar.style.position='fixed';toolbar.style.bottom='0';
  const dock=UI.createContextToolbar(toolbar,{container,zoom});return{container,toolbar,zoom,dock,section};
 }
 document.querySelector('#run').onclick=async()=>{
@@ -14,6 +15,7 @@ document.querySelector('#run').onclick=async()=>{
  try{const lines=[];for(const pack of ['postvisual','personal']){const s=sample(pack);for(const width of [320,560,1000,320,1000]){
  s.container.style.width=width+'px';s.dock.refresh();await frame();await frame();
  const t=s.toolbar.getBoundingClientRect(),z=s.zoom.getBoundingClientRect(),c=s.container.getBoundingClientRect();
+ assert(getComputedStyle(s.toolbar).position==='static',pack+' adopted toolbar kept old floating positioning');
  assert(t.left>=c.left&&t.right<=c.right,pack+' toolbar outside container at '+width);
  assert(t.right<=z.left||t.bottom<=z.top||z.bottom<=t.top,pack+' toolbar overlaps zoom at '+width);
  assert(Math.abs((t.left+t.right)/2-(c.left+c.right)/2)<1,pack+' toolbar not centered at '+width);
