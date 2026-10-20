@@ -12,7 +12,13 @@ function sample(pack){
 }
 document.querySelector('#run').onclick=async()=>{
  result.textContent='RUNNING';document.querySelector('#run').disabled=true;fixtures.replaceChildren();
- try{const lines=[];for(const pack of ['postvisual','personal']){const s=sample(pack);for(const width of [320,560,1000,320,1000]){
+ try{const lines=[];
+ const shell=document.createElement('aside');shell.hidden=true;shell.innerHTML='<details class="ui-disclosure ui-overflow" data-ui-overflow="expanded" open><summary>More</summary><button>Secondary</button></details>';fixtures.append(shell);
+ const feedback=UI.createZoomFeedback(document,{sprite:'/v1/icons.svg'});feedback.setVisible(true);assert(!feedback.element.hidden,'Hidden expanded More must not hide zoom');
+ shell.hidden=false;feedback.setVisible(true);assert(!feedback.element.hidden,'Visible inline expanded More must not hide zoom');
+ shell.firstElementChild.dataset.uiOverflow='collapsed';feedback.setVisible(true);assert(feedback.element.hidden,'Visible open menu must hide zoom');
+ shell.remove();feedback.setVisible(true);assert(!feedback.element.hidden,'Zoom must return after the overlay closes');feedback.dispose();lines.push('PASS zoom visibility: hidden/inline More ignored; visible open menu hides zoom and closing restores it');
+ for(const pack of ['postvisual','personal']){const s=sample(pack);for(const width of [320,560,1000,320,1000]){
  s.container.style.width=width+'px';s.dock.refresh();await frame();await frame();
  const t=s.toolbar.getBoundingClientRect(),z=s.zoom.getBoundingClientRect(),c=s.container.getBoundingClientRect();
  assert(getComputedStyle(s.toolbar).position==='static',pack+' adopted toolbar kept old floating positioning');

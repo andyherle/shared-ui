@@ -318,6 +318,9 @@
     const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);restore(toolbar,original);restore(zoom,previousZoom);host.remove();}};
     view.addEventListener('pagehide',api.dispose);refresh();return api;
   }
+  function blocksViewportTools(overlay){
+    return overlay.getClientRects().length>0&&!overlay.closest('[hidden],details:not([open]) > :not(summary)')&&!overlay.matches('details.ui-overflow[data-ui-overflow=expanded]');
+  }
   function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
     if(zoomDocks.has(doc))return zoomDocks.get(doc);
     const view=doc.defaultView,node=doc.createElement('div');node.className='ui-zoom-feedback ui-toolbar ui-actions ui-inline';node.setAttribute('role','group');node.setAttribute('aria-label','Content zoom');
@@ -330,7 +333,7 @@
     }
     doc.body.append(node);
     let visible=true;
-    const sync=()=>{node.hidden=!visible||Boolean(doc.querySelector('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open'));};
+    const sync=()=>{node.hidden=!visible||[...doc.querySelectorAll('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open')].some(blocksViewportTools);};
     doc.addEventListener('toggle',sync,true);doc.addEventListener('close',sync,true);
     const api={element:node,show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
     view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);sync();return api;
