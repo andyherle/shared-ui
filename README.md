@@ -947,3 +947,5 @@ Swatches cap both dimensions at the shared control height; extra container width
 Colour pickers inherit their trigger sprite for inline Apply actions, including nested application routes. Callers may supply `sprite` explicitly.
 
 Inside a floating context dock, authored `details.ui-overflow` groups use the shared anchored native menu contract. Opening More never adds an in-flow row or changes dock height; secondary actions keep complete captions in a vertical menu. Existing nodes, handlers, values and original composition are retained and restored on disposal.
+
+Colour, Custom colour and Hex compose the same compact property-row schema: one label column and vertically aligned value-column edges. The native colour input sits inside the shared field border. Desktop swatches may shrink slightly to balance narrow value columns; coarse pointers retain full native targets.
