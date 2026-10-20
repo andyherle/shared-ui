@@ -323,7 +323,7 @@
       const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+6:0;
       const stacked=side>0&&width-2*side<Math.min(240,toolbar.scrollWidth||240);
       toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow=stacked?'2':'1';
-      toolbar.style.maxWidth=Math.max(0,stacked?width:width-2*side)+'px';
+      toolbar.style.maxWidth=Math.max(0,Math.min(832,stacked?width:width-2*side))+'px';
       if(zoom){zoom.style.maxWidth=width+'px';zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow='1';zoom.style.justifySelf=stacked?'center':'end';}
       view.SharedUI?.observeActions?.(toolbar);
     };

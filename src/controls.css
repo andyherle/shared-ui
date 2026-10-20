@@ -48,7 +48,7 @@
     :where(.ui-item,.ui-action):is([aria-current=true],[aria-current=page],[aria-selected=true]) { background:var(--ui-accent-soft); color:var(--ui-text); border-color:var(--ui-accent); }
     textarea { resize:vertical; }
     :where(button:is(.media-button,.poster,.home-card,.card,.ui-media-button,[data-ui-surface=media])) { display:block; min-block-size:0; padding:0; border:0; border-radius:revert-layer; background:var(--ui-media); font:inherit; }
-    .ui-selectable:is([aria-selected=true],[aria-pressed=true],[aria-checked=true],[data-ui-selected=true],[aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed])::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:20; outline:calc(2px/var(--ui-graphic-scale,1)) solid var(--ui-text); outline-offset:calc(-2px/var(--ui-graphic-scale,1)); }
+    .ui-selectable:is([aria-selected=true],[aria-pressed=true],[aria-checked=true],[data-ui-selected=true],[aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed])::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:20; outline:calc(1px/var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(-1px/var(--ui-graphic-scale,1)); box-shadow:0 0 calc(5px/var(--ui-graphic-scale,1)) var(--ui-accent); }
     .ui-selectable:is([aria-pressed=mixed],[aria-checked=mixed],[data-ui-selected=mixed])::after { outline-style:dashed; }
     :where(button,input,select,textarea,a,summary,[role=slider],[role=separator]):focus-visible, .ui-selectable:focus-visible { outline:calc(2px/var(--ui-graphic-scale,1)) solid var(--ui-accent); outline-offset:calc(var(--ui-focus-offset,2px)/var(--ui-graphic-scale,1)); }
     button[aria-busy=true] { cursor:progress; }
@@ -63,7 +63,7 @@
     .ui-lightbox { position:fixed; inset:0; width:100%; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; border-radius:0; overflow:hidden; background:var(--ui-bg); }
     .ui-lightbox > [data-ui-lightbox-body] { width:100%; height:100%; }
     .ui-lightbox > [data-ui-lightbox-close] { position:absolute; top:8px; right:8px; }
-    .ui-popout { width:min(var(--ui-popout-width,900px),100%); height:var(--ui-popout-block,fit-content); max-height:min(var(--ui-popout-height,760px),calc(100dvh - var(--ui-popout-space,24px))); grid-template-rows:auto minmax(0,1fr) auto; padding:0; overflow:hidden; }
+    .ui-popout { width:min(var(--ui-popout-width,42rem),100%); height:var(--ui-popout-block,fit-content); max-height:min(var(--ui-popout-height,760px),calc(100dvh - var(--ui-popout-space,24px))); grid-template-rows:auto minmax(0,1fr) auto; padding:0; overflow:hidden; }
     :is(article,aside,form,dialog[open]).ui-popout { display:grid; }
     dialog:has(>form.ui-popout) { padding:0; overflow:hidden; }
     dialog > form.ui-popout { border:0; }
@@ -138,6 +138,8 @@
       &:has(input:focus-visible) { outline:2px solid var(--ui-accent); outline-offset:2px; }
       & input:focus-visible { outline:none; }
     }
+    .ui-controller-toggle { inline-size:100%; }
+    .ui-controller-toggle:has(input:checked) { background:var(--ui-primary); color:var(--ui-on-primary); border-color:var(--ui-primary); }
     .ui-skeleton { display:block; min-block-size:calc(var(--ui-control-height)*2); inline-size:100%; border-radius:var(--ui-radius-small); background:var(--ui-surface-soft); }
 
     :where(input,select,textarea):is(.ui-mono,[data-ui-font=mono]) { font-family:var(--ui-font-mono); }
@@ -306,15 +308,12 @@
   &::before { content:""; inline-size:18px; block-size:18px; border:1px solid var(--ui-line-strong); border-radius:var(--ui-radius-small); background:var(--colour,var(--ui-swatch-value,currentColor)); }
   &[aria-pressed=true]::before { outline:2px solid var(--ui-accent); outline-offset:3px; }
 }
-    .ui-color-picker { position:fixed; inset:auto; margin:0; inline-size:min(320px,calc(100vw - 24px)); max-block-size:calc(100dvh - 24px); box-shadow:var(--shadow-raised); }
+    .ui-color-picker { height:auto; position:fixed; inset:auto; margin:0; inline-size:min(320px,calc(100vw - 24px)); max-block-size:calc(100dvh - 24px); box-shadow:var(--shadow-raised); }
     .ui-color-picker:popover-open { display:grid; }
-    .ui-color-picker > :is(header,footer,[data-ui-popout-body]) { padding:12px; }
-    .ui-color-picker section + section { border-top:1px solid var(--ui-line); padding-top:12px; }
-    .ui-color-palette { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
-    .ui-color-palette > .ui-swatch { min-inline-size:0; min-block-size:44px; }
-    .ui-color-palette > .ui-swatch::before { inline-size:100%; block-size:28px; }
+    .ui-color-palette { display:grid; grid-template-columns:repeat(auto-fit,minmax(30px,1fr)); gap:6px; }
+    .ui-color-palette > .ui-swatch { min-inline-size:0; min-block-size:var(--ui-control-height); padding:3px; }
+    .ui-color-palette > .ui-swatch::before { inline-size:100%; block-size:auto; aspect-ratio:1; }
     .ui-swatch[data-ui-color-value=transparent]::before { background:repeating-conic-gradient(var(--ui-line-strong) 0 25%,#0000 0 50%) 50% / 10px 10px; }
-    .ui-color-picker input[type=color] { inline-size:44px; block-size:28px; flex:none; padding:0; border:0; background:#0000; }
     .ui-board-grid { background-color:var(--ui-bg); background-image:radial-gradient(color-mix(in srgb,var(--ui-line-strong) 28%,#0000) 1px,#0000 1px); }
     .ui-board-grid[data-ui-interacting=true] { background-image:radial-gradient(var(--ui-line-strong) 1px,#0000 1px); }
     .ui-fit-media { width:100%; height:100%; object-fit:contain; border:0; }
@@ -369,7 +368,7 @@
   }
   .ui-section-title { font-size:calc(var(--ui-control-size) + 2px); font-weight:600; line-height:1.4; margin:0; }
   .ui-chrome { font-size:var(--ui-control-size); line-height:1.45; }
-    :is(.ui-section > summary,.ui-section-heading) > :where(h2,h3,h4,h5,p,strong) { display:inline; margin:0; font:inherit; }
+    :is(.ui-section > summary,.ui-section-heading) > :where(h2,h3,h4,h5,strong) { display:inline; margin:0; font:inherit; }
   .ui-meta { font-size:calc(var(--ui-control-size) - 1px); line-height:1.45; font-weight:400; color:var(--ui-muted); }
   .ui-value { font-size:var(--ui-h1); font-weight:600; line-height:1.2; font-variant-numeric:tabular-nums; }
   .ui-chrome :where(h1,h2,h3,h4,h5,h6):where(:not(.ui-prose *,.markdown *,.ui-section-title,.ui-section>summary>*)) { font-size:inherit; line-height:1.4; letter-spacing:0; margin:0; }

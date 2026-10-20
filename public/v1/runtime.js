@@ -323,7 +323,7 @@
       const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+6:0;
       const stacked=side>0&&width-2*side<Math.min(240,toolbar.scrollWidth||240);
       toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow=stacked?'2':'1';
-      toolbar.style.maxWidth=Math.max(0,stacked?width:width-2*side)+'px';
+      toolbar.style.maxWidth=Math.max(0,Math.min(832,stacked?width:width-2*side))+'px';
       if(zoom){zoom.style.maxWidth=width+'px';zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow='1';zoom.style.justifySelf=stacked?'center':'end';}
       view.SharedUI?.observeActions?.(toolbar);
     };
@@ -804,7 +804,6 @@
     const element=document.createElement('label');element.className=variant==='controller'?'ui-icon-choice ui-controller-toggle':'ui-switch';
     const input=document.createElement('input');input.type='checkbox';input.setAttribute('aria-label',String(label));input.setAttribute('role','switch');
     const output=document.createElement('span');output.className='ui-label';output.hidden=variant==='controller';element.append(input,output);
-    if(variant==='controller')element.className='ui-switch ui-controller-toggle';
     output.hidden=false;
     const setValue=value=>{input.checked=Boolean(value);output.textContent=input.checked?'On':'Off';element.title=String(label)+': '+output.textContent;};
     const change=()=>{setValue(input.checked);onChange(input.checked);};input.addEventListener('change',change);setValue(value);
@@ -962,34 +961,58 @@
     listen(doc,'visibilitychange',()=>doc.visibilityState==='hidden'?suspend():resume());listen(view,'pagehide',event=>event.persisted?suspend():dispose());listen(view,'pageshow',resume);listen(doc,'ui:styles',refresh);listen(node,'focusout',refresh);resume();
     return {refresh,dispose};
   };
+  UI.cardColors=Object.freeze([
+    ['Neutral','#ffffff'],['Changes','#c44c53'],['Review','#f3d376'],['Approved','#22c55e'],['Translucent','transparent'],
+    ['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8']
+  ]);
+  // Native swatches share one container-sized grid in pickers, filters and inspectors.
+  UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
+    const element=root||document.createElement('div'),buttons=[],listeners=[];let values=new Set(),items=[];
+    element.classList.add('ui-color-palette');element.setAttribute('role','group');element.setAttribute('aria-label',label);
+    const setValue=next=>{values=new Set((Array.isArray(next)?next:next==null?[]:[next]).map(String));for(const b of buttons)b.setAttribute('aria-pressed',String(values.has(b.dataset.uiColorValue)));};
+    function setChoices(next){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;element.replaceChildren();items=next;
+      for(const entry of items){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
+        const fill=UI.resolveCardColor(color);b.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);
+        const click=()=>{const v=String(color);if(multiple){values.has(v)?values.delete(v):values.add(v);}else values=new Set([v]);setValue([...values]);onChange(multiple?[...values]:v);};b.addEventListener('click',click);listeners.push([b,click]);buttons.push(b);element.append(b);
+      }setValue([...values]);
+    }
+    setChoices(choices);setValue(value);return {element,buttons,setValue,setChoices,dispose(){for(const [b,fn]of listeners)b.removeEventListener('click',fn);}};
+  };
+  UI.createConfirmAction=(trigger,{label='Confirm',message='Continue?',onConfirm=()=>{},sprite}={})=>{
+    const doc=trigger.ownerDocument,view=doc.defaultView,panel=doc.createElement('div');panel.className='ui-panel ui-pad ui-stack';panel.popover='auto';panel.id='ui-confirm-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');panel.setAttribute('aria-label',message);
+    Object.assign(panel.style,{position:'fixed',margin:'0',inset:'auto',width:'min(320px,calc(100vw - 24px))'});
+    const text=doc.createElement('p');text.textContent=message;const status=doc.createElement('p');status.className='ui-status';status.setAttribute('role','status');const actions=doc.createElement('div');actions.className='ui-actions ui-fill';const cancel=doc.createElement('button'),confirm=doc.createElement('button');cancel.type=confirm.type='button';UI.adoptAction(cancel,{label:'Cancel',icon:'close',sprite});UI.adoptAction(confirm,{label,icon:'check',sprite});confirm.dataset.uiVariant='danger';actions.append(cancel,confirm);panel.append(text,status,actions);doc.body.append(panel);let pressedOpen=false;
+    function close(){if(panel.matches(':popover-open'))panel.hidePopover();if(trigger.isConnected)trigger.focus({preventScroll:true});}
+    function open(){if(trigger.disabled||!trigger.isConnected)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;return close();}status.textContent='';panel.showPopover();position();cancel.focus();}
+    function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect(),p=panel.getBoundingClientRect();Object.assign(panel.style,{left:Math.max(12,Math.min(r.left,view.innerWidth-p.width-12))+'px',top:Math.max(12,Math.min(r.bottom+6,view.innerHeight-p.height-12))+'px'});}
+    const press=()=>{pressedOpen=panel.matches(':popover-open');},toggle=()=>trigger.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
+    const accept=async()=>{confirm.disabled=cancel.disabled=true;try{await onConfirm();close();}catch(error){status.textContent=error.message||'Action failed';status.dataset.state='error';}finally{confirm.disabled=cancel.disabled=false;}};
+    const dispose=()=>{cancel.removeEventListener('click',close);confirm.removeEventListener('click',accept);trigger.removeEventListener('pointerdown',press);panel.removeEventListener('toggle',toggle);view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);view.removeEventListener('pagehide',dispose);panel.remove();for(const name of ['aria-haspopup','aria-controls','aria-expanded'])trigger.removeAttribute(name);};
+    trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded','false');trigger.addEventListener('pointerdown',press);panel.addEventListener('toggle',toggle);cancel.addEventListener('click',close);confirm.addEventListener('click',accept);view.addEventListener('resize',position);doc.addEventListener('scroll',position,true);view.addEventListener('pagehide',dispose,{once:true});return {element:panel,open,close,dispose};
+  };
+  UI.createFilterButton=({element,document=element?.ownerDocument||window.document,label='Filters',sprite,onClick=()=>{}}={})=>{
+    element ||= document.createElement('button');if(element.tagName==='BUTTON')element.type='button';UI.adoptAction(element,{label,icon:'filter',sprite});element.addEventListener('click',onClick);return {element,dispose(){element.removeEventListener('click',onClick);}};
+  };
   UI.createColorPicker=(trigger,{value=null,onChange=()=>{},title='Card colour',placement='auto'}={})=>{
     const doc=trigger.ownerDocument,view=doc.defaultView,removers=[];
     const panel=doc.createElement('div');panel.className='ui-popout ui-color-picker ui-chrome';panel.popover='auto';
     panel.dataset.uiComponent='color-picker';panel.id='ui-colour-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');
     const header=doc.createElement('header'),heading=doc.createElement('h2');heading.className='ui-section-title';heading.id=panel.id+'-title';heading.textContent=title;header.append(heading);panel.setAttribute('aria-labelledby',heading.id);
     const body=doc.createElement('div');body.dataset.uiPopoutBody='';body.className='ui-stack';
-    const buttons=[];
-    const swatches=(label,entries,captions=false)=>{
-      const section=doc.createElement('section');section.className='ui-stack';
-      const caption=doc.createElement('h3');caption.className='ui-meta';caption.textContent=label;
-      const group=doc.createElement('div');group.className='ui-color-palette';group.setAttribute('role','group');group.setAttribute('aria-label',label);if(captions)group.dataset.uiLabels='true';
-      for(const [name,color]of entries){const button=doc.createElement('button');button.type='button';button.className='ui-swatch';button.dataset.uiColorValue=color;UI.adoptAction(button,{label:name,ariaLabel:name,title:name});
-        button.querySelector(':scope > .ui-label').hidden=true;const fill=UI.resolveCardColor(color);button.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);button.addEventListener('click',()=>choose(color));buttons.push(button);group.append(button);}
-      section.append(caption,group);body.append(section);
-    };
-    swatches('Approval',[['Neutral','#ffffff'],['Changes','#c44c53'],['Review','#f3d376'],['Approved','#22c55e'],['Translucent','transparent']],true);
-    swatches('Everyday',[['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8']]);
+    const palette=UI.createColorPanel({document:doc,label:'Card colours',choices:UI.cardColors,onChange:choose});
+    const buttons=palette.buttons;body.append(palette.element);
     const custom=doc.createElement('label');custom.className='ui-field';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');custom.append(caption,input);body.append(custom);
     const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';hexField.append(hexLabel,hex,apply);body.append(hexField);
     const footer=doc.createElement('footer');footer.className='ui-actions ui-fill';const done=doc.createElement('button');done.type='button';done.textContent='Done';footer.append(done);panel.append(header,body,footer);doc.body.append(panel);
     trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded','false');
-    let disposed=false;
+    let disposed=false,pressedOpen=false;
     function listen(node,type,fn,options){node.addEventListener(type,fn,options);removers.push(()=>node.removeEventListener(type,fn,options));}
     function setValue(next,{mixed=false}={}){if(next!==null)UI.resolveCardColor(next);value=next?.toLowerCase()??null;for(const button of buttons){const pressed=String(!mixed&&button.dataset.uiColorValue===value);if(button.getAttribute('aria-pressed')!==pressed)button.setAttribute('aria-pressed',pressed);}if(doc.activeElement!==input&&input.value!==(value||'#ffffff'))input.value=value&&value!=='transparent'?value:'#ffffff';if(doc.activeElement!==hex)hex.value=value&&value!=='transparent'?value:'#ffffff';}
     function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect();if(placement==='top')panel.style.maxHeight=Math.max(100,r.top-20)+'px';const p=panel.getBoundingClientRect();if(placement==='top'){panel.style.left=Math.max(12,Math.min(r.left+r.width/2-p.width/2,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,r.top-p.height-8)+'px';return;}const right=r.right+10,left=right+p.width<=view.innerWidth-12?right:r.left-p.width-10;panel.style.left=Math.max(12,Math.min(left,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,Math.min(r.top,view.innerHeight-p.height-12))+'px';}
     function close(){if(panel.matches(':popover-open'))panel.hidePopover();}
-    function open(){if(disposed||trigger.disabled)return;panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
+    function open(){if(disposed||trigger.disabled)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;close();return;}panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
     function choose(next){setValue(next);close();onChange(next);trigger.focus({preventScroll:true});}
+    listen(trigger,'pointerdown',()=>{pressedOpen=panel.matches(':popover-open');});
     listen(panel,'keydown',event=>event.stopPropagation());
     function applyHex(){const next=hex.value.trim();const valid=/^#?[0-9a-f]{6}$/i.test(next);hex.setCustomValidity(valid?'':'Enter six hex digits, such as #99d6ff.');hex.setAttribute('aria-invalid',String(!valid));if(valid)choose((next.startsWith('#')?next:'#'+next).toLowerCase());else hex.reportValidity();}
     listen(hex,'input',()=>{hex.setCustomValidity('');hex.removeAttribute('aria-invalid');});listen(hex,'keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyHex();}});listen(apply,'click',applyHex);
@@ -1456,6 +1479,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       if(!group.isConnected){untrack(group);return;}
       // Overflow contents are governed by their outer group, including while closed.
       if(group.closest(overflowSelector))return;
+      const owner=group.parentElement;if(group.matches('.ui-inline,[data-ui-layout=inline]')&&owner?.matches('.ui-actions,.ui-toolbar')&&owner.dataset.uiLayout!=='vertical'&&style(owner).flexDirection!=='column'){untrack(group);register(owner);return;}
       const css=style(group),nodes=children(group).filter(node=>!['absolute','fixed'].includes(style(node).position)),actions=descendants(nodes).filter(eligible);
       const overflows=priorities(nodes);
       const vertical=group.dataset.uiLayout==='vertical'||css.flexDirection==='column';
@@ -1516,7 +1540,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       // A horizontal row owns its intrinsic subgroups. Registering both lets a
       // child's later fit undo the parent's caption mode and creates outliers.
       const parent=group.parentElement;
-      if(group.matches('.ui-inline,[data-ui-layout=inline]')&&parent?.matches('.ui-actions,.ui-toolbar')&&parent.dataset.uiLayout!=='vertical'&&style(parent).flexDirection!=='column'){register(parent);return;}
+      if(group.matches('.ui-inline,[data-ui-layout=inline]')&&parent?.matches('.ui-actions,.ui-toolbar')&&parent.dataset.uiLayout!=='vertical'&&style(parent).flexDirection!=='column'){untrack(group);register(parent);return;}
       let item=groups.get(group);
       if(!item){const target=group.matches('.ui-inline,[data-ui-layout=inline]')?group.parentElement:group;if(!target)return;item={target,width:-1,height:-1};groups.set(group,item);targets.set(target,(targets.get(target)||0)+1);if(!paused)observer.observe(target);}
       queue(group);

@@ -913,3 +913,11 @@ Additional viewport commands such as Back to top compose inside `createZoomFeedb
 Use `createTagInput(input,{field,chips,layout:'stacked',...options})` underneath it. The existing entry fills one row; chips have a permanently reserved second row with native horizontal scroll clearance. Adding/removing tags or showing the field-anchored suggestions never changes the control group's height or shrinks the entry. The default inline tag layout remains available to compact inspectors. No new panel, app breakpoint, overlay wrapper or application state is introduced.
 
 The same loopback fixture server exposes `/review`: run its review checks for 280/320/560/1000 px containers in both packs, dynamic icon-only Trash, long horizontal chip lists, suggestion overlays and fixed entry/menu geometry. The catalogue also demonstrates the composition with live tag entry.
+
+### Shared colour and command panels
+
+`createColorPanel({root, choices, multiple, value, onChange})` renders a responsive native swatch grid; `setChoices` updates available colours and `setValue` updates selection without app paint. Choices are `[name, CSS colour]` pairs; `SharedUI.cardColors` is the shared default palette used by `createColorPicker`. Colour pickers toggle closed when their trigger is used again and size to their contents. `createFilterButton` uses the standard filter icon, caption and container-driven compaction. `createConfirmAction(trigger,{message,label,onConfirm})` supplies an anchored keyboard-accessible confirmation with Cancel first. Apps explicitly bind its `open` method and retain the original action's domain handler.
+
+Controller Boolean controls keep their native checkbox and form/change semantics, expose On/Off in the property value column, and use the inverted pressed surface. Context docks cap command width at 832 px and one parent owns the fit of intrinsic nested groups, including groups moved from another container.
+
+For before/after text, use one unified diff inside a closed `details.ui-section`: `div.ui-prose > pre.ui-mono > code`. Keep unchanged context, prefix removed lines with `-` and added lines with `+`, and escape source text. Optional `span.ui-color` uses `--ui-color:var(--ui-error)` for removed lines and `var(--ui-success)` for added lines. Preserve the original reviewed text independently of this display.
