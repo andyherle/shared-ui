@@ -922,7 +922,7 @@ Controller Boolean controls keep their native checkbox and form/change semantics
 
 For before/after text, use one unified diff inside a closed `details.ui-section`: `div.ui-prose > pre.ui-mono > code`. Keep unchanged context, prefix removed lines with `-` and added lines with `+`, and escape source text. Optional `span.ui-color` uses `--ui-color:var(--ui-error)` for removed lines and `var(--ui-success)` for added lines. Preserve the original reviewed text independently of this display.
 
-Swatch panels also accept `groups:[{label:'Default',choices:[[name,value],…]},…]`. `setGroups` changes named sections; `setChoices` returns to a flat grid. `buttons` remains a flattened list and `setValue`/`onChange` keep the same values. `cardColorGroups` groups the shared palette as Default, Approval and Everyday; Canvas uses it directly. Empty grid slots stay reserved so short groups retain small squares. Anchored confirmations and colour panels adopt the trigger's native dialog when opened, preserving modal keyboard focus and accessibility.
+Swatch panels also accept `groups:[{label:'Default',choices:[[name,value],…]},…]`. `setGroups` changes named sections; `setChoices` returns to a flat grid. `buttons` remains a flattened list and `setValue`/`onChange` keep the same values. `cardColorGroups` combines default/approval choices, followed by ten pastels. Groups share equal, button-sized columns; pickers hide their headings and use the compact value-column schema. Anchored confirmations and colour panels adopt the trigger's native dialog when opened, preserving modal keyboard focus and accessibility.
 
 
 ## Collection filters
