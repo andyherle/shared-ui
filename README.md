@@ -834,7 +834,7 @@ shared action fitting. The toolbar retains its intrinsic width within the dock
 bounds. Context tools and zoom use 80% opacity while idle on hover-capable
 pointers, returning to full opacity on hover or keyboard focus.
 Touch controls remain fully opaque. Narrow containers center zoom above the command row when the two cannot
-coexist. The dock allows 8 px side padding (respecting safe areas) and keeps a
+coexist. The dock allows 16 px side padding (respecting safe areas) and keeps a
 6 px separation from right-aligned zoom so commands can use the available width. No controls are cloned. Call
 `refresh()` after visibility changes and `dispose()` to restore owned nodes and
 release observers/listeners. `createZoomFeedback` exposes `.element` and defaults
@@ -918,7 +918,7 @@ The same loopback fixture server exposes `/review`: run its review checks for 28
 
 `createColorPanel({root, choices, multiple, value, onChange})` renders a responsive native swatch grid; `setChoices` updates available colours and `setValue` updates selection without app paint. Choices are `[name, CSS colour]` pairs; `SharedUI.cardColors` is the shared default palette used by `createColorPicker`. Colour pickers toggle closed when their trigger is used again and size to their contents. `createFilterButton` uses the standard filter icon, caption and container-driven compaction. `createConfirmAction(trigger,{message,label,onConfirm})` supplies an anchored keyboard-accessible confirmation with Cancel first. Apps explicitly bind its `open` method and retain the original action's domain handler.
 
-Controller Boolean controls keep their native checkbox and form/change semantics, expose On/Off in the property value column, and use the inverted pressed surface. Context docks cap command width at 832 px and one parent owns the fit of intrinsic nested groups, including groups moved from another container.
+Controller Boolean controls keep their native checkbox and form/change semantics, expose On/Off in the property value column, and use the inverted pressed surface. Context docks cap command width at 1200 px and one parent owns the fit of intrinsic nested groups, including groups moved from another container.
 
 For before/after text, use one unified diff inside a closed `details.ui-section`: `div.ui-prose > pre.ui-mono > code`. Keep unchanged context, prefix removed lines with `-` and added lines with `+`, and escape source text. Optional `span.ui-color` uses `--ui-color:var(--ui-error)` for removed lines and `var(--ui-success)` for added lines. Preserve the original reviewed text independently of this display.
 
@@ -937,3 +937,5 @@ Use the same native form for tables, galleries, lists and search results. Put th
 `SharedUI.createTableToolbar(table, container, {sprite,search:true,sorting:true,onChange})` provides Search rows, a result count and one native Table options menu. Column visibility and Reset view stay inside that menu. It filters existing native rows without replacing them; disable `search`/`sorting` when the app searches/sorts its complete server dataset. `dispose()` releases listeners and restores the original rows. The Spreadsheet scan catalogue uses this toolbar without helper text or a sample caption.
 
 `createTableSort` defaults to the first column ascending. Successive clicks choose ascending, descending, then the configured default column/direction. Options `defaultColumn`, `defaultDirection`, and `cycle` preserve that behavior across native server navigation; its `cycle` getter is bounded to 0/1/2 and `reset()` restores the default. Ledger explicitly keeps its date-descending default. `createColumnManager` offers `renderControls:false` for authored menus and `setVisible(id,visible)`; its default controls use compact native `.ui-check` labels. Column reset notifies resize owners once, retaining original table cells and their listeners.
+
+Context toolbars accept an existing `status` node: `createContextToolbar(toolbar,{container,zoom,status})` places it in a separate shared context box centered above commands. Its text never consumes command width; hide the node when no selection is active. Disposal restores the original node. Wide command rows may use up to 1200 px within symmetric zoom clearance and safe margins. Colour pickers use separator-only palette groups (`createColorPanel` also accepts `headings:false`) and compact property rows for Custom colour and Hex.

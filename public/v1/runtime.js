@@ -307,31 +307,35 @@
     refresh();return {element:root,slots:{rating,actions,tags},refresh,addAction(action){if(disposed)throw new Error('Review controls disposed');adopt(action);actions.append(action);refresh();return action;},dispose(){if(disposed)return;disposed=true;api.releaseActions?.(root);for(const {node,values}of records)attributes.forEach((name,index)=>values[index]===null?node.removeAttribute(name):node.setAttribute(name,values[index]));}};
   }
   // A container owns the coordinate space; the existing native controls stay intact.
-  function createContextToolbar(toolbar,{container=toolbar.ownerDocument.body,zoom=null}={}){
+  function createContextToolbar(toolbar,{container=toolbar.ownerDocument.body,zoom=null,status=null}={}){
     const doc=toolbar.ownerDocument,view=doc.defaultView,host=doc.createElement('div');
     const original={parent:toolbar.parentNode,next:toolbar.nextSibling,style:toolbar.getAttribute('style')};
+    const previousStatus=status&&{parent:status.parentNode,next:status.nextSibling,style:status.getAttribute('style')};
     const previousZoom=zoom&&{parent:zoom.parentNode,next:zoom.nextSibling,style:zoom.getAttribute('style')};
     host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
-    host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
+    host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
     toolbar.classList.add('ui-toolbar','ui-actions','ui-inline');toolbar.dataset.uiLayout='bar';
     Object.assign(toolbar.style,{position:'static',inset:'auto',translate:'none',gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto'});
     host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',width:'max-content',maxWidth:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
+    if(status){const box=doc.createElement('div');box.className='ui-toolbar ui-inline';box.dataset.uiContextStatus='';Object.assign(box.style,{gridColumn:'1 / -1',gridRow:'1',justifySelf:'center',whiteSpace:'nowrap',maxWidth:'100%',pointerEvents:'auto'});box.append(status);host.append(box);}
     container.append(host);
     let disposed=false;
     const refresh=()=>{
       if(disposed||doc.hidden)return;
       const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+6:0;
       const stacked=side>0&&width-2*side<Math.min(240,toolbar.scrollWidth||240);
-      toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow=stacked?'2':'1';
-      toolbar.style.maxWidth=Math.max(0,Math.min(832,stacked?width:width-2*side))+'px';
-      if(zoom){zoom.style.maxWidth=width+'px';zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow='1';zoom.style.justifySelf=stacked?'center':'end';}
+      const row=status&&!status.hidden&&!toolbar.hidden?2:1;
+      if(status)status.parentNode.hidden=toolbar.hidden||status.hidden;
+      toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow=String(row+(stacked?1:0));
+      toolbar.style.maxWidth=Math.max(0,Math.min(1200,stacked?width:width-2*side))+'px';
+      if(zoom){zoom.style.maxWidth=width+'px';zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow=String(row);zoom.style.justifySelf=stacked?'center':'end';}
       view.SharedUI?.observeActions?.(toolbar);
     };
     const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;
     observer?.observe(container);observer?.observe(host);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
     view.addEventListener('resize',refresh);doc.addEventListener('visibilitychange',refresh);
     const restore=(node,record)=>{if(!node||!record)return;record.style===null?node.removeAttribute('style'):node.setAttribute('style',record.style);if(record.parent)record.parent.insertBefore(node,record.next?.parentNode===record.parent?record.next:null);else node.remove();};
-    const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);restore(toolbar,original);restore(zoom,previousZoom);host.remove();}};
+    const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);restore(toolbar,original);restore(zoom,previousZoom);restore(status,previousStatus);host.remove();}};
     view.addEventListener('pagehide',api.dispose);refresh();return api;
   }
   function blocksViewportTools(overlay){
@@ -997,12 +1001,12 @@
     {label:'Approval',choices:UI.cardColors.slice(1,4)},
     {label:'Everyday',choices:UI.cardColors.slice(5)}
   ]);
-  UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,groups=null,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
+  UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,groups=null,headings=true,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
     const element=root||document.createElement('div'),buttons=[],listeners=[];let values=new Set();
     element.setAttribute('role','group');element.setAttribute('aria-label',label);
     const setValue=next=>{values=new Set((Array.isArray(next)?next:next==null?[]:[next]).map(String));for(const b of buttons)b.setAttribute('aria-pressed',String(values.has(b.dataset.uiColorValue)));};
     function render(sections){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;element.replaceChildren();element.classList.remove('ui-stack','ui-color-palette');element.classList.add(sections?'ui-stack':'ui-color-palette');
-      for(const section of sections||[{choices}]){let grid=element;if(sections){const group=document.createElement('section'),heading=document.createElement('h3');group.className='ui-stack';heading.className='ui-meta';heading.textContent=section.label;grid=document.createElement('div');grid.className='ui-color-palette';grid.setAttribute('role','group');grid.setAttribute('aria-label',section.label);group.append(heading,grid);element.append(group);}
+      for(const section of sections||[{choices}]){let grid=element;if(sections){const group=document.createElement('section'),heading=document.createElement('h3');group.className='ui-stack';heading.className='ui-meta';heading.textContent=section.label;grid=document.createElement('div');grid.className='ui-color-palette';grid.setAttribute('role','group');grid.setAttribute('aria-label',section.label);if(headings)group.append(heading);else if(element.children.length)element.append(document.createElement('hr'));group.append(grid);element.append(group);}
         for(const entry of section.choices){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
           const fill=UI.resolveCardColor(color);b.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);
           const click=()=>{const v=String(color);if(multiple){values.has(v)?values.delete(v):values.add(v);}else values=new Set([v]);setValue([...values]);onChange(multiple?[...values]:v);};b.addEventListener('click',click);listeners.push([b,click]);buttons.push(b);grid.append(b);
@@ -1033,10 +1037,10 @@
     panel.dataset.uiComponent='color-picker';panel.id='ui-colour-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');
     const header=doc.createElement('header'),heading=doc.createElement('h2');heading.className='ui-section-title';heading.id=panel.id+'-title';heading.textContent=title;header.append(heading);panel.setAttribute('aria-labelledby',heading.id);
     const body=doc.createElement('div');body.dataset.uiPopoutBody='';body.className='ui-stack';
-    const palette=UI.createColorPanel({document:doc,label:'Card colours',groups:UI.cardColorGroups,onChange:choose});
+    const palette=UI.createColorPanel({document:doc,label:'Card colours',groups:UI.cardColorGroups,headings:false,onChange:choose});
     const buttons=palette.buttons;body.append(palette.element);
-    const custom=doc.createElement('label');custom.className='ui-field';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');custom.append(caption,input);body.append(custom);
-    const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';hexField.append(hexLabel,hex,apply);body.append(hexField);
+    const custom=doc.createElement('div');custom.className='';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');custom.append(input);body.append(custom);UI.adoptPropertyRow(custom,{name:'Custom colour',control:input});
+    const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';const hexValue=doc.createElement('div');hexValue.className='ui-field';hexValue.append(hex,apply);hexField.className='';hexField.append(hexValue);body.append(hexField);UI.adoptPropertyRow(hexField,{name:'Hex',control:hexValue});UI.adoptAction(apply,{label:'Apply',icon:'check',iconOnly:true});
     const footer=doc.createElement('footer');footer.className='ui-actions ui-fill';const done=doc.createElement('button');done.type='button';done.textContent='Done';footer.append(done);panel.append(header,body,footer);doc.body.append(panel);
     trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded','false');
     let disposed=false,pressedOpen=false;

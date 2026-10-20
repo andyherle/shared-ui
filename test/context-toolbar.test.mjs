@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const mod={exports:{}};vm.runInNewContext(fs.readFileSync(new URL('../src/runtime.js',import.meta.url),'utf8'),{module:mod,URL});
-function fixture(width=1100){
+function fixture(width=1100,withStatus=false){
  const listeners=new Set();let disconnected=false;
  const view={addEventListener:(name,fn)=>listeners.add(fn),removeEventListener:(name,fn)=>listeners.delete(fn),ResizeObserver:class{constructor(fn){this.fn=fn;}observe(){}disconnect(){disconnected=true;}}};
  const doc={hidden:false,defaultView:view,addEventListener:view.addEventListener,removeEventListener:view.removeEventListener};
@@ -17,8 +17,9 @@ function fixture(width=1100){
  }
  doc.createElement=()=>new Node();doc.body=new Node();
  const container=new Node(),toolbar=new Node(400),zoom=new Node(130);container.append(toolbar);container.append(zoom);
- const dock=mod.exports.createContextToolbar(toolbar,{container,zoom});
- return{doc,container,toolbar,zoom,dock,listeners,get disconnected(){return disconnected;}};
+ const status=withStatus?new Node(90):null;if(status)toolbar.append(status);
+ const dock=mod.exports.createContextToolbar(toolbar,{container,zoom,status});
+ return{doc,container,toolbar,zoom,status,dock,listeners,get disconnected(){return disconnected;}};
 }
 test('context commands remain centered with a separate right-hand zoom slot in container coordinates',()=>{
  const f=fixture();assert.equal(f.dock.element.dataset.uiPosition,'container');assert.equal(f.toolbar.style.gridColumn,'2');assert.equal(f.zoom.style.gridColumn,'3');assert.equal(f.zoom.style.justifySelf,'end');assert.equal(f.zoom.style.width,'max-content');assert.equal(f.toolbar.style.maxWidth,'828px');
@@ -40,4 +41,9 @@ test('context tools stay centered and bounded while a container shrinks and grow
  const f=fixture();assert.equal(f.toolbar.style.position,'static');assert.equal(f.toolbar.style.inset,'auto');assert.equal(f.toolbar.classes.has('ui-inline'),true);assert.equal(f.toolbar.style.width,'max-content');assert.equal(f.toolbar.style.justifySelf,'center');
  f.dock.element.width=320;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'320px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridRow,'2');assert.equal(f.zoom.style.justifySelf,'center');
  f.dock.element.width=1100;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'828px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridColumn,'2');assert.equal(f.zoom.style.justifySelf,'end');f.dock.dispose();
+});
+
+test('selection status owns a separate row and restores its original location',()=>{
+ const f=fixture(1800,true);assert.equal(f.toolbar.style.maxWidth,'1200px');assert.equal(f.toolbar.style.gridRow,'2');assert.notEqual(f.status.parentNode,f.toolbar);assert.equal(f.status.parentNode.style.whiteSpace,'nowrap');
+ f.dock.element.width=390;f.dock.refresh();assert.equal(f.toolbar.style.gridRow,'3');assert.equal(f.zoom.style.gridRow,'2');f.toolbar.hidden=true;f.dock.refresh();assert.equal(f.status.parentNode.hidden,true);f.dock.dispose();assert.equal(f.status.parentNode,f.toolbar);
 });
