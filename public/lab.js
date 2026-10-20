@@ -254,6 +254,12 @@ window.SharedUI.createColorWheel({root:document.getElementById('colour-wheel'),m
 
 {const swatches=document.getElementById('swatch-panel-demo');if(swatches){SharedUI.createColorPanel({root:swatches,multiple:true});const toggle=SharedUI.createBooleanControl({label:'Show selected only',variant:'controller'});SharedUI.adoptPropertyRow(document.getElementById('toggle-action-demo'),{name:'Show selected only',control:toggle.element});const action=SharedUI.createFilterButton({sprite:'./v1/icons.svg'});document.getElementById('filter-action-demo').append(action.element);const confirmation=SharedUI.createConfirmAction(action.element,{message:'Clear this sample filter selection?',label:'Clear selection',sprite:'./v1/icons.svg',onConfirm:()=>{}});action.element.addEventListener('click',confirmation.open);}}
 
+{const form=document.getElementById('filter-form-demo');if(form){
+ const rows=[...document.querySelectorAll('#filter-records-demo tr')];
+ const apply=values=>{let count=0;for(const row of rows){row.hidden=Boolean(values.query&&!row.textContent.toLowerCase().includes(values.query.toLowerCase())||values.status&&row.dataset.status!==values.status||values.from&&row.dataset.date<values.from||values.to&&row.dataset.date>values.to);if(!row.hidden)count++;}document.getElementById('filter-count-demo').textContent=`${count} of ${rows.length} records`;};
+ const filters=SharedUI.createFilterMenu(form,{sprite:'./v1/icons.svg',onChange:apply});form.addEventListener('submit',event=>{event.preventDefault();apply(filters.values);});
+}}
+
 /* Generic synthetic composition fixture. Uses the same native factory as consumers. */
 (() => {
   'use strict';

@@ -355,24 +355,32 @@
     ['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8']
   ]);
   // Native swatches share one container-sized grid in pickers, filters and inspectors.
-  UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
-    const element=root||document.createElement('div'),buttons=[],listeners=[];let values=new Set(),items=[];
-    element.classList.add('ui-color-palette');element.setAttribute('role','group');element.setAttribute('aria-label',label);
+  UI.cardColorGroups=Object.freeze([
+    {label:'Default',choices:[UI.cardColors[0],UI.cardColors[4]]},
+    {label:'Approval',choices:UI.cardColors.slice(1,4)},
+    {label:'Everyday',choices:UI.cardColors.slice(5)}
+  ]);
+  UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,groups=null,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
+    const element=root||document.createElement('div'),buttons=[],listeners=[];let values=new Set();
+    element.setAttribute('role','group');element.setAttribute('aria-label',label);
     const setValue=next=>{values=new Set((Array.isArray(next)?next:next==null?[]:[next]).map(String));for(const b of buttons)b.setAttribute('aria-pressed',String(values.has(b.dataset.uiColorValue)));};
-    function setChoices(next){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;element.replaceChildren();items=next;
-      for(const entry of items){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
-        const fill=UI.resolveCardColor(color);b.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);
-        const click=()=>{const v=String(color);if(multiple){values.has(v)?values.delete(v):values.add(v);}else values=new Set([v]);setValue([...values]);onChange(multiple?[...values]:v);};b.addEventListener('click',click);listeners.push([b,click]);buttons.push(b);element.append(b);
+    function render(sections){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;element.replaceChildren();element.classList.remove('ui-stack','ui-color-palette');element.classList.add(sections?'ui-stack':'ui-color-palette');
+      for(const section of sections||[{choices}]){let grid=element;if(sections){const group=document.createElement('section'),heading=document.createElement('h3');group.className='ui-stack';heading.className='ui-meta';heading.textContent=section.label;grid=document.createElement('div');grid.className='ui-color-palette';grid.setAttribute('role','group');grid.setAttribute('aria-label',section.label);group.append(heading,grid);element.append(group);}
+        for(const entry of section.choices){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
+          const fill=UI.resolveCardColor(color);b.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);
+          const click=()=>{const v=String(color);if(multiple){values.has(v)?values.delete(v):values.add(v);}else values=new Set([v]);setValue([...values]);onChange(multiple?[...values]:v);};b.addEventListener('click',click);listeners.push([b,click]);buttons.push(b);grid.append(b);
+        }
       }setValue([...values]);
     }
-    setChoices(choices);setValue(value);return {element,buttons,setValue,setChoices,dispose(){for(const [b,fn]of listeners)b.removeEventListener('click',fn);}};
+    const setChoices=next=>{choices=next;render(null);},setGroups=next=>render(next);
+    render(groups);setValue(value);return {element,buttons,setValue,setChoices,setGroups,dispose(){for(const [b,fn]of listeners)b.removeEventListener('click',fn);}};
   };
   UI.createConfirmAction=(trigger,{label='Confirm',message='Continue?',onConfirm=()=>{},sprite}={})=>{
     const doc=trigger.ownerDocument,view=doc.defaultView,panel=doc.createElement('div');panel.className='ui-panel ui-pad ui-stack';panel.popover='auto';panel.id='ui-confirm-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');panel.setAttribute('aria-label',message);
     Object.assign(panel.style,{position:'fixed',margin:'0',inset:'auto',width:'min(320px,calc(100vw - 24px))'});
     const text=doc.createElement('p');text.textContent=message;const status=doc.createElement('p');status.className='ui-status';status.setAttribute('role','status');const actions=doc.createElement('div');actions.className='ui-actions ui-fill';const cancel=doc.createElement('button'),confirm=doc.createElement('button');cancel.type=confirm.type='button';UI.adoptAction(cancel,{label:'Cancel',icon:'close',sprite});UI.adoptAction(confirm,{label,icon:'check',sprite});confirm.dataset.uiVariant='danger';actions.append(cancel,confirm);panel.append(text,status,actions);doc.body.append(panel);let pressedOpen=false;
     function close(){if(panel.matches(':popover-open'))panel.hidePopover();if(trigger.isConnected)trigger.focus({preventScroll:true});}
-    function open(){if(trigger.disabled||!trigger.isConnected)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;return close();}status.textContent='';panel.showPopover();position();cancel.focus();}
+    function open(){if(trigger.disabled||!trigger.isConnected)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;return close();}status.textContent='';const owner=trigger.closest('dialog')||doc.body;if(panel.parentElement!==owner)owner.append(panel);panel.showPopover();position();cancel.focus();}
     function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect(),p=panel.getBoundingClientRect();Object.assign(panel.style,{left:Math.max(12,Math.min(r.left,view.innerWidth-p.width-12))+'px',top:Math.max(12,Math.min(r.bottom+6,view.innerHeight-p.height-12))+'px'});}
     const press=()=>{pressedOpen=panel.matches(':popover-open');},toggle=()=>trigger.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
     const accept=async()=>{confirm.disabled=cancel.disabled=true;try{await onConfirm();close();}catch(error){status.textContent=error.message||'Action failed';status.dataset.state='error';}finally{confirm.disabled=cancel.disabled=false;}};
@@ -388,7 +396,7 @@
     panel.dataset.uiComponent='color-picker';panel.id='ui-colour-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');
     const header=doc.createElement('header'),heading=doc.createElement('h2');heading.className='ui-section-title';heading.id=panel.id+'-title';heading.textContent=title;header.append(heading);panel.setAttribute('aria-labelledby',heading.id);
     const body=doc.createElement('div');body.dataset.uiPopoutBody='';body.className='ui-stack';
-    const palette=UI.createColorPanel({document:doc,label:'Card colours',choices:UI.cardColors,onChange:choose});
+    const palette=UI.createColorPanel({document:doc,label:'Card colours',groups:UI.cardColorGroups,onChange:choose});
     const buttons=palette.buttons;body.append(palette.element);
     const custom=doc.createElement('label');custom.className='ui-field';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');custom.append(caption,input);body.append(custom);
     const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';hexField.append(hexLabel,hex,apply);body.append(hexField);
@@ -399,7 +407,7 @@
     function setValue(next,{mixed=false}={}){if(next!==null)UI.resolveCardColor(next);value=next?.toLowerCase()??null;for(const button of buttons){const pressed=String(!mixed&&button.dataset.uiColorValue===value);if(button.getAttribute('aria-pressed')!==pressed)button.setAttribute('aria-pressed',pressed);}if(doc.activeElement!==input&&input.value!==(value||'#ffffff'))input.value=value&&value!=='transparent'?value:'#ffffff';if(doc.activeElement!==hex)hex.value=value&&value!=='transparent'?value:'#ffffff';}
     function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect();if(placement==='top')panel.style.maxHeight=Math.max(100,r.top-20)+'px';const p=panel.getBoundingClientRect();if(placement==='top'){panel.style.left=Math.max(12,Math.min(r.left+r.width/2-p.width/2,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,r.top-p.height-8)+'px';return;}const right=r.right+10,left=right+p.width<=view.innerWidth-12?right:r.left-p.width-10;panel.style.left=Math.max(12,Math.min(left,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,Math.min(r.top,view.innerHeight-p.height-12))+'px';}
     function close(){if(panel.matches(':popover-open'))panel.hidePopover();}
-    function open(){if(disposed||trigger.disabled)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;close();return;}panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
+    function open(){if(disposed||trigger.disabled)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;close();return;}const owner=trigger.closest('dialog')||doc.body;if(panel.parentElement!==owner)owner.append(panel);panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
     function choose(next){setValue(next);close();onChange(next);trigger.focus({preventScroll:true});}
     listen(trigger,'pointerdown',()=>{pressedOpen=panel.matches(':popover-open');});
     listen(panel,'keydown',event=>event.stopPropagation());

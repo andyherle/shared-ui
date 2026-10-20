@@ -310,7 +310,7 @@
 }
     .ui-color-picker { height:auto; position:fixed; inset:auto; margin:0; inline-size:min(320px,calc(100vw - 24px)); max-block-size:calc(100dvh - 24px); box-shadow:var(--shadow-raised); }
     .ui-color-picker:popover-open { display:grid; }
-    .ui-color-palette { display:grid; grid-template-columns:repeat(auto-fit,minmax(30px,1fr)); gap:6px; }
+    .ui-color-palette { display:grid; grid-template-columns:repeat(auto-fill,minmax(30px,1fr)); gap:6px; }
     .ui-color-palette > .ui-swatch { min-inline-size:0; min-block-size:var(--ui-control-height); padding:3px; }
     .ui-color-palette > .ui-swatch::before { inline-size:100%; block-size:auto; aspect-ratio:1; }
     .ui-swatch[data-ui-color-value=transparent]::before { background:repeating-conic-gradient(var(--ui-line-strong) 0 25%,#0000 0 50%) 50% / 10px 10px; }
