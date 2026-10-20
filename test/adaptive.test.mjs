@@ -124,3 +124,11 @@ test('caption priority is opt-in, compacts intuitive navigation first and restor
  f.resize(160);assert.equal(actions.hasAttribute('data-ui-compact'),true);f.resize(600);
  for(const node of [prev,actions,info,next])assert.equal(node.hasAttribute('data-ui-compact'),false);
 });
+
+test('an intrinsic grid dock uses its bounded slot to restore captions after growing',()=>{
+ const f=fixture(),dock=new f.Node('div','ui-context-dock',400);dock.css={display:'grid',paddingLeft:'0px',paddingRight:'0px',borderLeftWidth:'0px',borderRightWidth:'0px'};
+ f.row.className='ui-actions ui-inline';f.row.clientWidth=140;f.row.css.maxWidth='180px';dock.append(f.row);
+ const a=f.action('Create text'),b=f.action('Add images');f.row.append(a,b);f.UI.observeActions(f.row);f.flush();assert.equal(a.hasAttribute('data-ui-compact'),true);
+ f.row.css.maxWidth='400px';f.UI.observeActions(f.row);f.flush();assert.equal(a.hasAttribute('data-ui-compact'),false);assert.equal(b.hasAttribute('data-ui-compact'),false);
+ f.row.css.maxWidth='180px';f.UI.observeActions(f.row);f.flush();assert.equal(a.hasAttribute('data-ui-compact'),true);
+});

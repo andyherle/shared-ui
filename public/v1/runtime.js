@@ -297,8 +297,8 @@
     const previousZoom=zoom&&{parent:zoom.parentNode,next:zoom.nextSibling,style:zoom.getAttribute('style')};
     host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
     host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto 12px max(12px, env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
-    toolbar.classList.add('ui-toolbar','ui-actions');toolbar.dataset.uiLayout='bar';
-    Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',margin:'0',pointerEvents:'auto'});
+    toolbar.classList.add('ui-toolbar','ui-actions','ui-inline');toolbar.dataset.uiLayout='bar';
+    Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto'});
     host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
     container.append(host);
     let disposed=false;
@@ -312,7 +312,7 @@
       view.SharedUI?.observeActions?.(toolbar);
     };
     const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;
-    observer?.observe(container);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
+    observer?.observe(container);observer?.observe(host);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
     view.addEventListener('resize',refresh);doc.addEventListener('visibilitychange',refresh);
     const restore=(node,record)=>{if(!node||!record)return;record.style===null?node.removeAttribute('style'):node.setAttribute('style',record.style);if(record.parent)record.parent.insertBefore(node,record.next?.parentNode===record.parent?record.next:null);else node.remove();};
     const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);restore(toolbar,original);restore(zoom,previousZoom);host.remove();}};
@@ -1439,7 +1439,12 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
         if(targetCSS.display.includes('flex')&&targetCSS.flexDirection!=='column'){
           const siblings=children(item.target).filter(node=>node!==group&&!['absolute','fixed'].includes(style(node).position));
           available-=siblings.reduce((sum,node)=>sum+width(node,false,new Set()),0)+number(targetCSS.columnGap)*siblings.length;
-        }else available=Math.min(available,group.clientWidth||available);
+        }else{
+          // An intrinsic dock may still be icon-sized after growing. Its explicit
+          // pixel cap is the available slot; measuring its compact width locks it.
+          const cap=css.maxWidth?.endsWith('px')?number(css.maxWidth):group.clientWidth;
+          available=Math.min(available,cap||available);
+        }
         available-=margins(css)+sides(css);
       }
       const collapsed=new Set(),limit=Math.max(0,available-2);
@@ -2130,6 +2135,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     const issue=(node,code,detail,severity='error')=>issues.push({code,name:name(node),detail,severity});
     for(const node of items){
       if(!name(node)||!node.getAttribute('aria-label')&&!node.textContent.trim()&&!node.querySelector('input[aria-label],select[aria-label]'))issue(node,'missing-name','Give the native action a complete accessible name.');
+      if(!node.matches('.ui-action')&&node.matches('button,a,summary')&&node.closest('.ui-actions,.ui-toolbar')&&node.querySelector(':scope > svg'))issue(node,'unadopted-action','Register the native icon command with SharedUI.adoptAction before fitting its group.');
       if(node.matches('.ui-action')){
         if(!node.matches('button,a,summary,label'))issue(node,'non-native-action','Use a native button, link, summary or labeled form control.');
         if(!node.querySelector(':scope > .ui-label'))issue(node,'missing-label','Adopt the action with the shared label helper.');

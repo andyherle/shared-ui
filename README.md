@@ -828,8 +828,12 @@ Open native menus observe their panel size so late field/font reflow remains ins
 `SharedUI.createContextToolbar(toolbar,{container:document.body,zoom:feedback.element})`
 keeps the existing native action row centered in its container and the zoom group
 right aligned with safe-area padding. A body container uses viewport coordinates;
-a positioned element uses its own bounds. Captions compact together through the
-normal shared action fitting. Narrow containers use a second zoom row when a
+a positioned element uses its own bounds. Register every native action with `adoptAction` (including actions in nested
+`.ui-actions.ui-inline` groups); captions compact together through the normal
+shared action fitting. The toolbar retains its intrinsic width within the dock
+bounds. Context tools and zoom use 80% opacity while idle on hover-capable
+pointers, returning to full opacity on hover or keyboard focus.
+Touch controls remain fully opaque. Narrow containers use a second zoom row when a
 centered command row and zoom cannot coexist. No controls are cloned. Call
 `refresh()` after visibility changes and `dispose()` to restore owned nodes and
 release observers/listeners. `createZoomFeedback` exposes `.element` and defaults
@@ -894,3 +898,7 @@ Search bars use the existing native `.ui-field.ui-search` pattern with a decorat
 Native menus evaluate the original composed click path when dismissing outside
 clicks. Removing a selected tag or colour during its click does not close its
 containing menu; a real outside click and Escape retain normal dismissal.
+
+Consumer browser checks should run `SharedUI.auditControls(workspace)` after toolbar reflow. It reports native icon commands missing `adoptAction` registration as `unadopted-action`, alongside height drift and overlapping controls. Test nested context groups in narrow and wide containers; a painted button alone does not satisfy the shared action contract.
+
+Run `node test/serve-context-toolbar.mjs` and open its loopback URL for the real browser contract fixture. **Run toolbar checks** exercises both packs through repeated 320/560/1000 px resizing, checks nested native actions, constant control height, centered bounds, zoom separation and keyboard visibility, and proves the audit rejects an unregistered icon command. It uses synthetic controls only.

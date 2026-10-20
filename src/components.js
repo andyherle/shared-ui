@@ -847,7 +847,12 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
         if(targetCSS.display.includes('flex')&&targetCSS.flexDirection!=='column'){
           const siblings=children(item.target).filter(node=>node!==group&&!['absolute','fixed'].includes(style(node).position));
           available-=siblings.reduce((sum,node)=>sum+width(node,false,new Set()),0)+number(targetCSS.columnGap)*siblings.length;
-        }else available=Math.min(available,group.clientWidth||available);
+        }else{
+          // An intrinsic dock may still be icon-sized after growing. Its explicit
+          // pixel cap is the available slot; measuring its compact width locks it.
+          const cap=css.maxWidth?.endsWith('px')?number(css.maxWidth):group.clientWidth;
+          available=Math.min(available,cap||available);
+        }
         available-=margins(css)+sides(css);
       }
       const collapsed=new Set(),limit=Math.max(0,available-2);

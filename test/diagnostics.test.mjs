@@ -22,3 +22,11 @@ test('state comparison detects neighbor movement, resizing, caption changes and 
  save.rect.width=70;neighbor.rect.x=76;neighbor.attrs.set('data-ui-compact','');assert.equal(f.UI.compareLayout(before).length,1);
  neighbor.isConnected=false;assert.equal(f.UI.compareLayout(before)[0].code,'control-disappeared');
 });
+
+test('consumer audit catches unregistered native icon commands even when they look like shared controls',()=>{
+ const f=fixture(),button=f.action('Text',0),matches=button.matches,query=button.querySelector;
+ button.matches=selector=>selector==='.ui-action'?false:selector==='button,a,summary'?true:matches(selector);
+ button.closest=selector=>selector==='.ui-actions,.ui-toolbar'?{}:null;button.querySelector=selector=>selector===':scope > svg'?{matches:()=>true}:query(selector);
+ assert.ok(f.UI.auditControls(f.scope).issues.some(issue=>issue.code==='unadopted-action'));
+ button.matches=matches;assert.equal(f.UI.auditControls(f.scope).issues.length,0);
+});

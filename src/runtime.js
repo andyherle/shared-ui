@@ -297,8 +297,8 @@
     const previousZoom=zoom&&{parent:zoom.parentNode,next:zoom.nextSibling,style:zoom.getAttribute('style')};
     host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
     host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto 12px max(12px, env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
-    toolbar.classList.add('ui-toolbar','ui-actions');toolbar.dataset.uiLayout='bar';
-    Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',margin:'0',pointerEvents:'auto'});
+    toolbar.classList.add('ui-toolbar','ui-actions','ui-inline');toolbar.dataset.uiLayout='bar';
+    Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto'});
     host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
     container.append(host);
     let disposed=false;
@@ -312,7 +312,7 @@
       view.SharedUI?.observeActions?.(toolbar);
     };
     const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;
-    observer?.observe(container);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
+    observer?.observe(container);observer?.observe(host);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
     view.addEventListener('resize',refresh);doc.addEventListener('visibilitychange',refresh);
     const restore=(node,record)=>{if(!node||!record)return;record.style===null?node.removeAttribute('style'):node.setAttribute('style',record.style);if(record.parent)record.parent.insertBefore(node,record.next?.parentNode===record.parent?record.next:null);else node.remove();};
     const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);restore(toolbar,original);restore(zoom,previousZoom);host.remove();}};

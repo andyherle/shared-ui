@@ -344,6 +344,7 @@
     .ui-card-container.ui-inline>.ui-item { flex:1; border:0; background:#0000; min-inline-size:0; }
     .ui-notice { padding:12px 14px; overflow-wrap:anywhere; }
     .ui-panel-resize { background:var(--ui-line-strong); background-clip:content-box; }
+    @media (hover) { .ui-context-dock>*,.ui-zoom-feedback { &:not(:hover,:focus-within) { opacity:.8; } } }
     .ui-zoom-feedback { position:fixed; inset:auto max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) auto; z-index:130; }
     .ui-success { color:var(--ui-good); }
     .ui-error { color:var(--ui-bad); }

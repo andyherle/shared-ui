@@ -1,0 +1,29 @@
+<!doctype html><html lang="en" data-ui="postvisual" data-ui-density="compact"><meta charset="utf-8"><title>Shared context toolbar regression</title><link rel="stylesheet" href="/v1/styles.css"><script src="/v1/runtime.js"></script><style>@layer app {main{padding:16px}.sample{position:relative;height:180px;width:320px;border:1px solid var(--ui-line);margin-block:12px}pre{white-space:pre-wrap}}</style><main><h1>Context toolbar contract</h1><button id="run">Run toolbar checks</button><pre id="result" role="status">Both packs; 320, 560 and 1000 px containers; nested commands; native focus.</pre><div id="fixtures"></div></main><script>
+const UI=SharedUI,result=document.querySelector('#result'),fixtures=document.querySelector('#fixtures');
+const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+const assert=(value,message)=>{if(!value)throw Error(message)};
+function sample(pack){
+ const section=document.createElement('section');section.dataset.ui=pack;section.dataset.uiDensity='compact';section.innerHTML=`<h2>${pack}</h2><div class="sample"><nav aria-label="${pack} context commands"><div class="ui-actions ui-inline"><button>Text</button><button>Images</button><button>StaticRef</button><button>Column</button></div></nav><div class="ui-toolbar ui-actions ui-inline" aria-label="${pack} zoom"><button>Zoom out</button><button>100%</button><button>Zoom in</button></div></div>`;fixtures.append(section);
+ const container=section.querySelector('.sample'),toolbar=section.querySelector('nav'),zoom=container.lastElementChild;
+ [...toolbar.querySelectorAll('button')].forEach((button,i)=>UI.adoptAction(button,{icon:['edit','image','search','columns'][i],sprite:'/v1/icons.svg'}));
+ [...zoom.children].forEach((button,i)=>UI.adoptAction(button,{...(i===1?{}:{icon:i===0?'minus':'plus'}),iconOnly:i!==1,sprite:'/v1/icons.svg'}));zoom.children[1].dataset.uiLabel='always';
+ const dock=UI.createContextToolbar(toolbar,{container,zoom});return{container,toolbar,zoom,dock,section};
+}
+document.querySelector('#run').onclick=async()=>{
+ result.textContent='RUNNING';document.querySelector('#run').disabled=true;fixtures.replaceChildren();
+ try{const lines=[];for(const pack of ['postvisual','personal']){const s=sample(pack);for(const width of [320,560,1000,320,1000]){
+ s.container.style.width=width+'px';s.dock.refresh();await frame();await frame();
+ const t=s.toolbar.getBoundingClientRect(),z=s.zoom.getBoundingClientRect(),c=s.container.getBoundingClientRect();
+ assert(t.left>=c.left&&t.right<=c.right,pack+' toolbar outside container at '+width);
+ assert(t.right<=z.left||t.bottom<=z.top,pack+' toolbar overlaps zoom at '+width);
+ assert(Math.abs((t.left+t.right)/2-(c.left+c.right)/2)<1,pack+' toolbar not centered at '+width);
+ for(const b of s.toolbar.querySelectorAll('button')){assert(Math.abs(b.getBoundingClientRect().height-30)<=1,pack+' caption wrapped at '+width);assert(b.hasAttribute('data-ui-compact')===(width<1000),pack+' captions failed to compact/restore at '+width);}
+ assert(!UI.auditControls(s.container).issues.length,JSON.stringify(UI.auditControls(s.container).issues));
+ s.toolbar.querySelector('button').focus();assert(getComputedStyle(s.toolbar).opacity==='1','Keyboard focus must restore full opacity');s.toolbar.querySelector('button').blur();
+ lines.push('PASS '+pack+' '+width+'px: bounded, centered, no overlap or wrapped captions, shared action audit, keyboard visibility');
+ }s.container.style.width='min(100%,1000px)';s.dock.refresh();}
+ const raw=document.createElement('button');raw.innerHTML='<svg class="ui-icon"></svg><span class="ui-label">Unregistered</span>';const group=document.createElement('div');group.className='ui-actions';group.append(raw);fixtures.append(group);await frame();assert(UI.auditControls(group).issues.some(i=>i.code==='unadopted-action'),'Audit missed unregistered native icon button');group.remove();
+ result.textContent=lines.join('\n')+'\nPASS negative fixture: unregistered native icon action rejected\nALL TOOLBAR CHECKS PASSED';
+ }catch(error){result.textContent='FAILED '+error.stack;}finally{document.querySelector('#run').disabled=false;}
+};
+</script></html>

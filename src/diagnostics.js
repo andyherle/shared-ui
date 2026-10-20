@@ -19,6 +19,7 @@
     const issue=(node,code,detail,severity='error')=>issues.push({code,name:name(node),detail,severity});
     for(const node of items){
       if(!name(node)||!node.getAttribute('aria-label')&&!node.textContent.trim()&&!node.querySelector('input[aria-label],select[aria-label]'))issue(node,'missing-name','Give the native action a complete accessible name.');
+      if(!node.matches('.ui-action')&&node.matches('button,a,summary')&&node.closest('.ui-actions,.ui-toolbar')&&node.querySelector(':scope > svg'))issue(node,'unadopted-action','Register the native icon command with SharedUI.adoptAction before fitting its group.');
       if(node.matches('.ui-action')){
         if(!node.matches('button,a,summary,label'))issue(node,'non-native-action','Use a native button, link, summary or labeled form control.');
         if(!node.querySelector(':scope > .ui-label'))issue(node,'missing-label','Adopt the action with the shared label helper.');
