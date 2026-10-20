@@ -945,3 +945,5 @@ The card palette places neutral/transparent first, then approval colours in one 
 Swatches cap both dimensions at the shared control height; extra container width never enlarges colour targets. The panel retains its full container width with consistent gaps and centered rows.
 
 Colour pickers inherit their trigger sprite for inline Apply actions, including nested application routes. Callers may supply `sprite` explicitly.
+
+Inside a floating context dock, authored `details.ui-overflow` groups use the shared anchored native menu contract. Opening More never adds an in-flow row or changes dock height; secondary actions keep complete captions in a vertical menu. Existing nodes, handlers, values and original composition are retained and restored on disposal.
