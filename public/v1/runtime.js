@@ -1002,7 +1002,7 @@
   ]);
   UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,groups=null,headings=true,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
     const element=root||document.createElement('div'),buttons=[],listeners=[],grids=[];let values=new Set(),largest=choices.length;
-    const layout=()=>{const width=element.getBoundingClientRect().width;if(!width)return;const view=document.defaultView,min=Math.max(30,parseFloat(view.getComputedStyle(element).getPropertyValue('--ui-control-height'))||30),available=Math.max(1,Math.floor((width+6)/(min+6))),limit=Math.min(5,available);let columns=limit;for(let n=limit;n>=Math.ceil(limit/2);n--)if(largest%n===0){columns=n;break;}for(const grid of grids)grid.style.gridTemplateColumns=`repeat(${columns},minmax(0,1fr))`;};
+    const layout=()=>{const width=element.getBoundingClientRect().width;if(!width)return;const view=document.defaultView,min=Math.max(30,parseFloat(view.getComputedStyle(element).getPropertyValue('--ui-control-height'))||30),available=Math.max(1,Math.floor((width+6)/(min+6))),limit=Math.min(5,available);let columns=limit;for(let n=limit;n>=Math.ceil(limit/2);n--)if(largest%n===0){columns=n;break;}for(const grid of grids)grid.style.gridTemplateColumns=`repeat(${columns},minmax(0,var(--ui-control-height)))`;};
     const observer=document.defaultView.ResizeObserver?new document.defaultView.ResizeObserver(layout):null;observer?.observe(element);
     element.setAttribute('role','group');element.setAttribute('aria-label',label);
     const setValue=next=>{values=new Set((Array.isArray(next)?next:next==null?[]:[next]).map(String));for(const b of buttons)b.setAttribute('aria-pressed',String(values.has(b.dataset.uiColorValue)));};

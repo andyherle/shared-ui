@@ -941,3 +941,5 @@ Use the same native form for tables, galleries, lists and search results. Put th
 Context toolbars accept an existing `status` node: `createContextToolbar(toolbar,{container,zoom,status})` places it in a separate shared context box centered above commands. Its text never consumes command width; hide the node when no selection is active. Disposal restores the original node. Wide command rows may use up to 1200 px within symmetric zoom clearance and safe margins. Colour pickers use separator-only palette groups (`createColorPanel` also accepts `headings:false`) and compact property rows for Custom colour and Hex.
 
 The card palette places neutral/transparent first, then approval colours in one five-swatch group, followed by ten pastels. Pickers omit group headings and separate groups with padding. Responsive swatch grids share equal columns across groups and choose balanced row counts; native hit targets remain bounded by the container.
+
+Swatches cap both dimensions at the shared control height; extra container width never enlarges colour targets. The panel retains its full container width with consistent gaps and left-aligned rows.
