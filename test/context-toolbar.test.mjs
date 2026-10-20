@@ -21,11 +21,11 @@ function fixture(width=1100){
  return{doc,container,toolbar,zoom,dock,listeners,get disconnected(){return disconnected;}};
 }
 test('context commands remain centered with a separate right-hand zoom slot in container coordinates',()=>{
- const f=fixture();assert.equal(f.dock.element.dataset.uiPosition,'container');assert.equal(f.toolbar.style.gridColumn,'2');assert.equal(f.zoom.style.gridColumn,'3');assert.equal(f.zoom.style.justifySelf,'end');assert.equal(f.toolbar.style.maxWidth,'816px');
+ const f=fixture();assert.equal(f.dock.element.dataset.uiPosition,'container');assert.equal(f.toolbar.style.gridColumn,'2');assert.equal(f.zoom.style.gridColumn,'3');assert.equal(f.zoom.style.justifySelf,'end');assert.equal(f.zoom.style.width,'max-content');assert.equal(f.toolbar.style.maxWidth,'828px');
  const native=f.toolbar;f.dock.refresh();assert.equal(f.dock.element.children[0],native);f.dock.dispose();assert.equal(native.parentNode,f.container);assert.equal(f.zoom.parentNode,f.container);assert.equal(f.listeners.size,0);assert.equal(f.disconnected,true);
 });
 test('narrow containers reserve two non-overlapping rows instead of squeezing the commands under zoom',()=>{
- const f=fixture(390);assert.equal(f.toolbar.style.gridColumn,'1 / -1');assert.equal(f.toolbar.style.gridRow,'1');assert.equal(f.zoom.style.gridRow,'2');assert.equal(f.toolbar.style.maxWidth,'390px');f.dock.dispose();
+ const f=fixture(390);assert.equal(f.toolbar.style.gridColumn,'1 / -1');assert.equal(f.toolbar.style.gridRow,'2');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.zoom.style.justifySelf,'center');assert.equal(f.toolbar.style.maxWidth,'390px');f.dock.dispose();
 });
 
 test('shared panel resize retains content, supports keyboard bounds and cancels pointer edits',()=>{
@@ -38,6 +38,6 @@ test('shared panel resize retains content, supports keyboard bounds and cancels 
 
 test('context tools stay centered and bounded while a container shrinks and grows',()=>{
  const f=fixture();assert.equal(f.toolbar.classes.has('ui-inline'),true);assert.equal(f.toolbar.style.width,'max-content');assert.equal(f.toolbar.style.justifySelf,'center');
- f.dock.element.width=320;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'320px');assert.equal(f.zoom.style.gridRow,'2');
- f.dock.element.width=1100;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'816px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridColumn,'2');f.dock.dispose();
+ f.dock.element.width=320;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'320px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridRow,'2');assert.equal(f.zoom.style.justifySelf,'center');
+ f.dock.element.width=1100;f.dock.refresh();assert.equal(f.toolbar.style.maxWidth,'828px');assert.equal(f.zoom.style.gridRow,'1');assert.equal(f.toolbar.style.gridColumn,'2');assert.equal(f.zoom.style.justifySelf,'end');f.dock.dispose();
 });

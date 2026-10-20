@@ -296,19 +296,19 @@
     const original={parent:toolbar.parentNode,next:toolbar.nextSibling,style:toolbar.getAttribute('style')};
     const previousZoom=zoom&&{parent:zoom.parentNode,next:zoom.nextSibling,style:zoom.getAttribute('style')};
     host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
-    host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto 12px max(12px, env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
+    host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
     toolbar.classList.add('ui-toolbar','ui-actions','ui-inline');toolbar.dataset.uiLayout='bar';
     Object.assign(toolbar.style,{gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto'});
-    host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
+    host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',width:'max-content',maxWidth:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
     container.append(host);
     let disposed=false;
     const refresh=()=>{
       if(disposed||doc.hidden)return;
-      const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+12:0;
+      const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+6:0;
       const stacked=side>0&&width-2*side<Math.min(240,toolbar.scrollWidth||240);
-      toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow='1';
+      toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow=stacked?'2':'1';
       toolbar.style.maxWidth=Math.max(0,stacked?width:width-2*side)+'px';
-      if(zoom){zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow=stacked?'2':'1';}
+      if(zoom){zoom.style.maxWidth=width+'px';zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow='1';zoom.style.justifySelf=stacked?'center':'end';}
       view.SharedUI?.observeActions?.(toolbar);
     };
     const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;

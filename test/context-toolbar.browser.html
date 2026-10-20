@@ -15,8 +15,9 @@ document.querySelector('#run').onclick=async()=>{
  s.container.style.width=width+'px';s.dock.refresh();await frame();await frame();
  const t=s.toolbar.getBoundingClientRect(),z=s.zoom.getBoundingClientRect(),c=s.container.getBoundingClientRect();
  assert(t.left>=c.left&&t.right<=c.right,pack+' toolbar outside container at '+width);
- assert(t.right<=z.left||t.bottom<=z.top,pack+' toolbar overlaps zoom at '+width);
+ assert(t.right<=z.left||t.bottom<=z.top||z.bottom<=t.top,pack+' toolbar overlaps zoom at '+width);
  assert(Math.abs((t.left+t.right)/2-(c.left+c.right)/2)<1,pack+' toolbar not centered at '+width);
+ if(width===320){assert(z.bottom<=t.top,pack+' zoom must stack above commands');assert(Math.abs((z.left+z.right)/2-(c.left+c.right)/2)<1,pack+' stacked zoom must be centered');}
  for(const b of s.toolbar.querySelectorAll('button')){assert(Math.abs(b.getBoundingClientRect().height-30)<=1,pack+' caption wrapped at '+width);assert(b.hasAttribute('data-ui-compact')===(width<1000),pack+' captions failed to compact/restore at '+width);}
  assert(!UI.auditControls(s.container).issues.length,JSON.stringify(UI.auditControls(s.container).issues));
  s.toolbar.querySelector('button').focus();assert(getComputedStyle(s.toolbar).opacity==='1','Keyboard focus must restore full opacity');s.toolbar.querySelector('button').blur();
