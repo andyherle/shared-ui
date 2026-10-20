@@ -1494,7 +1494,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
         }else{
           // An intrinsic dock may still be icon-sized after growing. Its explicit
           // pixel cap is the available slot; measuring its compact width locks it.
-          const cap=css.maxWidth?.endsWith('px')?number(css.maxWidth):group.clientWidth;
+          const cap=css.maxWidth?.endsWith('px')?number(css.maxWidth):available;
           available=Math.min(available,cap||available);
         }
         available-=margins(css)+sides(css);
