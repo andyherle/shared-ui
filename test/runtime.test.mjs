@@ -12,11 +12,11 @@ class Events {
  removeEventListener(type,fn){this.listeners.get(type)?.delete(fn);}
  dispatchEvent(event){for(const fn of this.listeners.get(event.type)||[])fn(event);return true;}
 }
-function environment({storage=new Map(),dataset={},request,channels=[],baselines=[]}={}){
+function environment({storage=new Map(),dataset={},request,channels=[],baselines=[],resizeObserver}={}){
  const timers=new Map();let timerID=0;const view=new Events(),doc=new Events(),links=[];
  const localStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)};
  class Channel {constructor(name){this.name=name;channels.push(this);}postMessage(value){for(const item of channels)if(item!==this&&item.name===this.name&&!item.closed)item.onmessage?.({data:value});}close(){this.closed=true;}}
- Object.assign(view,{localStorage,BroadcastChannel:Channel,crypto:{randomUUID:()=>String(Math.random())},fetch:request||(async()=>({ok:true,text:async()=>JSON.stringify(release)})),AbortController,CustomEvent:class{constructor(type,{detail}={}){this.type=type;this.detail=detail;}},setTimeout:(fn,delay)=>{const id=++timerID;timers.set(id,{fn,delay});return id;},clearTimeout:id=>timers.delete(id)});
+ Object.assign(view,{ResizeObserver:resizeObserver,localStorage,BroadcastChannel:Channel,crypto:{randomUUID:()=>String(Math.random())},fetch:request||(async()=>({ok:true,text:async()=>JSON.stringify(release)})),AbortController,CustomEvent:class{constructor(type,{detail}={}){this.type=type;this.detail=detail;}},setTimeout:(fn,delay)=>{const id=++timerID;timers.set(id,{fn,delay});return id;},clearTimeout:id=>timers.delete(id)});
  Object.assign(doc,{defaultView:view,baseURI:'https://app.example/',visibilityState:'visible',querySelectorAll:selector=>selector==='link[data-ui-baseline],style[data-ui-baseline]'?baselines:[],documentElement:{dataset:{ui:'postvisual',...dataset}},head:{append(link){links.push(link);}},createElement:()=>({dataset:{},remove(){this.removed=true;}})});
  const instance=module.exports.mount(doc);
  return {doc,view,links,timers,instance,storage,channels,async next(){for(let i=0;i<10;i++)await Promise.resolve();},load(link=links.at(-1)){link.onload?.();},fail(link=links.at(-1)){link.onerror?.();},tick(){const entry=[...timers].find(([,value])=>value.delay===100);assert.ok(entry);timers.delete(entry[0]);entry[1].fn();}};
@@ -54,9 +54,9 @@ test('untrusted style source and incompatible broadcasts are rejected',async()=>
  const e=environment();e.channels[0].onmessage({data:{protocol:2}});await e.next();assert.equal(e.links.length,0);e.instance.dispose();
 });
 test('a newer bundled contract rejects older remote CSS without touching the working document',async()=>{
- const e=environment({dataset:{uiVersion:'1.1.0',uiRevision:release.revision}});
+ const e=environment({dataset:{uiVersion:'1.15.0',uiRevision:release.revision}});
  assert.equal(await e.instance.applyRelease({...other,version:'1.0.9'}),false);assert.equal(e.links.length,0);assert.equal(e.doc.documentElement.dataset.uiRevision,release.revision);
- const next=e.instance.applyRelease({...other,version:'1.1.1'});e.load();assert.equal(await next,true);e.instance.dispose();
+ const next=e.instance.applyRelease({...other,version:'1.15.1'});e.load();assert.equal(await next,true);e.instance.dispose();
 });
 
 test('a validated replacement retires the marked bundled UI sheet only after load',async()=>{
@@ -103,3 +103,17 @@ test('shared lightbox uses native close, skips editable keyboard navigation and 
  fire(dialog,'keydown',{key:'ArrowRight',target:{closest:()=>null}});assert.equal(navigated,1);fire(dialog,'keydown',{key:'ArrowRight',target:{closest:()=>({})}});assert.equal(navigated,1);
  box.close();assert.equal(dialog.open,false);assert.equal(closed,1);assert.equal(e.doc.activeElement,opener);assert.equal(dialog.style.display,undefined);box.dispose();assert.ok([...dialog.listeners.values(),...e.view.listeners.values()].every(set=>set.size===0));
 });
+
+test('open menus refit after asynchronous panel reflow and release their observer',()=>{
+ let observer;class Observer{nodes=new Set();constructor(callback){this.callback=callback;observer=this;}observe(node){this.nodes.add(node);}unobserve(node){this.nodes.delete(node);}disconnect(){this.nodes.clear();this.disconnected=true;}}
+ const original=module.exports.positionMenu;let fits=0;module.exports.positionMenu=()=>{fits++;};
+ const e=environment({resizeObserver:Observer}),panel={},menu={open:true,matches:()=>true,querySelector:()=>panel};
+ try{e.doc.dispatchEvent({type:'toggle',target:menu});assert(observer.nodes.has(panel));assert.equal(fits,1);observer.callback();assert.equal(fits,2);menu.open=false;e.doc.dispatchEvent({type:'toggle',target:menu});assert.equal(observer.nodes.size,0);e.instance.dispose();assert(observer.disconnected);}finally{module.exports.positionMenu=original;}
+});
+
+test('missing or stale page version cannot downgrade the bundled runtime contract',async()=>{
+ for(const dataset of [{},{uiVersion:'1.0.0'}]){const baseline={removed:false,remove(){this.removed=true;}},e=environment({dataset,baselines:[baseline]});
+ assert.equal(await e.instance.applyRelease({...other,version:'1.13.9'}),false);assert.equal(e.links.length,0);assert.equal(baseline.removed,false);e.instance.dispose();}
+});
+
+test('removing an inside action keeps its menu open using the original composed click path',()=>{const e=environment(),menu={open:true,matches:()=>true,contains:()=>false,querySelector:()=>null},removed={closest:()=>null};e.doc.dispatchEvent({type:'toggle',target:menu});e.doc.dispatchEvent({type:'click',target:removed,composedPath:()=>[removed,menu,e.doc]});assert.equal(menu.open,true);e.doc.dispatchEvent({type:'click',target:removed,composedPath:()=>[removed,e.doc]});assert.equal(menu.open,false);e.instance.dispose();});

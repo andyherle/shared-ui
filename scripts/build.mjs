@@ -89,7 +89,7 @@ export function buildSite(directory=root){
     ...debugAssets(directory,compactCSS),...timelineAssets(directory,compactCSS),
     ['debug.html',read('debug-lab.html').replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],['debug-lab.js',read('debug-lab.js')],
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],
-    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
+    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('filters.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
     ['v1/floating-panel.fixture.css',floatingCss],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],

@@ -39,8 +39,8 @@
     function schedule(delay=PERIOD){view.clearTimeout(timer);if(!stopped&&doc.visibilityState!=='hidden')timer=view.setTimeout(tick,delay);}
     async function apply(value){
       const item=release(value,source);
-      const minimum=/^1\.\d+\.\d+$/.test(root.dataset.uiVersion||'')?root.dataset.uiVersion:'1.0.0';
-      const candidate=item.version.split('.').map(Number),floor=minimum.split('.').map(Number);
+      const bundled=api.version.split('.').map(Number),declared=(/^1\.\d+\.\d+$/.test(root.dataset.uiVersion||'')?root.dataset.uiVersion:api.version).split('.').map(Number);
+      const candidate=item.version.split('.').map(Number),floor=declared[1]>bundled[1]||declared[1]===bundled[1]&&declared[2]>bundled[2]?declared:bundled;
       if(candidate[1]<floor[1]||(candidate[1]===floor[1]&&candidate[2]<floor[2]))return false;
       if(stopped||root.dataset.uiRevision===item.revision||pendingLink?.dataset.uiRevision===item.revision)return false;
       cancelStyle?.();
@@ -93,13 +93,14 @@
       else if(event.key===preference&&root.dataset.ui==='postvisual'&&!localTheme)setMode(event.newValue||'system',{persist:false});
     });
     on(doc,'click',event=>{const control=event.target.closest?.('[aria-disabled=true]');if(control?.matches?.('button,a,summary')){event.preventDefault();event.stopImmediatePropagation();}},true);
+    const menuResize=view.ResizeObserver?new view.ResizeObserver(()=>positionMenus()):null;
     function closeMenu(menu,{focus=false}={}){if(!menu.open)return;menu.open=false;openedMenus.delete(menu);if(focus)menu.querySelector(':scope>summary')?.focus();}
-    on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open){openedMenus.add(menu);api.positionMenu?.(menu);}else openedMenus.delete(menu);}},true);
-    on(doc,'click',event=>{for(const menu of openedMenus)if(!menu.contains(event.target))closeMenu(menu);});
+    on(doc,'toggle',event=>{const menu=event.target;if(menu.matches?.('details.ui-menu')){if(menu.open){openedMenus.add(menu);api.positionMenu?.(menu);const panel=menu.querySelector(':scope > .ui-menu-panel');if(panel)menuResize?.observe(panel);}else{openedMenus.delete(menu);const panel=menu.querySelector(':scope > .ui-menu-panel');if(panel)menuResize?.unobserve(panel);}}},true);
+    on(doc,'click',event=>{for(const menu of openedMenus)if(!menu.contains(event.target)&&!event.composedPath?.().includes(menu))closeMenu(menu);});
     on(doc,'keydown',event=>{if(event.key!=='Escape')return;const menu=event.target.closest?.('details.ui-menu')||[...(doc.querySelectorAll?.('details.ui-menu[open]')||[])].at(-1);if(menu?.open){event.preventDefault();closeMenu(menu,{focus:true});}});
     const positionMenus=()=>{if(doc.visibilityState!=='hidden')for(const menu of openedMenus)api.positionMenu?.(menu);};
     on(view,'resize',positionMenus);on(doc,'scroll',event=>{if(!event.target.closest?.('.ui-menu-panel'))positionMenus();},true);on(doc,'ui:styles',positionMenus);
-    function dispose(){if(stopped)return;stopped=true;view.clearTimeout(timer);cancelStyle?.();requestController?.abort();channel?.close();removeLease();for(const remove of removers)remove();openedMenus.clear();api.disposeActions?.(doc);}
+    function dispose(){if(stopped)return;stopped=true;view.clearTimeout(timer);cancelStyle?.();requestController?.abort();channel?.close();removeLease();for(const remove of removers)remove();menuResize?.disconnect();openedMenus.clear();api.disposeActions?.(doc);}
     on(view,'pagehide',event=>{if(!event.persisted)dispose();else{view.clearTimeout(timer);removeLease();}});
     on(view,'pageshow',event=>{if(event.persisted)schedule(50);});
     schedule(100);
@@ -269,6 +270,79 @@
     return {next(direction){if(!direction){last=-Infinity;previous=burst=0;return 1;}const time=now();burst=direction===previous&&time-last<=interval?Math.min(2,burst+1):0;last=time;previous=direction;const factor=1+[.1,.15,.2][burst];return direction>0?factor:1/factor;}};
   }
   const zoomDocks=new WeakMap();
+  // Size only: application content and placement retain their existing owners.
+  function createResizablePanel(panel,{container=panel.parentElement,side='right',min=240,max=640,minMain=280,value=352,property='--ui-aside',onChange=()=>{}}={}){
+    if(!['left','right'].includes(side)||!/^--ui-[a-z-]+$/.test(property)||![min,max,minMain,value].every(Number.isFinite)||min<=0||max<min||minMain<0)throw new TypeError('Panel resize needs bounded dimensions and a shared sizing property');
+    const doc=panel.ownerDocument,view=doc.defaultView,handle=doc.createElement('div'),off=[];
+    const previous=container.style.getPropertyValue(property);let size=value,drag=null,disposed=false;
+    handle.className='ui-panel-resize';handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label','Resize panel');
+    Object.assign(handle.style,{position:'absolute',top:'0',bottom:'0',[side==='right'?'left':'right']:'-6px',width:'13px',padding:'0 6px',zIndex:'25',touchAction:'none',cursor:'col-resize'});container.append(handle);
+    const bounds=()=>{const width=container.getBoundingClientRect().width;return {upper:Math.max(min,Math.min(max,width-minMain)),enabled:width>=min+minMain};};
+    const set=(next,final=false)=>{const b=bounds();size=Math.round(Math.max(min,Math.min(b.upper,next)));container.style.setProperty(property,size+'px');handle.hidden=!b.enabled||panel.hidden;const area=container.getBoundingClientRect(),rect=panel.getBoundingClientRect();handle.style.top=Math.max(0,(rect.top||0)-(area.top||0))+'px';handle.style.bottom=Math.max(0,(area.bottom||0)-(rect.bottom||0))+'px';handle.style.left=(side==='right'?'calc(100% - '+size+'px - 6px)':(size-6)+'px');for(const [key,n]of Object.entries({'aria-valuemin':min,'aria-valuemax':b.upper,'aria-valuenow':size}))handle.setAttribute(key,String(n));onChange(size,{final});};
+    const listen=(node,type,fn)=>{node.addEventListener(type,fn);off.push(()=>node.removeEventListener(type,fn));};
+    function finish(cancel=false){if(!drag)return;const start=drag;drag=null;if(cancel)set(start.width,true);else set(size,true);if(handle.hasPointerCapture?.(start.id))handle.releasePointerCapture(start.id);}
+    listen(handle,'pointerdown',event=>{if(event.button!==0||event.isPrimary===false||!bounds().enabled)return;event.preventDefault();event.stopPropagation();drag={id:event.pointerId,x:event.clientX,width:size};handle.setPointerCapture(event.pointerId);handle.focus({preventScroll:true});});
+    listen(handle,'pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();set(drag.width+(event.clientX-drag.x)*(side==='right'?-1:1));});
+    listen(handle,'pointerup',()=>finish());listen(handle,'pointercancel',()=>finish(true));listen(handle,'lostpointercapture',()=>finish(true));
+    listen(handle,'keydown',event=>{if(event.key==='Escape'){finish(true);return;}if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?min:event.key==='End'?bounds().upper:size+(event.key==='ArrowRight'?1:-1)*(side==='right'?-1:1)*(event.shiftKey?40:10);set(next,true);});
+    listen(doc,'visibilitychange',()=>{if(doc.hidden)finish(true);});listen(view,'blur',()=>finish(true));
+    const refresh=()=>{if(!disposed&&!drag)set(size);};const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;observer?.observe(container);observer?.observe(panel);listen(view,'resize',refresh);
+    const api={element:handle,get value(){return size;},setValue:next=>set(next,true),refresh,dispose(){if(disposed)return;finish(true);disposed=true;observer?.disconnect();for(const remove of off)remove();handle.remove();previous?container.style.setProperty(property,previous):container.style.removeProperty(property);}};
+    listen(view,'pagehide',api.dispose);set(value);return api;
+  }
+  // Declared native review slots; domains retain commands, values and persistence.
+  function createReviewControls(root,{rating=root.querySelector('[data-ui-review-slot=rating]'),actions=root.querySelector('[data-ui-review-slot=actions]'),tags=root.querySelector('[data-ui-review-slot=tags]'),iconOnly=false,sprite='./shared-ui/icons.svg'}={}){
+    const slots=[rating,actions,tags].filter(Boolean);
+    if(!actions||new Set(slots).size!==slots.length||slots.some(node=>!root.contains(node)))throw new TypeError('Review controls require unique native slots inside their root');
+    const attributes=['style','class','data-ui-layout','data-ui-align'],records=[root,...slots].map(node=>({node,values:attributes.map(name=>node.getAttribute(name))}));let disposed=false;
+    root.classList.add('ui-review-controls');
+    Object.assign(root.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr)',justifyItems:'center',gap:'calc(2 * var(--ui-gap))',inlineSize:'100%',maxInlineSize:'52rem',minInlineSize:'0',marginInline:'auto',paddingBlock:'var(--ui-gap) calc(2 * var(--ui-gap))'});
+    for(const row of [rating,actions].filter(Boolean)){
+      row.classList.add('ui-actions','ui-inline');row.dataset.uiLayout='bar';row.dataset.uiAlign='center';
+      Object.assign(row.style,{inlineSize:'max-content',maxInlineSize:'100%',minInlineSize:'0',margin:'0'});
+    }
+    if(tags)Object.assign(tags.style,{inlineSize:'100%',maxInlineSize:'42rem',minInlineSize:'0',margin:'0'});
+    function adopt(action,compact=iconOnly){api.adoptAction(action,{sprite,...(action.dataset.uiIcon?{icon:action.dataset.uiIcon}:{}),...(compact?{iconOnly:true}:{})});}
+    function refresh(){if(disposed)return;for(const action of actions.querySelectorAll('button,a,summary'))adopt(action);api.observeActions?.(actions);if(rating){for(const action of rating.querySelectorAll('button,a,summary'))adopt(action,false);api.observeActions?.(rating);}}
+    refresh();return {element:root,slots:{rating,actions,tags},refresh,addAction(action){if(disposed)throw new Error('Review controls disposed');adopt(action);actions.append(action);refresh();return action;},dispose(){if(disposed)return;disposed=true;api.releaseActions?.(root);for(const {node,values}of records)attributes.forEach((name,index)=>values[index]===null?node.removeAttribute(name):node.setAttribute(name,values[index]));}};
+  }
+  // A container owns the coordinate space; the existing native controls stay intact.
+  function createContextToolbar(toolbar,{container=toolbar.ownerDocument.body,zoom=null,status=null}={}){
+    const doc=toolbar.ownerDocument,view=doc.defaultView,host=doc.createElement('div');
+    const original={parent:toolbar.parentNode,next:toolbar.nextSibling,style:toolbar.getAttribute('style')};
+    const previousStatus=status&&{parent:status.parentNode,next:status.nextSibling,style:status.getAttribute('style')};
+    const previousZoom=zoom&&{parent:zoom.parentNode,next:zoom.nextSibling,style:zoom.getAttribute('style')};
+    host.className='ui-context-dock';host.dataset.uiPosition=container===doc.body?'viewport':'container';
+    host.style.cssText='position:'+ (container===doc.body?'fixed':'absolute')+';inset:auto max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;z-index:130;pointer-events:none';
+    // Floating context overflow uses an anchored native menu, never an in-flow disclosure.
+    const menus=[...toolbar.querySelectorAll?.('details.ui-overflow')||[]].map(node=>{const body=node.querySelector(':scope > .ui-actions'),saved={node,body,classes:node.getAttribute('class'),bodyClasses:body?.getAttribute('class'),bodyStyle:body?.getAttribute('style'),layout:body?.getAttribute('data-ui-layout'),mode:node.getAttribute('data-ui-overflow'),open:node.open};node.classList.remove('ui-overflow','ui-disclosure');node.classList.add('ui-menu');node.removeAttribute('data-ui-overflow');node.open=false;if(body){body.classList.remove('ui-inline','ui-disclosure-body');body.classList.add('ui-menu-panel');body.dataset.uiLayout='vertical';view.SharedUI?.observeActions?.(body);}saved.click=event=>{const action=event.target.closest?.('button,a');if(action&&!action.hasAttribute('aria-pressed'))node.open=false;};node.addEventListener('click',saved.click);return saved;});
+    toolbar.classList.add('ui-toolbar','ui-actions','ui-inline');toolbar.dataset.uiLayout='bar';
+    Object.assign(toolbar.style,{position:'static',inset:'auto',translate:'none',gridColumn:'2',minWidth:'0',width:'max-content',justifySelf:'center',margin:'0',pointerEvents:'auto',overflow:'visible',zIndex:'1'});
+    host.append(toolbar);if(zoom){Object.assign(zoom.style,{position:'static',inset:'auto',translate:'none',width:'max-content',maxWidth:'none',gridColumn:'3',justifySelf:'end',margin:'0',pointerEvents:'auto'});host.append(zoom);}
+    if(status){const box=doc.createElement('div');box.className='ui-toolbar ui-inline';box.dataset.uiContextStatus='';Object.assign(box.style,{gridColumn:'1 / -1',gridRow:'1',justifySelf:'center',whiteSpace:'nowrap',maxWidth:'100%',pointerEvents:'auto'});box.append(status);host.append(box);}
+    container.append(host);
+    let disposed=false;
+    const refresh=()=>{
+      if(disposed||doc.hidden)return;
+      const width=host.getBoundingClientRect().width,side=zoom&&!zoom.hidden?zoom.getBoundingClientRect().width+6:0;
+      const stacked=side>0&&width-2*side<Math.min(240,toolbar.scrollWidth||240);
+      const row=status&&!status.hidden&&!toolbar.hidden?2:1;
+      if(status)status.parentNode.hidden=toolbar.hidden||status.hidden;
+      toolbar.style.gridColumn=stacked?'1 / -1':'2';toolbar.style.gridRow=String(row+(stacked?1:0));
+      toolbar.style.maxWidth=Math.max(0,Math.min(1200,stacked?width:width-2*side))+'px';
+      if(zoom){zoom.style.maxWidth=width+'px';zoom.style.gridColumn=stacked?'1 / -1':'3';zoom.style.gridRow=String(row);zoom.style.justifySelf=stacked?'center':'end';}
+      view.SharedUI?.observeActions?.(toolbar);
+    };
+    const observer=view.ResizeObserver?new view.ResizeObserver(refresh):null;
+    observer?.observe(container);observer?.observe(host);observer?.observe(toolbar);if(zoom)observer?.observe(zoom);
+    view.addEventListener('resize',refresh);doc.addEventListener('visibilitychange',refresh);
+    const restore=(node,record)=>{if(!node||!record)return;record.style===null?node.removeAttribute('style'):node.setAttribute('style',record.style);if(record.parent)record.parent.insertBefore(node,record.next?.parentNode===record.parent?record.next:null);else node.remove();};
+    const api={element:host,refresh,dispose(){if(disposed)return;disposed=true;observer?.disconnect();view.removeEventListener('resize',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pagehide',api.dispose);for(const m of menus){m.node.removeEventListener('click',m.click);m.node.setAttribute('class',m.classes);if(m.body){m.body.setAttribute('class',m.bodyClasses);m.bodyStyle===null?m.body.removeAttribute('style'):m.body.setAttribute('style',m.bodyStyle);m.layout===null?m.body.removeAttribute('data-ui-layout'):m.body.setAttribute('data-ui-layout',m.layout);}m.mode===null?m.node.removeAttribute('data-ui-overflow'):m.node.setAttribute('data-ui-overflow',m.mode);m.node.open=m.open;}restore(toolbar,original);restore(zoom,previousZoom);restore(status,previousStatus);host.remove();}};
+    view.addEventListener('pagehide',api.dispose);refresh();return api;
+  }
+  function blocksViewportTools(overlay){
+    return overlay.getClientRects().length>0&&!overlay.closest('[hidden],details:not([open]) > :not(summary)')&&!overlay.matches('details.ui-overflow[data-ui-overflow=expanded]');
+  }
   function createZoomFeedback(doc,{sprite='./shared-ui/icons.svg'}={}){
     if(zoomDocks.has(doc))return zoomDocks.get(doc);
     const view=doc.defaultView,node=doc.createElement('div');node.className='ui-zoom-feedback ui-toolbar ui-actions ui-inline';node.setAttribute('role','group');node.setAttribute('aria-label','Content zoom');
@@ -281,9 +355,9 @@
     }
     doc.body.append(node);
     let visible=true;
-    const sync=()=>{node.hidden=!visible||Boolean(doc.querySelector('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open'));};
+    const sync=()=>{node.hidden=!visible||[...doc.querySelectorAll('dialog[open],details.ui-menu[open],details.ui-disclosure[open],[popover]:popover-open')].some(blocksViewportTools);};
     doc.addEventListener('toggle',sync,true);doc.addEventListener('close',sync,true);
-    const api={show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
+    const api={element:node,show(value,{min=0,max=Infinity}={}){if(!Number.isFinite(value))return;setText(buttons[1].querySelector('.ui-label'),Math.round(value)+'%');buttons[0].disabled=value<=min;buttons[2].disabled=value>=max;},setVisible(value){visible=Boolean(value);sync();},dispose(){node.remove();zoomDocks.delete(doc);doc.removeEventListener('toggle',sync,true);doc.removeEventListener('close',sync,true);view.removeEventListener('pagehide',api.dispose);}};
     view.addEventListener('pagehide',api.dispose);zoomDocks.set(doc,api);sync();return api;
   }
   function createZoom(group,{min=50,max=200,step=10,value=100,onChange=()=>{},format=String,outLabel='Zoom out',inLabel='Zoom in',sprite='./shared-ui/icons.svg'}={}) {
@@ -309,6 +383,68 @@
     function dispose(){if(disposed)return;disposed=true;out.removeEventListener('click',decrease);into.removeEventListener('click',increase);view?.removeEventListener('pagehide',pagehide);}
     setValue(value);out.addEventListener('click',decrease);into.addEventListener('click',increase);view?.addEventListener('pagehide',pagehide);
     return {get value(){return current;},setValue,dispose};
+  }
+  // Sort existing native rows, or expose controlled sorting for a paginated app.
+  function createTableSort(table,{column='',direction='asc',defaultColumn=column,defaultDirection=direction,cycle:initialCycle=0,manual=false,onChange=()=>{},getValue,sprite='./shared-ui/icons.svg'}={}){
+    const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
+    if(!header||!view||!table.tBodies?.length)throw new TypeError('Sorting requires a native table with a header and body');
+    const heads=[...header.cells],off=[],saved=[];let active=column,order=direction,disposed=false,cycle=initialCycle,baseline;
+    if(!['asc','desc'].includes(order)||!['asc','desc'].includes(defaultDirection)||![0,1,2].includes(initialCycle))throw new TypeError('Sort direction must be asc or desc and cycle must be 0, 1 or 2');
+    const ids=heads.map((head,i)=>head.dataset.column||'column-'+i);
+    if(new Set(ids).size!==ids.length)throw new TypeError('Sort columns must have unique IDs');
+    const buttons=new Map(),labels=new Map();
+    function value(row,head){
+      const cell=row.cells[[...header.cells].indexOf(head)];
+      const raw=getValue?getValue(row,head,cell):cell?.dataset.sortValue??cell?.textContent??'';
+      if(raw==null||String(raw).trim()===''||['—','Unknown','Undated'].includes(String(raw).trim()))return null;
+      if(head.dataset.uiSortType==='number'){
+        const number=Number(String(raw).replace(/−/g,'-').replace(/,/g,'').replace(/\s+[A-Z]{3}$/, '').trim());
+        return Number.isFinite(number)?number:null;
+      }
+      return String(raw).trim();
+    }
+    function draw(){
+      heads.forEach((head,i)=>{
+        if(!buttons.has(ids[i]))return;
+        const selected=ids[i]===active,label=labels.get(ids[i]);
+        head.setAttribute('aria-sort',selected?(order==='asc'?'ascending':'descending'):'none');
+        adoptAction(buttons.get(ids[i]),{label,ariaLabel:'Sort by '+label+(selected?'; '+(order==='asc'?'ascending':'descending'):'')+'; click to '+(selected&&cycle===2?'restore default order':selected&&cycle===1?'sort descending':'sort ascending'),icon:selected?(order==='asc'?'arrow-up':'arrow-down'):'list',sprite});
+      });
+    }
+    function apply(){
+      const head=heads[ids.indexOf(active)];if(!head)return;
+      draw();if(manual)return;
+      for(const body of table.tBodies){
+        const rows=[...body.rows],positions=new Map(rows.map((row,i)=>[row,i]));
+        rows.sort((a,b)=>{
+          const x=value(a,head),y=value(b,head);
+          if(x===null||y===null)return x===y?positions.get(a)-positions.get(b):x===null?1:-1;
+          const compared=typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),undefined,{numeric:true,sensitivity:'base'});
+          return (order==='asc'?compared:-compared)||positions.get(a)-positions.get(b);
+        });
+        body.append(...rows);
+      }
+    }
+    function sort(id,next){
+      if(disposed)return;
+      if(!buttons.has(id)||!['asc','desc'].includes(next))throw new TypeError('Unknown sort column or direction');
+      active=id;order=next;apply();onChange({column:active,direction:order});
+    }
+    heads.forEach((head,i)=>{
+      if(head.dataset.uiSortDisabled!==undefined)return;
+      const nodes=[...head.childNodes],label=head.textContent.trim(),button=doc.createElement('button');
+      if(!label)return;
+      saved.push({head,nodes,aria:head.getAttribute('aria-sort'),tab:head.getAttribute('tabindex')});
+      button.type='button';button.dataset.uiTableSort='';button.dataset.uiVariant='quiet';button.dataset.uiLabel='always';
+      head.removeAttribute('tabindex');head.replaceChildren(button);buttons.set(ids[i],button);labels.set(ids[i],label);
+      const click=()=>{const next=active===ids[i]?cycle+1:1;if(next===3){cycle=0;sort(baseline.column,baseline.direction);}else{cycle=next;sort(ids[i],next===2?'desc':'asc');}};button.addEventListener('click',click);off.push(()=>button.removeEventListener('click',click));
+    });
+    if(active&&!buttons.has(active))throw new TypeError('Unknown initial sort column');
+    active ||= buttons.keys().next().value||'';baseline={column:defaultColumn||buttons.keys().next().value||'',direction:defaultDirection};
+    apply();draw();
+    function dispose(){if(disposed)return;disposed=true;for(const remove of off)remove();for(const item of saved){item.head.replaceChildren(...item.nodes);for(const [key,val]of [['aria-sort',item.aria],['tabindex',item.tab]])if(val===null)item.head.removeAttribute(key);else item.head.setAttribute(key,val);}view.removeEventListener('pagehide',pagehide);}
+    function pagehide(event){if(!event.persisted)dispose();}view.addEventListener('pagehide',pagehide);
+    return {get state(){return {column:active,direction:order};},get cycle(){return cycle;},sort,reset(){cycle=0;sort(baseline.column,baseline.direction);},refresh:apply,dispose};
   }
   function createColumnDrag(table,{order=[],pinFirst=false,onBeforeChange=()=>{},onChange=()=>{}}={}){
     const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument,view=doc?.defaultView;
@@ -395,6 +531,52 @@
     }
     return {get state(){return {order:[...current]};},reset(){if(!disposed)change([...original],null);},dispose};
   }
+  function createColumnManager(table,container,{order=[],hidden=[],pinFirst=false,renderControls=true,onBeforeChange=()=>{},onChange=()=>{}}={}){
+    const header=table?.tHead?.rows?.[0],doc=table?.ownerDocument;
+    if(!header||!container)throw new TypeError('A native table and column controls container are required');
+    const heads=[...header.cells],ids=heads.map(head=>head.dataset.column),rows=[header,...[...table.tBodies].flatMap(body=>[...body.rows])];
+    const cells=rows.map(row=>new Map(ids.map((id,index)=>[id,row.cells[index]]))),prior=cells.map(row=>new Map([...row].map(([id,cell])=>[id,cell.hidden])));
+    const omitted=new Set((Array.isArray(hidden)?hidden:[]).filter(id=>ids.includes(id)&&(!pinFirst||id!==ids[0])));
+    if(omitted.size===ids.length)omitted.delete(ids[0]);
+    const controls=[],removers=[];let disposed=false,resetting=false;
+    const state=()=>({...drag.state,hidden:[...omitted]});
+    const apply=()=>{for(const row of cells)for(const [id,cell] of row)cell.hidden=omitted.has(id);for(const {id,input} of controls){input.checked=!omitted.has(id);input.disabled=(pinFirst&&id===ids[0])||(!omitted.has(id)&&omitted.size===ids.length-1);}};
+    const drag=createColumnDrag(table,{order,pinFirst,onBeforeChange:()=>{if(!resetting)onBeforeChange();},onChange:()=>{apply();if(!resetting)onChange(state());}});
+    for(const head of (renderControls?heads:[])){
+      const id=head.dataset.column,label=doc.createElement('label'),input=doc.createElement('input'),text=doc.createElement('span');
+      label.className='ui-check';input.type='checkbox';input.setAttribute('aria-label','Show '+(head.querySelector?.('.ui-label')?.textContent||head.textContent));text.className='ui-label';text.textContent=head.querySelector?.('.ui-label')?.textContent||head.textContent;
+      const change=()=>{onBeforeChange();if(input.checked)omitted.delete(id);else omitted.add(id);apply();onChange(state());};
+      input.addEventListener('change',change);removers.push(()=>input.removeEventListener('change',change));label.append(input,text);container.append(label);controls.push({id,input,label});
+    }
+    apply();
+    function dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();for(const {label} of controls)label.remove();drag.dispose();for(const [index,row] of cells.entries())for(const [id,cell] of row)cell.hidden=prior[index].get(id);}
+    return {get state(){return state();},setVisible(id,visible){if(disposed)return;if(!ids.includes(id))throw new TypeError('Unknown column');if(!visible&&(pinFirst&&id===ids[0]||omitted.size===ids.length-1&&!omitted.has(id)))return;onBeforeChange();if(visible)omitted.delete(id);else omitted.add(id);apply();onChange(state());},reset(){if(disposed)return;onBeforeChange();omitted.clear();resetting=true;try{drag.reset();}finally{resetting=false;}apply();onChange(state());},dispose};
+  }
+  function createTableToolbar(table,container,{sprite='./shared-ui/icons.svg',search=true,sorting=true,onChange=()=>{}}={}){
+    const doc=table.ownerDocument,view=doc.defaultView,heads=[...table.tHead.rows[0].cells],original=new Map(),off=[],toggles=[];
+    let resize,disposed=false;
+    const bar=doc.createElement('div');bar.className='ui-toolbar ui-actions';bar.dataset.uiDensity='dense';bar.setAttribute('aria-label','Table controls');
+    const field=doc.createElement('label');field.className='ui-field ui-search';
+    const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Search';
+    const input=doc.createElement('input');input.type='search';input.setAttribute('aria-label','Search rows');input.placeholder='Search rows…';field.append(caption,input);
+    const count=doc.createElement('output');count.className='ui-meta';count.setAttribute('role','status');count.setAttribute('aria-live','polite');
+    const columns=doc.createElement('div');columns.className='ui-actions ui-inline';columns.setAttribute('role','group');columns.setAttribute('aria-label','Visible columns');
+    const empty=doc.createElement('p');empty.className='ui-meta';empty.textContent='No matching rows.';empty.hidden=true;
+    const sort=sorting?createTableSort(table,{sprite}):null;
+    function filter(){let shown=0,total=0;const query=input.value.trim().toLocaleLowerCase();for(const body of table.tBodies)for(const row of body.rows){if(!original.has(row))original.set(row,row.hidden);if(original.get(row))continue;total++;row.hidden=!row.textContent.toLocaleLowerCase().includes(query);if(!row.hidden)shown++;}count.textContent=shown+' of '+total+' rows';empty.hidden=shown!==0;}
+    function drawColumns(){const hidden=new Set(manager.state.hidden);for(const {id,button,label}of toggles){const visible=!hidden.has(id);button.setAttribute('aria-pressed',String(visible));button.disabled=visible&&hidden.size===heads.length-1;adoptAction(button,{label,icon:visible?'check':'plus',ariaLabel:(visible?'Hide ':'Show ')+label+' column',sprite});}onChange(manager.state);}
+    const manager=createColumnManager(table,columns,{renderControls:false,onBeforeChange:()=>resize?.dispose(),onChange:()=>{resize=createColumnResize(table);drawColumns();}});
+    for(const head of heads){const id=head.dataset.column,label=head.querySelector('.ui-label')?.textContent||head.textContent.trim(),button=doc.createElement('button');button.type='button';button.dataset.uiLabel='always';const click=()=>manager.setVisible(id,manager.state.hidden.includes(id));button.addEventListener('click',click);off.push(()=>button.removeEventListener('click',click));columns.append(button);toggles.push({id,button,label});}
+    const reset=doc.createElement('button');reset.type='button';adoptAction(reset,{label:'Reset view',icon:'refresh',sprite});
+    const restore=()=>{input.value='';manager.reset();sort?.reset();resize?.reset();filter();};reset.addEventListener('click',restore);input.addEventListener('input',filter);
+    const menu=doc.createElement('details');menu.className='ui-menu';
+    const trigger=doc.createElement('summary');trigger.className='ui-action';trigger.dataset.uiVariant='quiet';trigger.dataset.uiLabel='hidden';adoptAction(trigger,{label:'Table options',ariaLabel:'Table options',icon:'settings',iconOnly:true,sprite});
+    const panel=doc.createElement('div');panel.className='ui-menu-panel ui-stack';const title=doc.createElement('strong');title.className='ui-section-title';title.textContent='Visible columns';panel.append(title,columns,reset);menu.append(trigger,panel);
+    if(search)bar.append(field);bar.append(count,menu);container.append(bar,empty);resize=createColumnResize(table);drawColumns();filter();
+    function dispose(){if(disposed)return;disposed=true;input.removeEventListener('input',filter);reset.removeEventListener('click',restore);for(const remove of off)remove();resize?.dispose();manager.dispose();sort?.dispose();for(const [row,hidden]of original)row.hidden=hidden;bar.remove();empty.remove();view.removeEventListener('pagehide',pagehide);}
+    function pagehide(event){if(!event.persisted)dispose();}view.addEventListener('pagehide',pagehide);
+    return {element:bar,input,columns,sort,manager,refresh(){sort?.refresh();filter();},dispose};
+  }
   function createColumnResize(table,{min=72,max=1200,widths=[],onChange=()=>{}}={}){
     if(!Number.isFinite(min)||!Number.isFinite(max)||min<24||max<min)throw new TypeError('Column resizing requires finite positive bounds');
     const doc=table.ownerDocument,view=doc.defaultView,heads=[...table.tHead.rows[0].cells].filter(cell=>!cell.hidden);
@@ -450,7 +632,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.12.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.14.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -464,6 +646,34 @@
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,documents=new WeakMap();
+  // A stationary touch/pen press; hosts retain selection, geometry and capture.
+  UI.createPressHold=(root,{onHold,delay=450,tolerance=10,accept=()=>true}={})=>{
+    const doc=root.ownerDocument||root,view=doc.defaultView,removers=[];
+    let press=null,timer=null,consumed=null,heldPointer=null,expiry=null,disposed=false;
+    const listen=(target,type,handler,capture=false)=>{target.addEventListener(type,handler,capture);removers.push(()=>target.removeEventListener(type,handler,capture));};
+    function cancel(){if(timer!==null)view.clearTimeout(timer);timer=null;press=null;}
+    function forget(){consumed=null;heldPointer=null;if(expiry!==null)view.clearTimeout(expiry);expiry=null;}
+    listen(doc,'pointerdown',event=>{if(press&&press.pointerId!==event.pointerId)cancel();},true);
+    listen(root,'pointerdown',event=>{
+      if(disposed||!['touch','pen'].includes(event.pointerType)||event.button!==0||event.isPrimary===false||!accept(event))return;
+      cancel();forget();press=event;
+      timer=view.setTimeout(()=>{
+        timer=null;const initial=press;if(!initial||doc.hidden||!root.isConnected)return;
+        if(onHold?.(initial)!==false){consumed=initial.target;heldPointer=initial.pointerId;}
+        press=null;
+      },delay);
+    });
+    listen(doc,'pointermove',event=>{if(press&&event.pointerId===press.pointerId&&Math.hypot(event.clientX-press.clientX,event.clientY-press.clientY)>tolerance)cancel();},true);
+    listen(doc,'pointerup',event=>{if(event.pointerId===heldPointer){heldPointer=null;expiry=view.setTimeout(forget,800);}cancel();},true);
+    for(const type of ['pointercancel','lostpointercapture'])listen(doc,type,event=>{if(event.pointerId===heldPointer)forget();cancel();},true);
+    listen(view,'click',event=>{if(consumed&&event.detail!==0&&(event.target===consumed||consumed.contains?.(event.target))){event.preventDefault();event.stopImmediatePropagation();forget();}},true);
+    listen(root,'contextmenu',event=>{if(press||consumed)event.preventDefault();});
+    listen(doc,'visibilitychange',()=>{if(doc.hidden){cancel();forget();}});
+    listen(view,'blur',()=>{cancel();forget();});
+    function dispose(){if(disposed)return;disposed=true;cancel();forget();removers.splice(0).forEach(remove=>remove());}
+    listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
+    return {cancel,dispose};
+  };
   // Host-owned content, one shared native preview/selection pattern.
   UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite}={})=>{
     const doc=root.ownerDocument,original=root.className,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
@@ -572,6 +782,10 @@
     Object.assign(control.style,{gridColumn:'3',gridRow:'1',minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     row.append(actions,control);return {element:row,label,control,actions};
   };
+  UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
+    UI.adoptAction(action,{icon,label,iconOnly:true,sprite});
+    const control=UI.adoptPropertyRow(row,{name,control:action});row.classList.add('ui-property-action');row.dataset.uiComponent='property-action';return control;
+  };
   const propertyActions=new WeakMap();
   UI.setPropertyAction=(row,options={})=>{
     let label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');if(!label)return;
@@ -622,7 +836,6 @@
     const element=document.createElement('label');element.className=variant==='controller'?'ui-icon-choice ui-controller-toggle':'ui-switch';
     const input=document.createElement('input');input.type='checkbox';input.setAttribute('aria-label',String(label));input.setAttribute('role','switch');
     const output=document.createElement('span');output.className='ui-label';output.hidden=variant==='controller';element.append(input,output);
-    if(variant==='controller')element.className='ui-switch ui-controller-toggle';
     output.hidden=false;
     const setValue=value=>{input.checked=Boolean(value);output.textContent=input.checked?'On':'Off';element.title=String(label)+': '+output.textContent;};
     const change=()=>{setValue(input.checked);onChange(input.checked);};input.addEventListener('change',change);setValue(value);
@@ -728,7 +941,7 @@
     const panel=menu.querySelector(':scope > .ui-menu-panel'),summary=menu.querySelector(':scope > summary');
     if(!menu.open||!panel||!summary)return;
     const view=menu.ownerDocument.defaultView,scrollTop=panel.scrollTop;panel.style.translate='';panel.style.maxHeight='';
-    const trigger=summary.getBoundingClientRect(),base=panel.getBoundingClientRect(),above=Math.max(0,trigger.top-8),below=Math.max(0,view.innerHeight-trigger.bottom-8),preferAbove=base.bottom<=trigger.top;
+    const trigger=summary.getBoundingClientRect(),base=panel.getBoundingClientRect(),above=Math.max(0,trigger.top-8),below=Math.max(0,view.innerHeight-trigger.bottom-8),preferAbove=menu.dataset.uiPlacement==='top'||base.bottom<=trigger.top;
     const up=preferAbove?above>=base.height||above>below:below<base.height&&above>below;
     panel.style.maxHeight=Math.max(0,Math.min(parseFloat(view.getComputedStyle(panel).maxHeight)||Infinity,up?above:below))+'px';
     const box=panel.getBoundingClientRect(),left=Math.max(8,Math.min(box.left,view.innerWidth-box.width-8)),top=up?trigger.top-box.height:trigger.bottom;
@@ -780,41 +993,74 @@
     listen(doc,'visibilitychange',()=>doc.visibilityState==='hidden'?suspend():resume());listen(view,'pagehide',event=>event.persisted?suspend():dispose());listen(view,'pageshow',resume);listen(doc,'ui:styles',refresh);listen(node,'focusout',refresh);resume();
     return {refresh,dispose};
   };
-  UI.createColorPicker=(trigger,{value=null,onChange=()=>{},title='Card colour'}={})=>{
+  UI.cardColors=Object.freeze([
+    ['Neutral','#ffffff'],['Changes','#c44c53'],['Review','#f3d376'],['Approved','#22c55e'],['Translucent','transparent'],
+    ['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8'],['Sand','#e7cbb4']
+  ]);
+  // Native swatches share one container-sized grid in pickers, filters and inspectors.
+  UI.cardColorGroups=Object.freeze([
+    {label:'Default colours',choices:[UI.cardColors[0],UI.cardColors[4],...UI.cardColors.slice(1,4)]},
+    {label:'Pastel colours',choices:UI.cardColors.slice(5)}
+  ]);
+  UI.createColorPanel=({root,document=root?.ownerDocument||window.document,label='Colours',choices=UI.cardColors,groups=null,headings=true,multiple=false,value=multiple?[]:null,onChange=()=>{}}={})=>{
+    const element=root||document.createElement('div'),buttons=[],listeners=[],grids=[];let values=new Set(),largest=choices.length;
+    const layout=()=>{const width=element.getBoundingClientRect().width;if(!width)return;const view=document.defaultView,min=Math.max(30,parseFloat(view.getComputedStyle(element).getPropertyValue('--ui-control-height'))||30),available=Math.max(1,Math.floor((width+6)/((view.matchMedia?.('(pointer:coarse)').matches?min:min*.8)+6))),limit=Math.min(5,available);let columns=limit;for(let n=limit;n>=Math.ceil(limit/2);n--)if(largest%n===0){columns=n;break;}const size=Math.min(min,(width-6*(columns-1))/columns);for(const grid of grids){grid.style.gridTemplateColumns=`repeat(${columns},minmax(0,${size}px))`;grid.style.justifyContent='center';}for(const button of buttons)button.style.minBlockSize=size+'px';};
+    const observer=document.defaultView.ResizeObserver?new document.defaultView.ResizeObserver(layout):null;observer?.observe(element);
+    element.setAttribute('role','group');element.setAttribute('aria-label',label);
+    const setValue=next=>{values=new Set((Array.isArray(next)?next:next==null?[]:[next]).map(String));for(const b of buttons)b.setAttribute('aria-pressed',String(values.has(b.dataset.uiColorValue)));};
+    function render(sections){for(const [b,fn]of listeners)b.removeEventListener('click',fn);listeners.length=0;buttons.length=0;grids.length=0;largest=Math.max(...(sections||[{choices}]).map(s=>s.choices.length));element.replaceChildren();element.classList.remove('ui-stack','ui-color-palette');element.classList.add(sections?'ui-stack':'ui-color-palette');
+      for(const section of sections||[{choices}]){let grid=element;if(sections){const group=document.createElement('section'),heading=document.createElement('h3');group.className='ui-stack';heading.className='ui-meta';heading.textContent=section.label;grid=document.createElement('div');grid.className='ui-color-palette';grid.setAttribute('role','group');grid.setAttribute('aria-label',section.label);if(headings)group.append(heading);else if(element.children.length)group.style.paddingBlockStart='var(--ui-space-3,12px)';group.append(grid);element.append(group);}
+        grids.push(grid);for(const entry of section.choices){const [name,color]=Array.isArray(entry)?entry:[entry.label||entry.name||entry.value,entry.value||entry.color];const b=document.createElement('button');b.type='button';b.className='ui-swatch';b.dataset.uiColorValue=String(color);b.setAttribute('aria-label',name);b.title=name;
+          const fill=UI.resolveCardColor(color);b.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);
+          const click=()=>{const v=String(color);if(multiple){values.has(v)?values.delete(v):values.add(v);}else values=new Set([v]);setValue([...values]);onChange(multiple?[...values]:v);};b.addEventListener('click',click);listeners.push([b,click]);buttons.push(b);grid.append(b);
+        }
+      }setValue([...values]);layout();
+    }
+    const setChoices=next=>{choices=next;render(null);},setGroups=next=>render(next);
+    render(groups);setValue(value);return {element,buttons,setValue,setChoices,setGroups,dispose(){observer?.disconnect();for(const [b,fn]of listeners)b.removeEventListener('click',fn);}};
+  };
+  UI.createConfirmAction=(trigger,{label='Confirm',message='Continue?',onConfirm=()=>{},sprite}={})=>{
+    const doc=trigger.ownerDocument,view=doc.defaultView,panel=doc.createElement('div');panel.className='ui-panel ui-pad ui-stack';panel.popover='auto';panel.id='ui-confirm-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');panel.setAttribute('aria-label',message);
+    Object.assign(panel.style,{position:'fixed',margin:'0',inset:'auto',width:'min(320px,calc(100vw - 24px))'});
+    const text=doc.createElement('p');text.textContent=message;const status=doc.createElement('p');status.className='ui-status';status.setAttribute('role','status');const actions=doc.createElement('div');actions.className='ui-actions ui-fill';const cancel=doc.createElement('button'),confirm=doc.createElement('button');cancel.type=confirm.type='button';UI.adoptAction(cancel,{label:'Cancel',icon:'close',sprite});UI.adoptAction(confirm,{label,icon:'check',sprite});confirm.dataset.uiVariant='danger';actions.append(cancel,confirm);panel.append(text,status,actions);doc.body.append(panel);let pressedOpen=false;
+    function close(){if(panel.matches(':popover-open'))panel.hidePopover();if(trigger.isConnected)trigger.focus({preventScroll:true});}
+    function open(){if(trigger.disabled||!trigger.isConnected)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;return close();}status.textContent='';const owner=trigger.closest('dialog')||doc.body;if(panel.parentElement!==owner)owner.append(panel);panel.showPopover();position();cancel.focus();}
+    function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect(),p=panel.getBoundingClientRect();Object.assign(panel.style,{left:Math.max(12,Math.min(r.left,view.innerWidth-p.width-12))+'px',top:Math.max(12,Math.min(r.bottom+6,view.innerHeight-p.height-12))+'px'});}
+    const press=()=>{pressedOpen=panel.matches(':popover-open');},toggle=()=>trigger.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
+    const accept=async()=>{confirm.disabled=cancel.disabled=true;try{await onConfirm();close();}catch(error){status.textContent=error.message||'Action failed';status.dataset.state='error';}finally{confirm.disabled=cancel.disabled=false;}};
+    const dispose=()=>{cancel.removeEventListener('click',close);confirm.removeEventListener('click',accept);trigger.removeEventListener('pointerdown',press);panel.removeEventListener('toggle',toggle);view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);view.removeEventListener('pagehide',dispose);panel.remove();for(const name of ['aria-haspopup','aria-controls','aria-expanded'])trigger.removeAttribute(name);};
+    trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded','false');trigger.addEventListener('pointerdown',press);panel.addEventListener('toggle',toggle);cancel.addEventListener('click',close);confirm.addEventListener('click',accept);view.addEventListener('resize',position);doc.addEventListener('scroll',position,true);view.addEventListener('pagehide',dispose,{once:true});return {element:panel,open,close,dispose};
+  };
+  UI.createFilterButton=({element,document=element?.ownerDocument||window.document,label='Filters',sprite,onClick=()=>{}}={})=>{
+    element ||= document.createElement('button');if(element.tagName==='BUTTON')element.type='button';UI.adoptAction(element,{label,icon:'filter',sprite});element.addEventListener('click',onClick);return {element,dispose(){element.removeEventListener('click',onClick);}};
+  };
+  UI.createColorPicker=(trigger,{value=null,onChange=()=>{},title='Card colour',placement='auto',sprite=trigger.querySelector('use')?.getAttribute('href')?.split('#')[0]}={})=>{
     const doc=trigger.ownerDocument,view=doc.defaultView,removers=[];
     const panel=doc.createElement('div');panel.className='ui-popout ui-color-picker ui-chrome';panel.popover='auto';
     panel.dataset.uiComponent='color-picker';panel.id='ui-colour-'+view.crypto.randomUUID();panel.setAttribute('role','dialog');
     const header=doc.createElement('header'),heading=doc.createElement('h2');heading.className='ui-section-title';heading.id=panel.id+'-title';heading.textContent=title;header.append(heading);panel.setAttribute('aria-labelledby',heading.id);
     const body=doc.createElement('div');body.dataset.uiPopoutBody='';body.className='ui-stack';
-    const buttons=[];
-    const swatches=(label,entries,captions=false)=>{
-      const section=doc.createElement('section');section.className='ui-stack';
-      const caption=doc.createElement('h3');caption.className='ui-meta';caption.textContent=label;
-      const group=doc.createElement('div');group.className='ui-color-palette';group.setAttribute('role','group');group.setAttribute('aria-label',label);if(captions)group.dataset.uiLabels='true';
-      for(const [name,color]of entries){const button=doc.createElement('button');button.type='button';button.className='ui-swatch';button.dataset.uiColorValue=color;UI.adoptAction(button,{label:name,ariaLabel:name,title:name});
-        button.querySelector(':scope > .ui-label').hidden=true;const fill=UI.resolveCardColor(color);button.style.setProperty('--ui-swatch-value',`light-dark(${fill.light},${fill.dark})`);button.addEventListener('click',()=>choose(color));buttons.push(button);group.append(button);}
-      section.append(caption,group);body.append(section);
-    };
-    swatches('Approval',[['Neutral','#ffffff'],['Changes','#c44c53'],['Review','#f3d376'],['Approved','#22c55e'],['Translucent','transparent']],true);
-    swatches('Everyday',[['Light pink','#ffb3d2'],['Peach','#ffbf94'],['Lemon','#fff18a'],['Mint','#9be5bc'],['Seafoam','#8ce3d6'],['Baby blue','#99d6ff'],['Periwinkle','#b7c3ff'],['Lilac','#d6b3ff'],['Grey','#cbd1d8']]);
-    const custom=doc.createElement('label');custom.className='ui-field';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');custom.append(caption,input);body.append(custom);
-    const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';hexField.append(hexLabel,hex,apply);body.append(hexField);
+    const palette=UI.createColorPanel({document:doc,label:'Card colours',groups:UI.cardColorGroups,headings:false,onChange:choose});
+    const buttons=palette.buttons,colourRow=doc.createElement('div');colourRow.append(palette.element);body.append(colourRow);UI.adoptPropertyRow(colourRow,{name:'Colour',control:palette.element});
+    const custom=doc.createElement('div');custom.className='';const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Custom colour';const input=doc.createElement('input');input.type='color';input.setAttribute('aria-label','Custom card colour');const customValue=doc.createElement('div');customValue.className='ui-field';customValue.append(input);custom.append(customValue);body.append(custom);UI.adoptPropertyRow(custom,{name:'Custom colour',control:customValue});
+    const hexField=doc.createElement('div');hexField.className='ui-field';const hexLabel=doc.createElement('span');hexLabel.className='ui-label';hexLabel.textContent='Hex';const hex=doc.createElement('input');hex.type='text';hex.maxLength=7;hex.autocomplete='off';hex.spellcheck=false;hex.setAttribute('aria-label','Hex colour');hex.placeholder='#99d6ff';const apply=doc.createElement('button');apply.type='button';apply.textContent='Apply';const hexValue=doc.createElement('div');hexValue.className='ui-field';hexValue.append(hex,apply);hexField.className='';hexField.append(hexValue);body.append(hexField);UI.adoptPropertyRow(hexField,{name:'Hex',control:hexValue});UI.adoptAction(apply,{label:'Apply',icon:'check',iconOnly:true,sprite});
     const footer=doc.createElement('footer');footer.className='ui-actions ui-fill';const done=doc.createElement('button');done.type='button';done.textContent='Done';footer.append(done);panel.append(header,body,footer);doc.body.append(panel);
     trigger.setAttribute('aria-haspopup','dialog');trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded','false');
-    let disposed=false;
+    let disposed=false,pressedOpen=false;
     function listen(node,type,fn,options){node.addEventListener(type,fn,options);removers.push(()=>node.removeEventListener(type,fn,options));}
     function setValue(next,{mixed=false}={}){if(next!==null)UI.resolveCardColor(next);value=next?.toLowerCase()??null;for(const button of buttons){const pressed=String(!mixed&&button.dataset.uiColorValue===value);if(button.getAttribute('aria-pressed')!==pressed)button.setAttribute('aria-pressed',pressed);}if(doc.activeElement!==input&&input.value!==(value||'#ffffff'))input.value=value&&value!=='transparent'?value:'#ffffff';if(doc.activeElement!==hex)hex.value=value&&value!=='transparent'?value:'#ffffff';}
-    function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect(),p=panel.getBoundingClientRect();const right=r.right+10,left=right+p.width<=view.innerWidth-12?right:r.left-p.width-10;panel.style.left=Math.max(12,Math.min(left,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,Math.min(r.top,view.innerHeight-p.height-12))+'px';}
+    function position(){if(!panel.matches(':popover-open'))return;const r=trigger.getBoundingClientRect();if(placement==='top')panel.style.maxHeight=Math.max(100,r.top-20)+'px';const p=panel.getBoundingClientRect();if(placement==='top'){panel.style.left=Math.max(12,Math.min(r.left+r.width/2-p.width/2,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,r.top-p.height-8)+'px';return;}const right=r.right+10,left=right+p.width<=view.innerWidth-12?right:r.left-p.width-10;panel.style.left=Math.max(12,Math.min(left,view.innerWidth-p.width-12))+'px';panel.style.top=Math.max(12,Math.min(r.top,view.innerHeight-p.height-12))+'px';}
     function close(){if(panel.matches(':popover-open'))panel.hidePopover();}
-    function open(){if(disposed||trigger.disabled)return;panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
+    function open(){if(disposed||trigger.disabled)return;if(pressedOpen||panel.matches(':popover-open')){pressedOpen=false;close();return;}const owner=trigger.closest('dialog')||doc.body;if(panel.parentElement!==owner)owner.append(panel);panel.showPopover();position();(buttons.find(button=>button.getAttribute('aria-pressed')==='true')||buttons[0]).focus({preventScroll:true});}
     function choose(next){setValue(next);close();onChange(next);trigger.focus({preventScroll:true});}
+    listen(trigger,'pointerdown',()=>{pressedOpen=panel.matches(':popover-open');});
     listen(panel,'keydown',event=>event.stopPropagation());
     function applyHex(){const next=hex.value.trim();const valid=/^#?[0-9a-f]{6}$/i.test(next);hex.setCustomValidity(valid?'':'Enter six hex digits, such as #99d6ff.');hex.setAttribute('aria-invalid',String(!valid));if(valid)choose((next.startsWith('#')?next:'#'+next).toLowerCase());else hex.reportValidity();}
     listen(hex,'input',()=>{hex.setCustomValidity('');hex.removeAttribute('aria-invalid');});listen(hex,'keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyHex();}});listen(apply,'click',applyHex);
     listen(input,'change',()=>choose(input.value));listen(done,'click',close);
     listen(panel,'toggle',event=>{const open=event.newState==='open';trigger.setAttribute('aria-expanded',String(open));if(open){position();view.addEventListener('resize',position);doc.addEventListener('scroll',position,true);}else{view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);if(panel.contains(doc.activeElement)||doc.activeElement===doc.body)trigger.focus({preventScroll:true});}});
     setValue(value);
-    return {element:panel,open,close,setValue,dispose(){if(disposed)return;disposed=true;close();view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);for(const remove of removers)remove();panel.remove();for(const name of ['aria-haspopup','aria-controls','aria-expanded'])trigger.removeAttribute(name);}};
+    return {element:panel,open,close,setValue,dispose(){if(disposed)return;disposed=true;close();palette.dispose();view.removeEventListener('resize',position);doc.removeEventListener('scroll',position,true);for(const remove of removers)remove();panel.remove();for(const name of ['aria-haspopup','aria-controls','aria-expanded'])trigger.removeAttribute(name);}};
   };
 
   UI.createChoiceControl=({label='Choice',options=[],value,searchable=options.length>6,onChange=()=>{},document=window.document,sprite}={})=>{
@@ -889,7 +1135,7 @@
     function show(next){
       if(disposed||doc.visibilityState==='hidden')return;
       items=next.slice(0,20);active=0;draw();
-      const rect=input.getBoundingClientRect(),width=Math.min(Math.max(rect.width,240),view.innerWidth-16);
+      const rect=input.getBoundingClientRect(),width=Math.min(rect.width,view.innerWidth-16);
       list.style.width=width+'px';list.style.left=Math.max(8,Math.min(rect.left,view.innerWidth-width-8))+'px';
       const below=view.innerHeight-rect.bottom;
       list.style.top=(below>=Math.min(list.offsetHeight,160)?rect.bottom+4:Math.max(8,rect.top-list.offsetHeight-4))+'px';
@@ -913,33 +1159,94 @@
     on(view,'pagehide',event=>{hide();if(!event.persisted)dispose();});
     return {show,hide,dispose,element:list};
   };
-  UI.createTagInput=(input,{options=()=>[],excluded=()=>[],onCommit=()=>{},limit=6}={})=>{
-    const doc=input.ownerDocument,list=doc.createElement('div'),slot=doc.createElement('div'),removers=[];
-    slot.className='ui-tag-suggestions';slot.append(list);list.className='ui-tags';list.id=`${input.id||'ui-tags'}-suggestions`;list.setAttribute('role','listbox');list.setAttribute('aria-label','Suggested tags');
-    (input.closest('.ui-field')||input.parentElement).after(slot);
-    for(const [name,value] of Object.entries({role:'combobox','aria-autocomplete':'list','aria-controls':list.id,autocomplete:'off',enterkeyhint:'done'}))input.setAttribute(name,value);
-    let matches=[],active=-1,disposed=false;
-    function on(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
-    function hide(){list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');}
+  // Native, keyboard-operable hue/saturation picker with optional multiple nodes.
+  UI.createColorWheel=({root,values=[],choices=[],multiple=false,label='Colour wheel',onChange=()=>{}}={})=>{
+    if(!root?.ownerDocument)throw new TypeError('Colour wheel needs a native root');
+    const doc=root.ownerDocument,view=doc.defaultView,size=240,button=doc.createElement('button'),canvas=doc.createElement('canvas'),selected=doc.createElement('div'),status=doc.createElement('span'),accentProbe=doc.createElement('span');
+    const normalize=value=>/^#[\da-f]{6}$/i.test(String(value))?String(value).toLowerCase():null;
+    const palette=[...new Set(choices.map(normalize).filter(Boolean))];let colors=[],cursor={h:0,s:1},disposed=false,selectionSignature=null,drag=null,suppressClick=false,hovered=false;
+    const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+    function hsv(hex){const [r,g,b]=rgb(hex).map(v=>v/255),max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;return{h:!d?0:((max===r?(g-b)/d+(g<b?6:0):max===g?(b-r)/d+2:(r-g)/d+4)*60),s:max?d/max:0};}
+    function hex(h,s){const c=s,x=c*(1-Math.abs(h/60%2-1)),m=1-c,parts=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return '#'+parts.map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');}
+    function nearest(color){if(!palette.length)return color;const a=rgb(color);return palette.reduce((best,next)=>{const distance=value=>rgb(value).reduce((sum,v,i)=>sum+(v-a[i])**2,0);return distance(next)<distance(best)?next:best;});}
+    const background=doc.createElement('canvas');background.width=background.height=size;
+    const paint=background.getContext('2d'),pixels=paint.createImageData(size,size);
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){const dx=(x-size/2)/(size/2-12),dy=(y-size/2)/(size/2-12),s=Math.hypot(dx,dy),i=(y*size+x)*4;if(s>1)continue;const color=rgb(hex((Math.atan2(dy,dx)*180/Math.PI+360)%360,s));pixels.data.set([...color,255],i);}
+    paint.putImageData(pixels,0,0);canvas.width=canvas.height=size;canvas.setAttribute('aria-hidden','true');Object.assign(canvas.style,{display:'block',inlineSize:'100%',aspectRatio:'1'});
+    button.type='button';button.className='ui-action';button.title='Click to add/remove a colour; drag a node to adjust it. Arrows choose hue/saturation; Enter toggles; Escape cancels a drag.';Object.assign(button.style,{display:'block',inlineSize:'100%',maxInlineSize:'100%',touchAction:'none'});button.append(canvas);
+    selected.className='ui-actions';selected.setAttribute('aria-label','Selected colours');status.className='ui-meta ui-truncate';status.setAttribute('role','status');status.setAttribute('aria-live','polite');accentProbe.hidden=true;accentProbe.style.color='var(--ui-accent)';root.classList.add('ui-stack');Object.assign(root.style,{inlineSize:'100%',minInlineSize:'0'});root.dataset.uiComponent='colour-wheel';root.append(button,status,selected,accentProbe);
+    function point(value){const c=hsv(value),a=c.h*Math.PI/180;return{x:size/2+Math.cos(a)*c.s*(size/2-12),y:size/2+Math.sin(a)*c.s*(size/2-12)};}
     function draw(){
-      if(disposed)return;
+      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,size,size);ctx.drawImage(background,0,0);
+      // Resolve light-dark()/variable tokens through native CSS before Canvas paint.
+      const ink=view.getComputedStyle(root).color||'#fff',accent=view.getComputedStyle(accentProbe).color||ink;
+      ctx.beginPath();ctx.arc(size/2,size/2,size/2-10,0,Math.PI*2);ctx.lineWidth=1.5;ctx.strokeStyle=ink;ctx.stroke();
+      for(const value of colors){const p=point(value);ctx.beginPath();ctx.arc(p.x,p.y,value===drag?.value?10:7,0,Math.PI*2);ctx.fillStyle=value;ctx.fill();ctx.lineWidth=4;ctx.strokeStyle=ink;ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle=accent;ctx.stroke();}
+      const value=nearest(hex(cursor.h,cursor.s)),p=point(value);ctx.beginPath();ctx.arc(p.x,p.y,hovered||drag?10:3,0,Math.PI*2);ctx.lineWidth=2;ctx.strokeStyle=accent;ctx.stroke();
+      button.setAttribute('aria-label',`${label}; ${colors.length} selected; hue ${Math.round(cursor.h)}, saturation ${Math.round(cursor.s*100)} percent`);
+      const feedback=`${colors.length?colors.length+' selected':'All colours'} · ${hovered||drag?value:'Click to add · drag to adjust'}`;if(status.textContent!==feedback)status.textContent=feedback;
+      const signature=colors.join(',');if(signature!==selectionSignature){selectionSignature=signature;selected.replaceChildren();for(const color of colors){const remove=doc.createElement('button');remove.type='button';remove.className='ui-tag';remove.textContent=color+' ×';remove.setAttribute('aria-label','Remove colour '+color);remove.onclick=()=>{change(colors.filter(v=>v!==color));button.focus({preventScroll:true});};selected.append(remove);}}selected.hidden=!colors.length;
+    }
+    function setValues(next){if(disposed)return;colors=[...new Set(next.map(normalize).filter(Boolean).map(nearest))].slice(0,multiple?32:1);draw();}
+    function change(next){if(disposed)return;const before=colors.join(',');setValues(next);if(before!==colors.join(','))onChange([...colors]);}
+    function toggle(value){value=nearest(value);change(colors.includes(value)?colors.filter(v=>v!==value):multiple?[...colors,value]:[value]);}
+    function position(event){const r=canvas.getBoundingClientRect();if(!r.width||!r.height)return null;const x=(event.clientX-r.left)/r.width*size,y=(event.clientY-r.top)/r.height*size,dx=(x-size/2)/(size/2-12),dy=(y-size/2)/(size/2-12);return{x,y,inside:Math.hypot(dx,dy)<=1,h:(Math.atan2(dy,dx)*180/Math.PI+360)%360,s:Math.min(1,Math.hypot(dx,dy)),hit:colors.find(value=>{const p=point(value);return Math.hypot(p.x-x,p.y-y)<=Math.max(12,12*size/r.width);})};}
+    function aim(p){cursor={h:p.h,s:p.s};hovered=p.inside;}
+    function click(event){if(disposed)return;if(suppressClick&&event.detail){suppressClick=false;return;}suppressClick=false;if(!event.detail){toggle(hex(cursor.h,cursor.s));return;}const p=position(event);if(!p?.inside)return;aim(p);toggle(p.hit||hex(cursor.h,cursor.s));}
+    function down(event){if(disposed||drag||event.button!==0||event.isPrimary===false)return;const p=position(event);if(!p?.inside)return;event.preventDefault();button.focus({preventScroll:true});aim(p);drag={id:event.pointerId,original:[...colors],index:p.hit?colors.indexOf(p.hit):multiple?colors.length:0,hit:p.hit,value:p.hit,x:event.clientX,y:event.clientY,moved:false};button.setPointerCapture?.(event.pointerId);draw();}
+    function move(event){if(disposed||drag&&event.pointerId!==drag.id)return;const p=position(event);if(!p)return;aim(p);button.style.cursor=p.hit?'grab':'crosshair';if(drag){event.preventDefault();drag.moved ||= Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>3;if(drag.moved){const next=[...drag.original];drag.value=nearest(hex(cursor.h,cursor.s));next[drag.index]=drag.value;button.style.cursor='grabbing';change(next);return;}}draw();}
+    function end(event,cancel=false){if(!drag||event&&event.pointerId!==drag.id)return;const prior=drag;drag=null;if(cancel){if(prior.moved)change(prior.original);}else{if(!prior.moved)toggle(prior.hit||hex(cursor.h,cursor.s));suppressClick=true;}if(button.hasPointerCapture?.(prior.id))button.releasePointerCapture(prior.id);button.style.cursor='crosshair';draw();}
+    function key(event){if(event.key==='Escape'&&drag){event.preventDefault();event.stopPropagation();end(null,true);return;}if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',' ','Home','Delete','Backspace'].includes(event.key))return;event.preventDefault();event.stopPropagation();const step=event.shiftKey?15:5;if(event.key==='ArrowLeft'||event.key==='ArrowRight')cursor.h=(cursor.h+(event.key==='ArrowRight'?step:-step)+360)%360;else if(event.key==='ArrowUp'||event.key==='ArrowDown')cursor.s=Math.max(0,Math.min(1,cursor.s+(event.key==='ArrowUp'?step:-step)/100));else if(event.key==='Home')cursor={h:0,s:1};else if(event.key==='Delete'||event.key==='Backspace'){change(colors.filter(v=>v!==nearest(hex(cursor.h,cursor.s))));return;}else{toggle(hex(cursor.h,cursor.s));return;}draw();}
+    const off=[];function on(target,type,handler){target.addEventListener(type,handler);off.push(()=>target.removeEventListener(type,handler));}
+    on(button,'click',click);on(button,'keydown',key);on(button,'pointerdown',down);on(button,'pointermove',move);on(button,'pointerup',event=>end(event));on(button,'pointercancel',event=>end(event,true));on(button,'lostpointercapture',event=>end(event,true));on(button,'pointerleave',()=>{hovered=false;if(!drag)draw();});on(doc,'visibilitychange',()=>{if(doc.hidden)end(null,true);});on(view,'pagehide',()=>end(null,true));setValues(values);
+    return {element:root,get values(){return [...colors];},setValues,clear:()=>change([]),dispose(){if(disposed)return;end(null,true);disposed=true;for(const remove of off)remove();button.remove();selected.remove();status.remove();accentProbe.remove();background.width=background.height=1;canvas.width=canvas.height=1;}};
+  };
+  UI.createSuggestedInput=(input,{options=()=>[],excluded=()=>[],onCommit=()=>{},limit=6,label='Suggestions',separator=null,tags=false}={})=>{
+    const doc=input.ownerDocument,view=doc.defaultView,list=doc.createElement('div'),slot=doc.createElement('div'),removers=[];
+    const attributes=['role','aria-autocomplete','aria-controls','aria-expanded','aria-activedescendant','autocomplete','enterkeyhint'],prior=attributes.map(name=>input.getAttribute(name));
+    slot.className='ui-listbox';Object.assign(slot.style,{position:'fixed',zIndex:'2147483647',margin:'0',maxBlockSize:'min(16rem,40vh)'});slot.append(list);list.className=tags?'ui-tags':'ui-stack';list.id=`${input.id||view.crypto.randomUUID()}-suggestions`;list.setAttribute('role','listbox');list.setAttribute('aria-label',label);
+    (input.closest('dialog')||doc.body).append(slot);
+    for(const [name,value] of Object.entries({role:'combobox','aria-autocomplete':'list','aria-controls':list.id,autocomplete:'off',enterkeyhint:'done'}))input.setAttribute(name,value);
+    let matches=[],active=-1,disposed=false,composing=false;
+    function on(node,type,handler,options){node.addEventListener(type,handler,options);removers.push(()=>node.removeEventListener(type,handler,options));}
+    function hide(){slot.hidden=true;list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');}
+    function draw(){
+      if(disposed||composing||doc.hidden)return;
       const query=input.value.trim().toLocaleLowerCase(),selected=new Set(excluded().map(tag=>tag.toLocaleLowerCase()));
       matches=options().filter(tag=>!selected.has(tag.toLocaleLowerCase())&&tag.toLocaleLowerCase().startsWith(query)).slice(0,limit);active=Math.min(active,matches.length-1);list.replaceChildren();
-      matches.forEach((tag,index)=>{const button=doc.createElement('button');button.type='button';button.className='ui-tag';button.textContent=tag;button.id=`${list.id}-${index}`;button.setAttribute('role','option');button.setAttribute('aria-selected',String(index===active));button.tabIndex=-1;
+      matches.forEach((tag,index)=>{const button=doc.createElement('button');button.type='button';button.className=tags?'ui-tag':'ui-action';button.textContent=tag;if(!tags)UI.adoptAction(button,{label:tag});button.id=`${list.id}-${index}`;button.setAttribute('role','option');button.setAttribute('aria-selected',String(index===active));button.tabIndex=-1;
         button.addEventListener('pointerdown',event=>event.preventDefault());button.addEventListener('click',()=>{commit(tag);input.focus();});list.append(button);});
-      list.hidden=!matches.length;input.setAttribute('aria-expanded',String(Boolean(matches.length)));
+      slot.hidden=!matches.length;list.hidden=!matches.length;
+      if(matches.length){const rect=(input.closest('.ui-field')||input).getBoundingClientRect(),width=Math.min(rect.width,view.innerWidth-16);slot.style.width=width+'px';slot.style.left=Math.max(8,Math.min(rect.left,view.innerWidth-width-8))+'px';slot.style.top=(view.innerHeight-rect.bottom>=Math.min(slot.offsetHeight,160)?rect.bottom+4:Math.max(8,rect.top-slot.offsetHeight-4))+'px';}input.setAttribute('aria-expanded',String(Boolean(matches.length)));
       if(matches.length&&active>=0)input.setAttribute('aria-activedescendant',`${list.id}-${active}`);else input.removeAttribute('aria-activedescendant');
     }
-    function commit(value){if(!value.trim())return;input.value='';active=-1;onCommit(value);draw();}
+    function commit(value){if(!value.trim())return;input.value='';active=-1;hide();onCommit(value);}
     function handleKey(event){
-      if(event.isComposing||event.shiftKey&&event.key==='Enter')return;
+      if(composing||event.isComposing||event.shiftKey||event.ctrlKey||event.metaKey||event.altKey)return;
       if(event.key==='Escape'&&!list.hidden){event.preventDefault();event.stopPropagation();hide();return;}
       if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();active=active<0?(event.key==='ArrowDown'?0:matches.length-1):(active+(event.key==='ArrowDown'?1:-1)+matches.length)%(matches.length||1);draw();}
-      if(event.key==='Enter'||event.key===','){event.preventDefault();event.stopPropagation();commit(event.key==='Enter'&&!list.hidden&&active>=0?matches[active]:input.value);}
+      if(event.key==='Enter'||separator&&event.key===separator){event.preventDefault();event.stopPropagation();commit(event.key==='Enter'&&!list.hidden&&active>=0?matches[active]:input.value);}
     }
     on(input,'input',()=>{active=-1;draw();});on(input,'focus',draw);on(input,'blur',hide);on(input,'keydown',handleKey);
-    on(input,'paste',event=>{const value=event.clipboardData?.getData('text');if(value?.includes(',')){event.preventDefault();commit(value);}});
-    hide();return {element:list,hide,draw,handleKey,flush:()=>commit(input.value),dispose(){if(disposed)return;disposed=true;for(const remove of removers)remove();slot.remove();for(const name of ['role','aria-autocomplete','aria-controls','aria-expanded','aria-activedescendant'])input.removeAttribute(name);}};
+    on(input,'compositionstart',()=>{composing=true;hide();});on(input,'compositionend',()=>{composing=false;draw();});
+    on(doc,'pointerdown',event=>{if(event.target!==input&&!slot.contains(event.target))hide();});on(view,'resize',hide);on(doc,'scroll',event=>{if(!slot.contains(event.target))hide();},true);on(doc,'visibilitychange',()=>{if(doc.hidden)hide();});on(view,'pagehide',event=>{hide();if(!event.persisted)dispose();});
+    on(input,'paste',event=>{const value=event.clipboardData?.getData('text');if(separator&&value?.includes(separator)){event.preventDefault();commit(value);}});
+    function dispose(){if(disposed)return;disposed=true;hide();for(const remove of removers)remove();slot.remove();attributes.forEach((name,i)=>prior[i]===null?input.removeAttribute(name):input.setAttribute(name,prior[i]));}
+    hide();return {element:list,hide,draw,handleKey,flush:()=>commit(input.value),dispose};
+  };
+  UI.createTagInput=(input,{field, chips,layout='inline',...options}={})=>{
+    if(!['inline','stacked'].includes(layout))throw new TypeError('Unknown tag field layout');
+    // Keep declared tag slots stable; suggestions retain their overlay ownership.
+    let layoutState=[];
+    if(field&&chips){const entry=input.closest('.ui-field')||input;layoutState=[field,entry,chips].map(node=>({node,style:node.getAttribute('style')}));Object.assign(field.style,{display:'flex',flexWrap:'nowrap',gap:'var(--ui-gap)',minInlineSize:'0'});Object.assign(entry.style,{minInlineSize:'0',inlineSize:'100%',flex:'1 1 14ch'});Object.assign(chips.style,{flex:'0 1 auto',maxInlineSize:'50%',flexWrap:'nowrap',overflowX:'auto',minInlineSize:'0'});field.prepend(entry);
+      if(layout==='stacked'){
+        Object.assign(field.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr)',gridTemplateRows:'var(--ui-field-height) calc(max(var(--ui-tag-height), var(--ui-control-height)) + 18px)',alignItems:'start'});
+        Object.assign(entry.style,{gridRow:'1',flex:'none',blockSize:'var(--ui-field-height)'});
+        Object.assign(chips.style,{display:'flex',gridRow:'2',inlineSize:'100%',maxInlineSize:'100%',blockSize:'100%',alignItems:'start',flex:'none'});
+      }
+    }
+    const control=UI.createSuggestedInput(input,{...options,tags:true,separator:',',label:'Suggested tags'}),dispose=control.dispose;let restored=false;
+    control.dispose=()=>{if(restored)return;restored=true;dispose();for(const {node,style}of layoutState)style===null?node.removeAttribute('style'):node.setAttribute('style',style);};return control;
   };
   function activate(tab){const group=tab.closest('[data-ui-tabs]');if(!group)return;
     for(const item of group.querySelectorAll('[role=tab]')){const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;const panel=document.getElementById(item.getAttribute('aria-controls'));if(panel)panel.hidden=!selected;}
@@ -1191,16 +1498,19 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
         if(collapsed.has(node))return actionWidth(node.querySelector(':scope > summary'),true);
         return rowWidth(contents(node),style(node.querySelector(':scope > .ui-actions')||node),compact,collapsed);
       }
-      if(isAction(node))return actionWidth(node,compact&&eligible(node));
-      if(node.matches('.ui-field'))return fieldWidth(node,compact&&eligible(node));
-      if(node.tagName==='DETAILS'){const summary=node.querySelector(':scope > summary');if(summary&&isAction(summary))return actionWidth(summary,compact&&eligible(summary));}
+      if(isAction(node))return actionWidth(node,(compact===true||compact instanceof Set&&compact.has(node))&&eligible(node));
+      if(node.matches('.ui-field'))return fieldWidth(node,(compact===true||compact instanceof Set&&compact.has(node))&&eligible(node));
+      if(node.tagName==='DETAILS'){const summary=node.querySelector(':scope > summary');if(summary&&isAction(summary))return actionWidth(summary,(compact===true||compact instanceof Set&&compact.has(summary))&&eligible(summary));}
       if(node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')||style(node).display==='contents')return rowWidth(children(node),style(node),compact,collapsed,node.matches('.ui-fill'));
       const css=style(node),basis=number(css.flexBasis);if(number(css.flexGrow)>0)return Math.max(number(css.minWidth),basis||caption(node)+sides(css))+margins(css);
       // The header identity's auto margin is leftover space, not caption width.
       if(node.parentElement?.matches('.ui-header')&&node===children(node.parentElement)[0]&&!node.matches('.ui-actions,.ui-action,.ui-field,button,details'))return node.getBoundingClientRect().width;
       return outer(node);
     }
-    function rowWidth(nodes,css,compact,collapsed,equal=false){const widths=nodes.map(node=>width(node,compact,collapsed));return (equal?Math.max(0,...widths)*nodes.length:widths.reduce((sum,value)=>sum+value,0))+number(css.columnGap)*Math.max(0,nodes.length-1);}
+    function rowWidth(nodes,css,compact,collapsed,equal=false){const widths=nodes.map(node=>width(node,compact,collapsed));
+      const fixed=equal&&compact instanceof Set?nodes.map((node,i)=>compact.has(node)&&node.hasAttribute('data-ui-compact-priority')?i:-1).filter(i=>i>=0):[];
+      return (equal?fixed.reduce((sum,i)=>sum+widths[i],0)+Math.max(0,...widths.filter((_,i)=>!fixed.includes(i)))*(nodes.length-fixed.length):widths.reduce((sum,value)=>sum+value,0))+number(css.columnGap)*Math.max(0,nodes.length-1);
+    }
     function descendants(nodes){return nodes.flatMap(node=>node.matches(overflowSelector)?descendants(contents(node)):node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')?descendants(children(node)):node.tagName==='DETAILS'?[node.querySelector(':scope > summary')].filter(Boolean):[node]);}
     function priorities(nodes){return nodes.flatMap(node=>node.matches(overflowSelector)?[node]:node.matches('.ui-actions.ui-inline,[data-ui-layout=inline]')?priorities(children(node)):[]);}
     function setCompact(node,value){if(value){if(!node.hasAttribute('data-ui-compact'))node.setAttribute('data-ui-compact','');}else if(node.hasAttribute('data-ui-compact'))node.removeAttribute('data-ui-compact');}
@@ -1210,6 +1520,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       if(!group.isConnected){untrack(group);return;}
       // Overflow contents are governed by their outer group, including while closed.
       if(group.closest(overflowSelector))return;
+      const owner=group.parentElement;if(group.matches('.ui-inline,[data-ui-layout=inline]')&&owner?.matches('.ui-actions,.ui-toolbar')&&owner.dataset.uiLayout!=='vertical'&&style(owner).flexDirection!=='column'){untrack(group);register(owner);return;}
       const css=style(group),nodes=children(group).filter(node=>!['absolute','fixed'].includes(style(node).position)),actions=descendants(nodes).filter(eligible);
       const overflows=priorities(nodes);
       const vertical=group.dataset.uiLayout==='vertical'||css.flexDirection==='column';
@@ -1221,13 +1532,23 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
         if(targetCSS.display.includes('flex')&&targetCSS.flexDirection!=='column'){
           const siblings=children(item.target).filter(node=>node!==group&&!['absolute','fixed'].includes(style(node).position));
           available-=siblings.reduce((sum,node)=>sum+width(node,false,new Set()),0)+number(targetCSS.columnGap)*siblings.length;
-        }else available=Math.min(available,group.clientWidth||available);
+        }else{
+          // An intrinsic dock may still be icon-sized after growing. Its explicit
+          // pixel cap is the available slot; measuring its compact width locks it.
+          const cap=css.maxWidth?.endsWith('px')?number(css.maxWidth):available;
+          available=Math.min(available,cap||available);
+        }
         available-=margins(css)+sides(css);
       }
       const collapsed=new Set(),limit=Math.max(0,available-2);
       const required=mode=>rowWidth(nodes,css,mode,collapsed,group.matches('.ui-fill'));
-      const compact=!vertical&&required(false)>limit;
-      for(const node of actions)setCompact(node,compact);
+      let compact=!vertical&&required(false)>limit;
+      if(compact&&actions.some(node=>node.hasAttribute('data-ui-compact-priority'))){
+        const chosen=new Set(),ranks=[...new Set(actions.map(node=>node.hasAttribute('data-ui-compact-priority')?number(node.dataset.uiCompactPriority):Infinity))].sort((a,b)=>a-b);
+        for(const rank of ranks){for(const node of actions)if((node.hasAttribute('data-ui-compact-priority')?number(node.dataset.uiCompactPriority):Infinity)===rank)chosen.add(node);if(required(chosen)<=limit)break;}
+        compact=chosen;
+      }
+      for(const node of actions)setCompact(node,compact===true||compact instanceof Set&&compact.has(node));
       const equal=nodes.length>1&&!vertical&&!group.matches('.ui-fill,.ui-inline,[data-ui-layout=inline]')&&nodes.every(node=>node.matches('.ui-action,button'))&&(group.matches('.ui-tabs')?compact:limit<480);
       const slot=(limit-number(css.columnGap)*(nodes.length-1))/nodes.length;
       if(equal&&nodes.every(node=>width(node,compact,collapsed)<=slot))group.setAttribute('data-ui-equal','');else group.removeAttribute('data-ui-equal');
@@ -1251,7 +1572,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       }
       const after=item.target.getBoundingClientRect();item.width=after.width;item.height=after.height;
     }
-    function flush(){frame=0;const work=[...pending];pending.clear();for(const group of work){const item=groups.get(group);if(item)fit(group,item);}for(const group of groups.keys())if(!group.isConnected)untrack(group);}
+    function flush(){frame=0;const work=[...pending];pending.clear();for(const group of work){const item=groups.get(group);if(item)fit(group,item);}for(const group of groups.keys())if(!group.isConnected)untrack(group);for(const menu of doc.querySelectorAll?.('details.ui-menu[open]')||[])UI.positionMenu?.(menu);}
     const observer=new view.ResizeObserver(entries=>{
       for(const entry of entries)for(const [group,item]of groups)if(item.target===entry.target){const box=entry.target.getBoundingClientRect();if(box.width!==item.width||box.height!==item.height)queue(group);}
     });
@@ -1260,7 +1581,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       // A horizontal row owns its intrinsic subgroups. Registering both lets a
       // child's later fit undo the parent's caption mode and creates outliers.
       const parent=group.parentElement;
-      if(group.matches('.ui-inline,[data-ui-layout=inline]')&&parent?.matches('.ui-actions,.ui-toolbar')&&parent.dataset.uiLayout!=='vertical'&&style(parent).flexDirection!=='column'){register(parent);return;}
+      if(group.matches('.ui-inline,[data-ui-layout=inline]')&&parent?.matches('.ui-actions,.ui-toolbar')&&parent.dataset.uiLayout!=='vertical'&&style(parent).flexDirection!=='column'){untrack(group);register(parent);return;}
       let item=groups.get(group);
       if(!item){const target=group.matches('.ui-inline,[data-ui-layout=inline]')?group.parentElement:group;if(!target)return;item={target,width:-1,height:-1};groups.set(group,item);targets.set(target,(targets.get(target)||0)+1);if(!paused)observer.observe(target);}
       queue(group);
@@ -1482,6 +1803,49 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
   return {element,dispose(){activeFinish?.(true);for(const remove of removers)remove();},sync(next,nextSpec,parameters){spec=nextSpec;endSpec=parameters.find(item=>(item.key||item.id)===spec.rangeControl.end);element.hidden=!endSpec;if(!endSpec)return;if(!dragging){start=next;other=Number(endSpec.value??endSpec.default??0);paint();}}};
 }
 
+})();
+
+/* Native filter forms shared by tables, galleries and other collections. */
+(() => {
+  'use strict';
+  if(typeof window==='undefined'||!window.SharedUI)return;
+  const UI=window.SharedUI;
+  UI.createFilterMenu=(form,{label='Filters',sprite,defaults={},onChange=()=>{}}={})=>{
+    const element=form?.querySelector('details[data-ui-filter]'),summary=element?.querySelector('summary');
+    if(form?.tagName!=='FORM'||!summary)throw new TypeError('Use a native form with details[data-ui-filter] and summary');
+    const doc=form.ownerDocument,view=doc.defaultView,off=[];let disposed=false,active=0;
+    const fields=()=>[...form.querySelectorAll('[data-ui-filter-field]')].filter(f=>f.name&&['INPUT','SELECT','TEXTAREA'].includes(f.tagName));
+    const baseline=f=>defaults[f.name]??f.dataset.uiFilterDefault??(f.multiple?[]:'');
+    const normalize=value=>(Array.isArray(value)?value:[value]).filter(v=>v!==''&&v!=null).map(String).sort();
+    function values(){const out=Object.create(null);for(const f of fields()){
+      if(f.disabled)continue;
+      if(f.type==='radio'||f.type==='checkbox'){
+        out[f.name]??=[];if(f.checked)out[f.name].push(f.value);
+      }else out[f.name]=f.multiple?[...f.selectedOptions].map(o=>o.value):f.value;
+    }return out;}
+    function refresh(){if(disposed)return;const state=values(),seen=new Set();active=0;
+      for(const f of fields()){if(f.disabled||seen.has(f.name))continue;seen.add(f.name);if(JSON.stringify(normalize(state[f.name]))!==JSON.stringify(normalize(baseline(f))))active++;}
+      UI.adoptAction(summary,{label:active?`${label} · ${active}`:label,ariaLabel:active?`${label}, ${active} active`:label,icon:'filter',sprite});
+      summary.dataset.uiFilterActive=String(active);
+      for(const clear of form.querySelectorAll('[data-ui-filter-clear]')){if(clear.tagName==='BUTTON')clear.disabled=!active;else clear.setAttribute('aria-disabled',String(!active));}
+      return state;
+    }
+    function emit(reason){const state=refresh();if(!disposed)onChange(state,{reason,active});}
+    function clear(){if(disposed)return;for(const f of fields()){
+      const wanted=normalize(baseline(f));
+      if(f.type==='radio'||f.type==='checkbox')f.checked=wanted.includes(f.value);
+      else if(f.multiple){for(const o of f.options)o.selected=wanted.includes(o.value);}
+      else f.value=wanted[0]??'';
+    }emit('clear');}
+    function changed(event){if(event.target.matches('[data-ui-filter-field]'))emit(event.type);}
+    function click(event){if(event.target.closest('[data-ui-filter-clear]')?.closest('form')!==form)return;event.preventDefault();clear();}
+    function key(event){if(event.key==='Escape'&&element.open&&!event.defaultPrevented){event.preventDefault();element.open=false;summary.focus({preventScroll:true});}}
+    function listen(node,type,fn){node.addEventListener(type,fn);off.push(()=>node.removeEventListener(type,fn));}
+    listen(form,'input',changed);listen(form,'change',changed);listen(form,'click',click);listen(element,'keydown',key);
+    listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
+    function dispose(){if(disposed)return;disposed=true;for(const remove of off)remove();}
+    refresh();return {element,get values(){return values();},get active(){return active;},refresh,clear,dispose};
+  };
 })();
 
 /* Native canonical compositions: shells only, no app state, transport or listeners. */
@@ -1715,7 +2079,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     // Prepend ONLY new fixture chrome. The original native forms/buttons and
     // app-owned <details> remain at their original DOM identity and position.
     const chrome=node('header','ui-floating-chrome');
-    const controls=node('div','ui-floating-controls');
+    const controls=node('div','ui-actions ui-inline');
     const handle=node('button','ui-floating-handle','Move panel');
     handle.type='button';
     handle.setAttribute('aria-label','Move '+label+'; arrow keys move, Shift+arrows move faster, Home resets');
@@ -1727,11 +2091,12 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     controls.append(handle,reset);
     const name=node('strong','ui-floating-name',label);
     const variant=node('span','ui-floating-variant');
-    const deployment=node('span','ui-floating-deployment');
-    const identity=node('span','ui-floating-identity');
+    const deployment=node('span','ui-floating-deployment ui-meta');
+    const identity=node('span','ui-floating-identity ui-meta');
     const info=node('details','ui-floating-provenance');
     const summary=node('summary',null,'Versions & provenance');
     const fields=node('dl','ui-floating-source-list');
+    Object.assign(fields.style,{display:'grid',gridTemplateColumns:'minmax(6rem,auto) minmax(0,1fr)',gap:'3px 8px',margin:'6px 0 0'});
     info.append(summary,fields);
     const status=node('span','ui-sr-only');
     status.setAttribute('role','status');status.setAttribute('aria-live','polite');
@@ -1755,7 +2120,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       identity.textContent=formatted.identityLabel;
       fields.replaceChildren();
       for(const [key,value] of formatted.details){
-        const dt=node('dt',null,key),dd=node('dd',null,value);
+        const dt=node('dt','ui-meta',key),dd=node('dd',null,value);dd.style.margin='0';
         fields.append(dt,dd);
       }
       panel.dataset.uiFloatingVariant=formatted.variant;
@@ -1906,6 +2271,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     const issue=(node,code,detail,severity='error')=>issues.push({code,name:name(node),detail,severity});
     for(const node of items){
       if(!name(node)||!node.getAttribute('aria-label')&&!node.textContent.trim()&&!node.querySelector('input[aria-label],select[aria-label]'))issue(node,'missing-name','Give the native action a complete accessible name.');
+      if(!node.matches('.ui-action')&&node.matches('button,a,summary')&&node.closest('.ui-actions,.ui-toolbar')&&node.querySelector(':scope > svg'))issue(node,'unadopted-action','Register the native icon command with SharedUI.adoptAction before fitting its group.');
       if(node.matches('.ui-action')){
         if(!node.matches('button,a,summary,label'))issue(node,'non-native-action','Use a native button, link, summary or labeled form control.');
         if(!node.querySelector(':scope > .ui-label'))issue(node,'missing-label','Adopt the action with the shared label helper.');

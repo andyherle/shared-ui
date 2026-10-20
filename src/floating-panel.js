@@ -106,7 +106,7 @@
     // Prepend ONLY new fixture chrome. The original native forms/buttons and
     // app-owned <details> remain at their original DOM identity and position.
     const chrome=node('header','ui-floating-chrome');
-    const controls=node('div','ui-floating-controls');
+    const controls=node('div','ui-actions ui-inline');
     const handle=node('button','ui-floating-handle','Move panel');
     handle.type='button';
     handle.setAttribute('aria-label','Move '+label+'; arrow keys move, Shift+arrows move faster, Home resets');
@@ -118,11 +118,12 @@
     controls.append(handle,reset);
     const name=node('strong','ui-floating-name',label);
     const variant=node('span','ui-floating-variant');
-    const deployment=node('span','ui-floating-deployment');
-    const identity=node('span','ui-floating-identity');
+    const deployment=node('span','ui-floating-deployment ui-meta');
+    const identity=node('span','ui-floating-identity ui-meta');
     const info=node('details','ui-floating-provenance');
     const summary=node('summary',null,'Versions & provenance');
     const fields=node('dl','ui-floating-source-list');
+    Object.assign(fields.style,{display:'grid',gridTemplateColumns:'minmax(6rem,auto) minmax(0,1fr)',gap:'3px 8px',margin:'6px 0 0'});
     info.append(summary,fields);
     const status=node('span','ui-sr-only');
     status.setAttribute('role','status');status.setAttribute('aria-live','polite');
@@ -146,7 +147,7 @@
       identity.textContent=formatted.identityLabel;
       fields.replaceChildren();
       for(const [key,value] of formatted.details){
-        const dt=node('dt',null,key),dd=node('dd',null,value);
+        const dt=node('dt','ui-meta',key),dd=node('dd',null,value);dd.style.margin='0';
         fields.append(dt,dd);
       }
       panel.dataset.uiFloatingVariant=formatted.variant;
