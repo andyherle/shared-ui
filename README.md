@@ -780,3 +780,8 @@ Media viewport hosts can set `keyboard:false` to reserve all keys for transport/
 ### Numbered document links
 
 Use `SharedUI.adoptNumberedAction(link,{number:1,label:'Bank statement.pdf',ariaLabel:'Statement 1: Bank statement.pdf',sprite:'./shared-ui/icons.svg'})` for an ordered group of document links. It retains the native link and shared action paint, focus and sizing, with a square numeral SVG in place of the file icon. Use `data-ui-variant="quiet"` and a `.ui-label.ui-truncate`; keep the complete filename and recorded location in its accessible name/title. Put the links together in `.ui-actions` and leave captions adaptive: at narrow widths the captions collapse together into square numbered icons. `number` must be a positive safe integer and is a position within the displayed group, not an inferred document identity. Re-adopting the same number retains its glyph node. The app owns hrefs, ordering and document preview behavior. The catalogue's Numbered document links demonstrates the native pattern.
+
+
+### Distinct icons within a bar
+
+Each distinct action in one bar must use a distinct icon. Repeated document links use numbered square icons so their collapsed controls remain distinguishable. Keep accessible names and tooltips complete when captions collapse. All eligible captions in a navigation bar collapse together; do not force a few labels to stay visible while their neighbours collapse.
