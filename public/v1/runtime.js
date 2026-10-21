@@ -125,6 +125,21 @@
     if(current.textContent!==String(value))current.textContent=String(value);
     return element;
   }
+  function adoptNumberedAction(element,{number,...options}={}){
+    if(!Number.isSafeInteger(number)||number<1)throw new TypeError('A positive document number is required');
+    const action=adoptAction(element,{...options,icon:undefined}),doc=element.ownerDocument;
+    let glyph=element.querySelector(':scope > svg');
+    if(glyph?.getAttribute('data-ui-number')===String(number))return action;
+    if(!glyph){glyph=doc.createElementNS('http://www.w3.org/2000/svg','svg');element.prepend(glyph);}
+    for(const [name,value]of Object.entries({class:'ui-icon',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','aria-hidden':'true',focusable:'false','data-ui-number':String(number)}))glyph.setAttribute(name,value);
+    const square=doc.createElementNS('http://www.w3.org/2000/svg','rect');
+    for(const [name,value]of Object.entries({x:2,y:2,width:20,height:20,rx:3}))square.setAttribute(name,String(value));
+    const text=doc.createElementNS('http://www.w3.org/2000/svg','text'),digits=String(number).length;
+    for(const [name,value]of Object.entries({x:12,y:12,'dominant-baseline':'central','text-anchor':'middle',fill:'currentColor',stroke:'none','font-family':'var(--ui-font)','font-weight':'var(--ui-control-weight)','font-size':String(Math.min(14,26/digits))}))text.setAttribute(name,value);
+    text.textContent=String(number);glyph.replaceChildren(square,text);
+    const group=element.closest?.('.ui-actions,.ui-toolbar');if(group)api.observeActions?.(group);
+    return action;
+  }
   const actionStates=new WeakMap();
   function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
@@ -450,7 +465,7 @@
     dialog.addEventListener('keydown',key);dialog.addEventListener('click',click);dialog.addEventListener('close',closed);view.addEventListener('pagehide',pagehide);
     return {open(trigger=doc.activeElement){if(disposed)return;if(!dialog.open){opener=trigger;dialog.showModal();}},close,dispose};
   }
-  const api={version:'1.12.0',mount,release,adoptAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.12.0',mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createValueTransition,createZoomSteps,createColumnDrag,createColumnResize,createLightbox,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
