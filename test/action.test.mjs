@@ -190,3 +190,17 @@ test('content zoom starts gently and accelerates only rapid same-direction press
  assert.equal(steps.next(1),1.1);time=100;assert.equal(steps.next(1),1.15);time=180;assert.equal(steps.next(1),1.2);time=220;assert.equal(steps.next(1),1.2);
  assert.equal(steps.next(-1),1/1.1);time=600;assert.equal(steps.next(-1),1/1.1);steps.next(0);assert.equal(steps.next(-1),1/1.1);
 });
+
+
+test('numbered document actions retain native links, names and glyph nodes across caption changes',()=>{
+ const {doc}=control(),link=doc.createElement('a');link.setAttribute('href','/statement#row-42');link.setAttribute('aria-label','Statement 2: Bank.pdf');link.setAttribute('title','Bank.pdf · row 42');link.textContent='Bank.pdf';const handler=()=>{};link.onclick=handler;
+ module.exports.adoptNumberedAction(link,{number:2,sprite:'/ui/icons.svg'});
+ const glyph=link.querySelector(':scope > svg'),square=glyph.querySelector('rect'),text=glyph.querySelector('text');
+ assert.equal(text.textContent,'2');assert.equal(square.getAttribute('width'),'20');assert.equal(glyph.getAttribute('aria-hidden'),'true');assert.equal(link.getAttribute('href'),'/statement#row-42');assert.equal(link.getAttribute('aria-label'),'Statement 2: Bank.pdf');assert.equal(link.onclick,handler);
+ module.exports.adoptNumberedAction(link,{number:2,label:'Renamed bank.pdf',iconOnly:true,sprite:'/ui/icons.svg'});
+ assert.equal(link.querySelector(':scope > svg'),glyph);assert.equal(glyph.querySelector('text'),text);assert.equal(link.dataset.uiLabel,'hidden');assert.equal(link.querySelector(':scope > .ui-label').textContent,'Renamed bank.pdf');
+ module.exports.adoptNumberedAction(link,{number:12,sprite:'/ui/icons.svg'});assert.equal(link.querySelector(':scope > svg'),glyph);assert.equal(glyph.querySelector('text').textContent,'12');
+});
+test('document ordinals reject non-integers and unsafe values before changing a control',()=>{
+ for(const number of [0,-1,1.5,NaN,Infinity,'2',Number.MAX_SAFE_INTEGER+1]){const {button}=control();assert.throws(()=>module.exports.adoptNumberedAction(button,{number}),/positive document number/);assert.equal(button.querySelector(':scope > svg'),undefined);}
+});

@@ -27,6 +27,7 @@ UI.adoptAction(embedded.querySelector('button'),{label:'Save folder',icon:'save'
 embedded.querySelector('form').addEventListener('submit',event=>{event.preventDefault();const status=embedded.querySelector('[role=status]');status.textContent='Folder retained: '+embedded.querySelector('input').value;status.dataset.state='success';});
 for(const swatch of document.querySelectorAll('[data-colour]'))swatch.style.setProperty('--colour',swatch.dataset.colour);
 for(const action of document.querySelectorAll('[data-ui-icon]'))UI.adoptAction(action,{icon:action.dataset.uiIcon,sprite:'./v1/icons.svg'});
+for(const action of document.querySelectorAll('[data-ui-number]'))UI.adoptNumberedAction(action,{number:Number(action.dataset.uiNumber),sprite:'./v1/icons.svg'});
 const preview=$('responsive-preview'),previewWidth=$('preview-width');
 function resizePreview(value){const fit=value==='fit';const width=Math.max(180,Math.min(900,Number(value)||320));preview.style.width=fit?'100%':width+'px';if(!fit)previewWidth.value=width;$('preview-width-value').textContent=fit?'Fit container':width+' px';}
 previewWidth.addEventListener('input',()=>resizePreview(previewWidth.value));
