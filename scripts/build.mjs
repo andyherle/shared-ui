@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import vm from 'node:vm';
 import {gzipSync} from 'node:zlib';
 import {resolvePacks} from '../src/packs.mjs';
+import {publishGeneratedFiles} from './generated-files.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 // Compact punctuation outside strings; preserve descendant selectors and calc spaces.
 export function compactCSS(source){
@@ -78,7 +79,7 @@ export function buildSite(directory=root){
   const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css).length;
   if(rawBytes>36864||gzipBytes>8192||/@import|url\s*\(/i.test(css))
     throw new Error('Styles must remain within 36 KiB raw / 8 KiB gzip with no external imports');
-  const release=manifest(css),out=path.join(directory,'public/v1');
+  const release=manifest(css);
   const icons=JSON.parse(read('icons.json'));
   const symbols=Object.entries(icons).map(([name,paths])=>{
     if(!/^[a-z][a-z0-9-]*$/.test(name)||!Array.isArray(paths)||paths.some(d=>!/^[-MmLlHhVvCcSsQqTtAaZz0-9.,\s+]+$/.test(d)))throw new Error('Invalid icon path');
@@ -89,15 +90,16 @@ export function buildSite(directory=root){
     ...debugAssets(directory,compactCSS),...timelineAssets(directory,compactCSS),
     ['debug.html',read('debug-lab.html').replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],['debug-lab.js',read('debug-lab.js')],
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],
-    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
+    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('filters.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
     ['v1/floating-panel.fixture.css',floatingCss],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],
     ['lab.js',read('lab.js').replace('@@ICON_NAMES@@',JSON.stringify(Object.keys(icons)))+'\n'+read('composition-lab.js')],['lab.css',read('lab.css')],
     ['v1/manifest.json',JSON.stringify(release)+'\n']
   ]);
-  fs.mkdirSync(out,{recursive:true});
-  for(const [name,content] of assets){const target=path.join(directory,'public',name),temporary=target+'.'+process.pid+'.tmp';fs.writeFileSync(temporary,content);fs.renameSync(temporary,target);}
+  // Validate the exact emitted scripts, including optional and concatenated code.
+  for(const [name,content] of assets)if(name.endsWith('.js'))new vm.Script(content,{filename:name});
+  publishGeneratedFiles(path.join(directory,'public'),assets);
   return {revision:release.revision,cssBytes:Buffer.byteLength(css),gzipBytes:gzipSync(css).length,
     floatingFixtureCssBytes:Buffer.byteLength(floatingCss),
     floatingFixtureCssSha256:createHash('sha256').update(floatingCss).digest('hex'),

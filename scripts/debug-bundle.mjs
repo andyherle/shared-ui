@@ -3,6 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
+import {publishGeneratedFiles} from './generated-files.mjs';
 export const DEBUG_BUDGET=Object.freeze({css:6144,cssGzip:2048,js:32768,jsGzip:10240});
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 export function debugAssets(root,compactCSS){
@@ -25,8 +26,6 @@ export function installDebugBundle(target,{source,check=false}={}){
  new vm.Script(files.get('debug.js').toString(),{filename:'debug.js'});
  if(/@import|url\s*\(/i.test(files.get('debug.css').toString()))throw new Error('External debug CSS imports are prohibited');
  files.set('debug.manifest.json',Buffer.from(JSON.stringify(manifest,null,2)+'\n'));
- const changed=[...files].filter(([name,bytes])=>!fs.existsSync(path.join(target,name))||!fs.readFileSync(path.join(target,name)).equals(bytes)).map(([name])=>name);
- if(check&&changed.length)throw new Error('Debug component is out of date: '+changed.join(', '));
- if(!check){fs.mkdirSync(target,{recursive:true});for(const name of changed){const dest=path.join(target,name),tmp=dest+'.'+process.pid+'.tmp';try{fs.writeFileSync(tmp,files.get(name));fs.renameSync(tmp,dest);}finally{if(fs.existsSync(tmp))fs.unlinkSync(tmp);}}}
+ const changed=publishGeneratedFiles(target,files,{check,stale:'Debug component is out of date: '});
  return {component:'debug',checked:check,changed,sizes:manifest.sizes};
 }

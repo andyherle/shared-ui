@@ -1,7 +1,7 @@
 <section id="floating-review" class="lab-section">
   <header><h2>Floating fixture review</h2><p class="ui-muted">One shared, screen-bounded panel. Drag only its dedicated handle or move it with arrow keys. The original native fixture controls stay interactive.</p></header>
-  <div class="ui-actions lab-row"><button id="floating-demo-toggle" type="button" aria-controls="floating-review-panel" aria-expanded="true">Hide review panel</button><span class="ui-meta">Pinned to the visible viewport, not the page header</span></div>
-  <aside id="floating-review-panel" class="ui-panel ui-chrome" aria-label="Shared floating fixture review">
+  <div class="ui-actions lab-row"><button id="floating-demo-toggle" type="button" aria-controls="floating-review-panel" aria-expanded="false">Show review panel</button><span class="ui-meta">Pinned to the visible viewport, not the page header</span></div>
+  <aside hidden id="floating-review-panel" class="ui-panel ui-chrome" aria-label="Shared floating fixture review">
     <details id="floating-demo-tools"><summary>Fixture navigation &amp; test controls</summary>
       <div class="ui-stack ui-pad">
         <label class="ui-field"><span class="ui-label">Editable fixture label</span><input id="floating-demo-input" value="Typing does not move this panel" aria-label="Editable floating fixture label"></label>
@@ -11,7 +11,7 @@
   </aside>
 </section>
 <section id="control-fixture" class="lab-section">
-  <header><h2>Control fixture</h2></header>
+  <header><h2>Control fixture</h2><p class="ui-meta">Zoom with shortcuts or the controls: the floating zoom group appears during changes, on hover or with keyboard focus, then clears while idle. Touch controls remain visible.</p></header>
   <div class="lab-fixture-controls" aria-label="Fixture widths">
     <div class="ui-actions ui-fill" aria-label="Choose fixture width"><button type="button" data-fixture-width="320">Phone</button><button type="button" data-fixture-width="480">Panel</button><button type="button" data-fixture-width="960">Wide</button><button type="button" data-fixture-width="fit">Fit</button></div>
     <label class="ui-field"><span class="ui-label">Width</span><input class="ui-range" id="fixture-width" type="range" min="240" max="1120" value="960" aria-label="Control fixture width"><output id="fixture-width-value">960</output></label>
@@ -109,11 +109,17 @@
     <article class="ui-card ui-pad ui-chrome ui-stack" aria-label="Record detail">
       <h3 class="ui-section-title">Record detail</h3><p class="ui-meta">Example invoice · 2026-10-15</p>
       <p class="ui-value">900.00 CAD</p><p class="ui-meta">Outstanding · due 2026-11-01</p>
-      <details class="ui-section" open><summary><h5>Amounts</h5><p class="ui-meta">Invoice 1,200.00 · paid 300.00 CAD</p></summary><dl><dt>Invoice</dt><dd>1,200.00 CAD</dd><dt>Paid</dt><dd>300.00 CAD</dd></dl></details>
-      <details class="ui-section"><summary><h5>History</h5><p class="ui-meta">2 events · latest payment 2026-10-15</p></summary><p>Issued 2026-10-02 · part paid 2026-10-15</p></details>
-      <details class="ui-section"><summary><h5>Document</h5><p class="ui-meta">1 PDF · Example invoice.pdf</p></summary><div class="ui-actions ui-fill"><a class="ui-action" data-ui-icon="file" data-ui-label="always" href="#control-fixture">Open Example invoice.pdf</a><a class="ui-action" data-ui-icon="download" href="#control-fixture" aria-label="Download example invoice">Download</a></div></details>
-      <details class="ui-section"><summary><h5>Source</h5><p class="ui-meta">Ledger record · line 42</p></summary><a class="ui-action" data-ui-icon="arrow-up-right" href="#control-fixture">Open source record</a></details>
+      <div class="ui-grid"><div class="ui-stack"><span class="ui-meta">Invoice</span><span>1,200.00 CAD</span></div><div class="ui-stack"><span class="ui-meta">Paid</span><span>300.00 CAD</span></div></div>
+      <div class="ui-actions"><a class="ui-action" data-ui-icon="file" data-ui-label="always" href="#control-fixture">Example invoice.pdf</a></div>
+      <details class="ui-section"><summary><h5>Details</h5></summary><div class="ui-stack"><section class="ui-stack"><h5>History</h5><p>Issued 2026-10-02 · part paid 2026-10-15</p></section><section class="ui-stack"><h5>Source</h5><a class="ui-action" data-ui-icon="arrow-up-right" href="#control-fixture">Open source record</a></section></div></details>
     </article>
+    <details class="ui-section"><summary><h3 class="ui-section-title">Changes</h3></summary><div class="ui-prose"><pre class="ui-mono" aria-label="Changes"><code>--- Before
++++ After
+@@ -1,2 +1,2 @@
+ Example invoice
+<span class="ui-error">-Status: Draft</span>
+<span class="ui-success">+Status: Ready</span>
+</code></pre></div></details>
     <section class="ui-stack" aria-label="Adaptive panel layout">
       <h3 class="ui-section-title">Adaptive panel layout</h3>
       <p class="ui-meta">The same grid holds text, controls and records. Resize the fixture: tracks wrap around their contents without a page breakpoint.</p>
@@ -165,7 +171,7 @@
 </div>
 </section>
 
-<section class="ui-effects-inspector ui-panel ui-stack" id="fixture-property-panel" aria-label="Effects inspector" style="max-inline-size:100%"><h2>Shared effects inspector</h2><label class="ui-field"><span class="ui-label">Preview width</span><select id="property-fixture-width"><option value="100%">Full width</option><option value="390px">390px phone</option><option value="260px">260px panel</option></select></label><div id="fixture-property-colour"></div><div id="fixture-property-number"></div><div id="fixture-property-boolean"></div></section>
+<section class="ui-effects-inspector ui-panel ui-stack" id="fixture-property-panel" data-effects-demo aria-label="Effects inspector" style="max-inline-size:100%"><h2>Shared effects inspector</h2><label class="ui-field"><span class="ui-label">Preview width</span><select id="property-fixture-width"><option value="100%">Full width</option><option value="390px">390px phone</option><option value="260px">260px panel</option></select></label></section>
 
 <section class="ui-card ui-pad ui-stack" aria-label="Independent workspace panels"><h3>Workspace panels</h3><div id="fixture-panel-toggles" class="ui-actions ui-inline" role="group" aria-label="Visible panels"><button type="button" data-panel="timeline" data-ui-icon="timeline">Timeline</button><button type="button" data-panel="activity" data-ui-icon="terminal">Activity</button><button type="button" data-panel="debug" data-ui-icon="code">Debug</button></div><section id="fixture-panel-timeline" class="ui-card ui-pad">Timeline panel</section><section id="fixture-panel-activity" class="ui-card ui-pad">Activity panel</section><section id="fixture-panel-debug" class="ui-card ui-pad">Debug panel</section></section>
 <section class="ui-stack" aria-label="Native timeline playhead">

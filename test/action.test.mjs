@@ -161,10 +161,10 @@ test('output colour resolver caches actual native card paint and refreshes theme
 test('button feedback preserves its handler and icon contract through pending, success, error and reset',async()=>{
  const {button}=control(),UI=module.exports;UI.adoptAction(button,{icon:'save',label:'Save'});const handler=button.onclick;
  UI.setActionState(button,{state:'pending',message:'Saving'});assert.equal(button.getAttribute('aria-busy'),'true');assert.ok(button.classList.contains('ui-warning'));assert.equal(button.onclick,handler);
- UI.setActionState(button,{state:'success',message:'Saved'});assert.ok(button.classList.contains('ui-success'));assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-check$/);
- UI.adoptAction(button,{icon:'save',label:'Save'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-check$/,'ordinary decoration cannot replace a success glyph');
+ UI.setActionState(button,{state:'success',message:'Saved'});assert.ok(button.classList.contains('ui-success'));assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);
+ UI.adoptAction(button,{icon:'save',label:'Save'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/,'feedback keeps the action purpose through re-adoption');
  UI.setActionState(button,{state:'idle'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);assert.ok(button.classList.contains('primary'));
- await assert.rejects(UI.runAction(button,async()=>{throw new Error('Offline')}),/Offline/);assert.equal(button.dataset.uiActionState,'error');assert.equal(button.onclick,handler);
+ await assert.rejects(UI.runAction(button,async()=>{throw new Error('Offline')}),/Offline/);assert.equal(button.dataset.uiActionState,'error');assert.equal(button.onclick,handler);assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);
 });
 
 test('Command arrows change content only, preserve native editors and IME, and dispose',()=>{

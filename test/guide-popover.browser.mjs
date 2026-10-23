@@ -1,0 +1,22 @@
+/* Real native popovers, keyboard focus and modal hosting; synthetic catalogue only. */
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
+const {chromium}=await import(process.env.SHARED_UI_PLAYWRIGHT_MODULE||'playwright');
+const root=new URL('../public/',import.meta.url);
+const server=createServer(async(req,res)=>{try{const path=new URL(req.url,'http://local').pathname,relative=path==='/'?'index.html':path.slice(1);if(relative.includes('..'))throw Error();res.setHeader('Content-Type',relative.endsWith('.html')?'text/html':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':relative.endsWith('.json')?'application/json':'image/svg+xml');res.end(await readFile(new URL(relative,root)));}catch{res.writeHead(404);res.end();}});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
+const browser=await chromium.launch({headless:true,...(process.env.SHARED_UI_CHROMIUM?{executablePath:process.env.SHARED_UI_CHROMIUM}:{})});
+try{
+ for(const pack of ['postvisual','personal']){
+  const context=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce',serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());await page.goto(origin+"/#guide-demo");await page.evaluate(pack=>document.documentElement.dataset.ui=pack,pack);
+  await page.getByRole('button',{name:'Guide in a tray',exact:true}).click();const guide=page.getByRole('region',{name:'Guided lesson'});await guide.getByText('Keep the tray usable',{exact:true}).waitFor();
+  await guide.getByRole('button',{name:'Focus control',exact:true}).click();assert.equal(await page.evaluate(()=>document.activeElement.id),'guide-tray-note');assert.equal(await page.locator('#guide-tray').evaluate(node=>node.matches(':popover-open')),true,'Guide focus must keep the native auto tray open');
+  await page.locator('#guide-tray-note').fill('Keep draft and focus');await page.locator('#guide-tray-save').click();await guide.getByText('Tray saved',{exact:true}).waitFor();await guide.getByRole('button',{name:'Done',exact:true}).click();await page.getByRole('button',{name:'Guide in a tray',exact:true}).click();
+  await page.evaluate(()=>{const modal=document.createElement('dialog');modal.id='probe-modal';modal.innerHTML='<button id="probe-start">Open nested tray</button><article id="probe-tray" class="ui-popout"><header><h2>Nested tray</h2></header><div data-ui-popout-body><label class="ui-field"><span>Native draft</span><input id="probe-note" value="Keep nested text"></label></div></article>';document.body.append(modal);const tray=modal.querySelector('article'),note=modal.querySelector('input');const coaching=SharedUI.createGuide({onSkip:()=>coaching.close()});const host=SharedUI.createAnchoredPopover(modal.querySelector('button'),{element:tray,onClose:()=>coaching.close()});modal.querySelector('button').addEventListener('click',()=>{if(!tray.matches(':popover-open'))return;coaching.open({title:'Nested lesson',text:'Keep the modal and tray interactive.',target:()=>note,position:1,total:1});});modal.showModal();});
+  await page.getByRole('button',{name:'Open nested tray',exact:true}).click();await guide.getByText('Nested lesson',{exact:true}).waitFor();await guide.getByRole('button',{name:'Focus control',exact:true}).click();
+  assert.deepEqual(await page.evaluate(()=>({focused:document.activeElement.id,modal:document.querySelector('#probe-modal').open,tray:document.querySelector('#probe-tray').matches(':popover-open'),guideHost:document.querySelector('#probe-tray [aria-label="Guided lesson"]')!==null,value:document.querySelector('#probe-note').value})),{focused:'probe-note',modal:true,tray:true,guideHost:true,value:'Keep nested text'});
+  await page.keyboard.press('Escape');assert.equal(await page.locator('#probe-modal').evaluate(node=>node.open),true,'Escape leaves the outer modal available');assert.deepEqual(errors,[]);await context.close();console.log(pack+': catalogue tray, real Focus click, acknowledged save, nested modal tray, native draft and Escape passed; no screenshots.');
+ }
+}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

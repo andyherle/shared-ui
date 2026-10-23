@@ -4,6 +4,8 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import {publishGeneratedFiles} from './generated-files.mjs';
+import {installOptions} from './install-options.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const hash=(bytes,algorithm='sha256')=>createHash(algorithm).update(bytes).digest(algorithm==='sha384'?'base64':'hex');
 export function installBundle(target,{check=false,source=path.join(root,'public/v1')}={}) {
@@ -16,18 +18,11 @@ export function installBundle(target,{check=false,source=path.join(root,'public/
   const icons=files.get('icons.svg').toString();
   if(!icons.startsWith('<svg xmlns="http://www.w3.org/2000/svg">')||/<script|\bon\w+\s*=|\bhref\s*=/i.test(icons))throw new Error('Shared UI icons must be a passive local sprite');
   files.set('bundle.json',Buffer.from(JSON.stringify({repository:'https://github.com/andyherle/shared-ui',version:release.version,revision:release.revision,files:Object.fromEntries([...files].map(([name,bytes])=>[name,hash(bytes)]))},null,2)+'\n'));
-  target=path.resolve(target);let changed=[];
-  for(const [name,bytes] of files){const dest=path.join(target,name);if(!fs.existsSync(dest)||!fs.readFileSync(dest).equals(bytes))changed.push(name);}
-  if(check&&changed.length)throw new Error('Generated UI assets are out of date: '+changed.join(', '));
-  if(!check&&changed.length){
-    fs.mkdirSync(target,{recursive:true});
-    // Every source has been validated. Publish the descriptive bundle manifest last.
-    for(const name of changed){const dest=path.join(target,name),temp=dest+'.'+process.pid+'.tmp';try{fs.writeFileSync(temp,files.get(name));fs.renameSync(temp,dest);}finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}}
-  }
+  target=path.resolve(target);
+  const changed=publishGeneratedFiles(target,files,{check,stale:'Generated UI assets are out of date: '});
   return {target,revision:release.revision,changed,checked:check};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
-  const args=process.argv.slice(2);let target,check=false;
-  for(let i=0;i<args.length;i++){if(args[i]==='--target')target=args[++i];else if(args[i]==='--check')check=true;else throw new Error('Unknown argument: '+args[i]);}
+  const {target,check}=installOptions(process.argv.slice(2));
   console.log(JSON.stringify(installBundle(target,{check})));
 }

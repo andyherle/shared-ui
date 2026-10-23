@@ -5,14 +5,16 @@ import {resolvePacks} from '../packs.mjs';
 import {freeze, object, requireThat} from './validation.mjs';
 
 const colorNames = 'prose-code-fill prose-code-ink bg surface surface-raised surface-soft text muted subtle line line-strong control accent accent-hover accent-soft primary on-primary good bad warning note note-text scrim shadow-color media playhead-color playhead-outline';
-const lengthNames = 'menu-width page-width composition-gap composition-aside control-height field-height body-size control-size h1 h2 h3 h4 h5 h6 radius radius-small gap range-thumb control-inset range-width tag-height playhead-width focus-offset popout-width popout-height popout-space grid-min grid-gap aside main switch-width switch-height switch-thumb switch-inset resize-target tag-size tag-radius form-column';
-const expressionNames = 'font font-mono control-font control-padding field-padding tag-font tag-padding fill';
-const contentNames = 'app-color card-fill card-ink swatch-value';
+const lengthNames = 'action-size action-icon safe-inset dock-width menu-width page-width composition-gap composition-aside control-height field-height body-size control-size h1 h2 h3 h4 h5 h6 radius radius-small gap range-thumb control-inset range-width tag-height playhead-width focus-offset popout-width popout-height popout-block popout-space grid-min grid-max grid-gap aside main switch-width switch-height switch-thumb switch-inset resize-target tag-size tag-radius form-column';
+const expressionNames = 'action-flow action-caption font font-mono control-font control-padding field-padding tag-font tag-padding fill';
+const contentNames = 'color app-color card-fill card-ink swatch-value';
 export const TOKEN_TYPES = freeze(Object.fromEntries([
   ...colorNames.split(' ').map(name => ['--ui-' + name, {type: 'color', editable: true}]),
   ...lengthNames.split(' ').map(name => ['--ui-' + name, {type: 'length', editable: true}]),
   ...expressionNames.split(' ').map(name => ['--ui-' + name, {type: 'expression', editable: false}]),
   ...contentNames.split(' ').map(name => ['--ui-' + name, {type: 'color', editable: false, reason: 'Authored content belongs to the owning application.'}]),
+  ['--ui-idle-opacity', {type:'number',min:0,max:1,editable:false,reason:'Transient visibility belongs to the shared control lifecycle.'}],
+  ['--ui-control-leading', {type:'number',min:1,max:2,editable:true}],
   ['--ui-control-weight', {type: 'number', min: 100, max: 900, editable: true}],
   ['--ui-graphic-scale', {type: 'number', min: 0.01, max: 100, editable: false, reason: 'Viewport scale belongs to the owning application.'}]
 ]));
@@ -54,15 +56,15 @@ export function inventoryCSS(source, file = 'src/controls.css') {
 function rootDeclaration(declaration, context) {
   if (declaration.context[0] !== '@layer ui.tokens') return false;
   const scopes = declaration.context.slice(1).map(scope => scope.replace(/\s/g, ''));
-  if (scopes[0] === '@media(pointer:coarse)') {
-    if (context.pointer !== 'coarse') return false;
+  if (/^@media\(pointer:(fine|coarse)\)$/.test(scopes[0])) {
+    if (scopes[0] !== `@media(pointer:${context.pointer})`) return false;
     scopes.shift();
   }
   if (scopes.length !== 1) return false;
   const selector = scopes[0];
-  if (['[data-ui]', ':where([data-ui],[data-ui-density])', '[data-ui],[data-ui][data-ui-density],[data-ui]:where([data-ui-density])'].includes(selector)) return true;
+  if (['[data-ui]', ':where([data-ui],[data-ui-density])', '[data-ui],[data-ui-density]'].includes(selector)) return true;
   if (selector === `[data-ui=${context.pack}]`) return true;
-  return selector === `[data-ui][data-ui-density=${context.density}],[data-ui]:where([data-ui-density=${context.density}])`;
+  return selector === `[data-ui-density=${context.density}]`;
 }
 function literal(value, type) { return type === 'number' ? Number(value) : value; }
 export function validateTokenValue(value, descriptor, id) {
@@ -116,7 +118,7 @@ export function createTokenCatalogue({tokens, controls, pack = 'postvisual', mod
   tokens = resolvePacks(tokens);
   requireThat(['postvisual', 'personal'].includes(pack), 'Unknown pack');
   requireThat(['light', 'dark'].includes(mode), 'Unknown mode');
-  requireThat(['default', 'compact', 'dense', 'comfortable'].includes(density), 'Unknown density');
+  requireThat(['default', 'compact', 'dense', 'micro', 'comfortable'].includes(density), 'Unknown density');
   requireThat(['fine', 'coarse'].includes(pointer), 'Unknown pointer');
   const context = {pack, mode, density, pointer};
   const inventory = inventoryCSS(controls), byId = new Map(), definitions = {};

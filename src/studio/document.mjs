@@ -98,7 +98,7 @@ export const COMMANDS = {
   create: command('Create a working document for a registered document view.', {document: recordSchema}),
   duplicate: command('Duplicate an exact saved version into an independent document.', {sourceDocumentId: idSchema, sourceRevision: {type: 'integer', minimum: 1}, versionId: idSchema, name: stringSchema}),
   rename: command('Rename this working document.', {name: stringSchema}),
-  'set-context': command('Choose one of the two packs, theme and density for this draft.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'comfortable']}}),
+  'set-context': command('Choose one of the two packs, theme and density for this draft.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'micro', 'comfortable']}}),
   'remove-node': command('Remove a node and its descendants; required slots remain validated.', {nodeId: idSchema}),
   'set-props': command('Update declared props without changing bindings or node identity.', {nodeId: idSchema, props: recordSchema}),
   'set-bindings': command('Explicitly choose typed binding references from the registered view.', {nodeId: idSchema, bindings: recordSchema}),

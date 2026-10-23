@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
+import {publishGeneratedFiles} from './generated-files.mjs';
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 export function timelineAssets(root,compact){
  const css=compact(fs.readFileSync(path.join(root,'src/timeline.css'),'utf8'))+'\n';
@@ -12,6 +13,7 @@ export function timelineAssets(root,compact){
 export function installTimeline(target,{source,check=false}={}){
  const css=fs.readFileSync(path.join(source,'timeline.css')),manifest=JSON.parse(fs.readFileSync(path.join(source,'timeline.manifest.json'),'utf8'));
  if(manifest.component!=='timeline'||manifest.version!==1||digest(css)!==manifest.files?.['timeline.css']||css.length>2048||gzipSync(css).length>1024||/@import|url\s*\(/i.test(css))throw Error('Timeline bundle integrity failed');
- const changed=[];for(const [name,bytes]of [['timeline.css',css],['timeline.manifest.json',Buffer.from(JSON.stringify(manifest,null,2)+'\n')]]){const file=path.join(target,name);if(!fs.existsSync(file)||!fs.readFileSync(file).equals(bytes)){changed.push(name);if(!check){const temp=file+'.'+process.pid+'.tmp';fs.writeFileSync(temp,bytes);fs.renameSync(temp,file);}}}
- if(check&&changed.length)throw Error('Stale timeline bundle: '+changed.join(', '));return {component:'timeline',changed,checked:check,sizes:manifest.sizes};
+ const files=new Map([['timeline.css',css],['timeline.manifest.json',Buffer.from(JSON.stringify(manifest,null,2)+'\n')]]);
+ const changed=publishGeneratedFiles(target,files,{check,stale:'Stale timeline bundle: '});
+ return {component:'timeline',changed,checked:check,sizes:manifest.sizes};
 }

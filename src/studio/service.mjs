@@ -33,7 +33,7 @@ export const METHODS = freeze({
   'configuration.validate': method('Run full shared tests and build in isolation; save an exact revision and source validation receipt.', configWrite, ['configurationId', 'expectedRevision', 'operationId'], 'write'),
   'configuration.publish': method('Push the exact validated configuration to origin/main for the existing Pages workflow. Requires local --publish permission. Retry uncertain outcomes with identical arguments.', {...configWrite, validationId: id}, ['configurationId', 'expectedRevision', 'operationId', 'validationId'], 'publish'),
   'components.list': method('Search the complete registered library independently of app usage.', {text: {type: 'string'}, family: {type: 'string'}, pack: {enum: ['postvisual', 'personal']}, status: {type: 'string'}, authorable: {type: 'boolean'}}),
-  'tokens.list': method('Inspect source tokens and their declared component consumers.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'comfortable']}, pointer: {enum: ['fine', 'coarse']}}),
+  'tokens.list': method('Inspect source tokens and their declared component consumers.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'micro', 'comfortable']}, pointer: {enum: ['fine', 'coarse']}}),
   'views.list': method('List explicitly registered views and their adapter permissions.'),
   'documents.list': method('List saved working documents.'),
   'document.read': method('Read working content or one exact saved version.', {documentId: id, versionId: id}, ['documentId']),

@@ -14,3 +14,16 @@ test('independent native panels preserve content, bound selection and release li
  items[0].button.listeners.keydown({key:'End',preventDefault(){}});assert.equal(items[2].button.focused,true);
  panels.dispose();assert.equal(Object.keys(items[0].button.listeners).length,0);assert(changes>=5);
 });
+
+test('exclusive panels switch, close and Shift-toggle without rebuilding content',()=>{
+ class Node {attrs={};listeners={};hidden=false;disabled=false;setAttribute(k,v){this.attrs[k]=v;}addEventListener(k,f){this.listeners[k]=f;}removeEventListener(k){delete this.listeners[k];}focus(){}}
+ const UI={};vm.runInNewContext(fs.readFileSync(new URL('../src/components.js',import.meta.url),'utf8'),{window:{SharedUI:UI},document:{addEventListener(){}},WeakMap,Map,Set});
+ const items=['timeline','activity','debug'].map(id=>({id,button:new Node(),panel:Object.assign(new Node(),{id})}));
+ const panels=UI.createPanelToggles({items,selectionMode:'exclusive',selected:['activity']});
+ items[2].button.listeners.click({});assert.equal(panels.selected.join(','),'debug');
+ items[2].button.listeners.click({});assert.equal(panels.selected.length,0);
+ items[0].button.listeners.click({});items[1].button.listeners.click({shiftKey:true});assert.equal(panels.selected.join(','),'timeline,activity');
+ items[0].button.listeners.click({shiftKey:true});assert.equal(panels.selected.join(','),'activity');
+ items[2].button.listeners.click({shiftKey:true});assert.equal(panels.selected.join(','),'activity,debug');
+ panels.show('timeline');assert.equal(panels.selected.join(','),'timeline');panels.dispose();
+});

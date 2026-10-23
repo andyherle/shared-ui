@@ -43,3 +43,28 @@ test('invalid browser code cannot replace the working lab release',t=>{
  fs.writeFileSync(path.join(directory,'src/lab.js'),'(() => { broken syntax');assert.throws(()=>buildSite(directory),SyntaxError);
  assert.equal(fs.readFileSync(path.join(directory,'public/lab.js'),'utf8'),before);
 });
+
+test('all emitted scripts, including filters, debug and combined lexical scope, validate before publishing',t=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'shared-ui-emitted-code-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+ fs.cpSync(path.join(root,'src'),path.join(directory,'src'),{recursive:true});buildSite(directory);
+ const names=['v1/runtime.js','v1/manifest.json','debug-lab.js','lab.js'];
+ const before=new Map(names.map(name=>[name,fs.readFileSync(path.join(directory,'public',name))]));
+ for(const name of ['filters.js','debug-lab.js']){
+  const file=path.join(directory,'src',name),original=fs.readFileSync(file);
+  fs.writeFileSync(file,'(() => { invalid syntax');
+  assert.throws(()=>buildSite(directory),SyntaxError);
+  for(const [asset,bytes]of before)assert.deepEqual(fs.readFileSync(path.join(directory,'public',asset)),bytes);
+  fs.writeFileSync(file,original);
+ }
+ for(const name of ['runtime.js','components.js'])fs.appendFileSync(path.join(directory,'src',name),'\nconst sharedBuildCollision = 1;\n');
+ assert.throws(()=>buildSite(directory),SyntaxError);
+ for(const [asset,bytes]of before)assert.deepEqual(fs.readFileSync(path.join(directory,'public',asset)),bytes);
+});
+
+test('closing Style Lab ends active event streams before waiting for HTTP shutdown',async t=>{
+ const server=createStyleLabServer({watch:false});server.listen(0,'127.0.0.1');await once(server,'listening');
+ t.after(()=>{server.closeAllConnections();server.close();});
+ const response=await fetch(`http://127.0.0.1:${server.address().port}/events`),reader=response.body.getReader();await reader.read();
+ const closed=new Promise(resolve=>server.close(resolve));
+ const end=await reader.read();assert.equal(end.done,true);await closed;
+});

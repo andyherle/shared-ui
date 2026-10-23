@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 function fixture(){
  class Node {style={};listeners=new Map();attrs=new Map();children=[];hidden=false;open=false;ownerDocument=null;id='';setAttribute(k,v){this.attrs.set(k,v);}getAttribute(k){return this.attrs.get(k)??null;}removeAttribute(k){this.attrs.delete(k);}addEventListener(k,f){const a=this.listeners.get(k)||[];a.push(f);this.listeners.set(k,a);}removeEventListener(k,f){this.listeners.set(k,(this.listeners.get(k)||[]).filter(x=>x!==f));}emit(k,e={}){for(const f of this.listeners.get(k)||[])f({target:this,preventDefault(){},stopImmediatePropagation(){},...e});}append(...nodes){this.children.push(...nodes);}remove(){this.removed=true;}querySelectorAll(){return this.sections||[];}closest(){return this.hidden?this:null;}contains(node){return node===this;}getBoundingClientRect(){return {left:10,top:20,width:200,height:100};}focus(){this.ownerDocument.activeElement=this;}setPointerCapture(id){this.capture=id;}hasPointerCapture(id){return this.capture===id;}releasePointerCapture(){this.capture=null;}}
  const doc=new Node(),view=new Node();doc.defaultView=view;doc.createElement=()=>Object.assign(new Node(),{ownerDocument:doc});doc.hidden=false;
- const UI={adoptAction(node,{label}){node.textContent=label;}};vm.runInNewContext(fs.readFileSync(new URL('../src/components.js',import.meta.url),'utf8'),{window:{SharedUI:UI},document:doc,WeakMap,Map,Set});
+ const UI={adoptAction(node,options){node.textContent=options.label;node.adopted=options;}};vm.runInNewContext(fs.readFileSync(new URL('../src/components.js',import.meta.url),'utf8'),{window:{SharedUI:UI},document:doc,WeakMap,Map,Set});
  return {UI,doc,view,node:()=>doc.createElement('div')};
 }
 test('bulk disclosure actions only affect visible sections and retain their nodes',()=>{
@@ -37,4 +37,9 @@ test('hosts can reserve transport keys and hand wheel input to scene tools',()=>
  assert.equal(prevented,0);assert.equal(view.state.x,0);
  view.setEnabled(false);surface.emit('wheel',{deltaX:10,deltaY:20,preventDefault(){prevented++;}});assert.equal(prevented,0);assert.equal(view.state.y,0);
  view.setEnabled(true);surface.emit('wheel',{deltaX:10,deltaY:20});assert.equal(view.state.y,-20);view.dispose();
+});
+
+test('bulk section controls offer intrinsic icon commands without changing authored classes',()=>{
+ const {UI,node}=fixture(),root=node(),actions=node();actions.className='ui-actions ui-inline';const classes=new Set(actions.className.split(' '));actions.classList={add:(...names)=>names.forEach(name=>classes.add(name)),remove:(...names)=>names.forEach(name=>classes.delete(name))};root.sections=[node()];
+ const control=UI.createSectionActions({root,actions,fill:false,iconOnly:true});assert(classes.has('ui-inline'));assert(!classes.has('ui-fill'));assert(actions.children.every(button=>button.adopted.iconOnly===true));assert.equal(actions.children[0].adopted.label,'Expand all');control.dispose();assert.equal(actions.className,'ui-actions ui-inline');
 });

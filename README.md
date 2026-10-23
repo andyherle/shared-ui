@@ -16,11 +16,36 @@ Use native `button`, `input`, `select`, `textarea`, `details` and `dialog`. Acti
 
 Layout CSS may position and size application-specific media, timelines, canvases and rows. Common control paint belongs here. Use semantic `--ui-*` variables instead of page-specific palettes. Content colors such as a user's color parameter or collaborator identity remain content data.
 
+## Control/config panels
+
+Use `<aside class="ui-control-panel" data-ui-density="compact">` on an existing control surface. Compact starts at 12 px text and 30 px controls. `SharedUI.createControlScale(panel, {fontSize:12})` returns `setFontSize(number)`, `refresh()` and `dispose()`. Any positive finite font size, including decimals, scales the existing density's text, fields, actions, icons, switches and spacing proportionally. It never transforms the DOM or replaces controls. Scaling always starts from the original density; it does not compound. Coarse pointers retain 44 px targets and at least 16 px field text. CSS refresh and pointer changes recalculate the baseline; hidden views defer work. Disposal restores prior inline tokens and releases listeners. Applications own persistence and should keep the size setting outside the scaled panel.
+
+`micro` remains an optional precision-desktop profile: 12 px control minimum, 10 px text/icons and 2 px group gaps. Native fields, longer labels and multiline editors may grow; nothing clips text to force a row height.
+
+The role supplies operational typography; it does not replace the effects inspector. Compose the same `.ui-effects-inspector`, `SharedUI.adoptPropertyRow`, native choice, colour and boolean controls, scrub fields, keyframe actions and expression editors used at larger densities. The name → Keyframe → FX → value order, aligned columns, reset gestures, focus, selected states and keyboard behavior are unchanged. Omit nested density attributes so all fields and actions inherit one profile.
+
+```html
+<aside id="controls" class="ui-effects-inspector ui-panel ui-pad ui-stack ui-control-panel"
+       data-ui-density="compact" aria-label="Transform"></aside>
+<script>
+const panel = document.getElementById('controls');
+const row = document.createElement('div');
+const visible = SharedUI.createBooleanControl({label:'Visible', value:true, variant:'controller'});
+panel.append(row);
+SharedUI.adoptPropertyRow(row, {name:'Visible', control:visible.element});
+// Existing app callbacks still own values, History and saving.
+</script>
+```
+
+Use `details.ui-section` for deeper controls and `.ui-popout` for a bounded inspector. Do not scale the DOM with transforms or CSS zoom. Remove old panel/row padding, heading heights and field sizing when adopting this role; keep only app placement and domain row geometry in `@layer app`. The **Compact controller** catalogue uses the exact same component builder as **Shared effects inspector**. Its density and font-size settings change tokens on the existing nodes, retaining values, keyframes and open expression drafts.
+
+For lightboxes, compose `.ui-control-panel` with `.ui-review-dock` and `createReviewControls` using the existing native tags, rating, commands and navigation. The app still owns values, navigation, History and saving.
+
 ## Automatic updates
 
 Successful pushes to `main` build and publish a v1 manifest and an immutable, integrity-addressed stylesheet through GitHub Pages. Apps retain their bundled baseline and check for compatible style updates in the background every five minutes while visible. Same-origin views coordinate checks with a short storage lease and BroadcastChannel notifications. The browser's shared asset cache handles the stylesheet bytes.
 
-Mark only the bundled UI sheet with `data-ui-baseline` on its `link` or `style` element. An update becomes active only after the replacement stylesheet loads and its integrity check passes; it then removes that marked sheet so deleted rules disappear. Keep app layout in a separate unmarked sheet. A failed fetch or offline session retains the working appearance. Style refresh never rebuilds the page or changes playback, forms, focus, selection, renderer identity or application state. Hidden pages stop checking; closing a page cleans up its listeners and channel. Browser behavior code stays bundled with each app and is upgraded through its normal code release.
+Mark only the bundled UI sheet with `data-ui-baseline` on its `link` or `style` element. An update becomes active only after the replacement stylesheet loads and its integrity check passes; it then removes that marked sheet so deleted rules disappear. Keep app layout in a separate unmarked sheet. A failed fetch or offline session retains the working appearance. Releases older than the bundled runtime contract are rejected even if the page omits its version attribute; a newer declared page version raises that floor. Style refresh never rebuilds the page or changes playback, forms, focus, selection, renderer identity or application state. Hidden pages stop checking; closing a page cleans up its listeners and channel. Browser behavior code stays bundled with each app and is upgraded through its normal code release.
 
 Allow `https://andyherle.github.io` in `style-src` and `connect-src` when using automatic updates. Keep scripts same-origin. No app credentials or user content are sent to the style source; update requests omit credentials and referrers. Use a bundled revision when a deployment must remain visually frozen. A major control-contract change requires a new version channel and an application migration.
 
@@ -151,6 +176,62 @@ intact and existing consumers do not change until their own isolated PR
 adopts the layout. Test 390px, 768px, full desktop, a 360px embedded pane,
 coarse pointer, keyboard, zoom and state preservation before adopting.
 
+## Live app previews from source
+
+Double-click **App previews.command** in this source folder, or run:
+
+```sh
+npm run previews
+```
+
+This opens **App previews** at http://127.0.0.1:41911/previews and watches this
+checkout's `src/`. The Style Lab header also has **App previews**. Choose Portal,
+Aura, StaticRef, Ledger (PV or Personal), Postvisual Home, or Documents (PV or
+Personal). Each button starts its app once and opens it; repeated clicks reuse it.
+Portal signs into synthetic state automatically. Keep the terminal running;
+Ctrl-C stops the launcher and its owned preview processes. Run the command again
+to reopen an already running launcher. Use `SHARED_UI_PORT=41913 npm run previews`
+if another service owns the default port; `npm run previews -- --no-open` skips
+opening the system browser.
+
+Shared CSS refreshes in place after a successful build, preserving text, focus,
+open disclosures and playback. Failed builds retain the last working assets.
+Shared JavaScript or icons offer **Reload shared UI** inside each app; save or
+finish your current interaction before clicking it. No bundle reinstall or app
+restart is needed for shared-ui edits. Hidden views catch up when shown again.
+
+The preview launcher expects sibling source folders `portal`, `aura`, `staticref`,
+`pv-ledger`, `postvisual-home`, and `vault-store`. Node, Go, Python 3.12+ (the local
+venv or Homebrew Python on macOS), ffmpeg and each app's existing dependencies
+must be installed. Missing dependencies report a startup error and local log
+folder. All fixture state is synthetic. Aura uses a disposable Core copy and an
+empty effects library, StaticRef uses generated media, Ledger uses demo books,
+Home uses a sample inventory, and Documents uses sample files.
+
+### What am I editing?
+
+- `shared-ui/src/` owns the common controls. These previews load its current
+  validated assets directly through a loopback source overlay.
+- Each app's checkout owns its pages, handlers and domain layout. Opening a
+  preview does not move that code into shared-ui. App code is loaded at launch;
+  Portal embeds its app code, and Aura/StaticRef stage disposable source copies.
+  Restart the launcher after app-code changes. Shared-ui changes stay live.
+- Generated app bundles remain unchanged during previewing. Production still
+  requires `npm run check`, the shared installer plus `--check`, and an app release
+  to ship JavaScript/icons. Local edits do not publish the automatic CSS channel.
+
+This foreground mode is separate from the installed background Style Lab and
+from immutable brokered review runs. `npm start` still serves only Style Lab;
+`npm run previews` enables the explicit local app-launching routes. Private app
+source and fixture state stay outside shared-ui's generated/public output.
+
+Preview routes require their exact loopback Host and same-origin writes. Fixture
+upstreams must be loopback HTTP origins. Malformed requests and unavailable source
+assets return errors without terminating the launcher. Event streams are capped
+at 64; closing the launcher ends streams and waits for owned child cleanup.
+Restarted fixtures receive fresh scratch directories. These are trusted local
+development processes; the separately brokered review workflow supplies OS isolation.
+
 ## Packaging the baseline
 
 Run from this repository to update an app's generated assets:
@@ -161,6 +242,16 @@ node scripts/install.mjs --target /path/to/app/shared-ui-assets --check
 ```
 
 The installer validates the canonical release and browser code before writing exactly `styles.css`, `runtime.js`, `icons.svg`, `manifest.json`, and `bundle.json`. Identical bytes are left untouched. The bundle records every file hash; `--check` rejects generated drift. Deployment uses those local assets with no Node runtime requirement.
+
+The baseline, debug, timeline and PDF installers share destination validation and
+exclusive random staging. They reject linked output directories and linked or
+non-regular asset entries, validate every destination before replacing any asset,
+and stage all changed bytes before publication. `--check` creates nothing. Each
+file replacement is atomic, with the manifest last; a multi-file release is not a
+filesystem transaction. Run one writer per destination and verify with `--check`.
+The build also syntax-checks every emitted script, including concatenated runtime
+modules, before replacing working output. See [the tooling audit](docs/TOOLING_AUDIT.md)
+for coverage and remaining boundaries.
 
 Set `data-ui-version` and `data-ui-revision` from the bundled manifest. A page rejects automatic CSS older than its bundled contract, accepts compatible v1 releases, and keeps its working baseline on failure. Automatic updates carry CSS; helper code and icon additions ship through the normal app release and the same installer.
 
@@ -439,7 +530,50 @@ shared action group wrap; do not add application-specific input widths. The
 Control fixture includes an empty From date, a populated To date and a time.
 
 
+### Clickable column sorting
+
+`SharedUI.createTableSort(table, {column:'date', direction:'desc', manual:false, onChange, getValue, sprite})`
+adds native quiet action buttons to the column headers and keeps `aria-sort` current.
+With no options, the default is the first sortable column, ascending. A heading
+cycles ascending → descending → the configured default on three clicks;
+`reset()` restores that default. Existing row nodes and selection are retained.
+Each header has a stable `data-column`; use `data-ui-sort-type="number"` for numbers,
+`data-sort-value` on a cell for an unformatted value, and `data-ui-sort-disabled`
+on a header that is not sortable. ISO dates sort naturally. Missing values stay
+last. Existing row nodes, links, focus and selection survive sorting. Only the
+body moves; applications calculate derived values before sorting.
+For server pagination use `manual:true`: the callback receives `{column,direction}`
+and the app sorts the entire filtered dataset before selecting a page. Never
+sort only the visible page while implying a full-dataset sort. Call `refresh()`
+after replacing rows; `dispose()` restores the original headings and listeners.
+Use `.ui-color` with the `--ui-color` custom property on any cell or text element
+for an application-supplied colour, for example `style="--ui-color:var(--ui-accent)"`.
+The application owns its meaning and accessible labels; the kit supplies only paint.
+
+### Quiet table toolbar
+
+`SharedUI.createTableToolbar(table, container, {sprite, search:true, sorting:true, onChange})`
+combines row search, a live result count, three-step header sorting, resizing and
+column reordering. One quiet native **Table options** menu contains the named
+column switches and **Reset view**. Hidden columns keep their named switch for
+one-click recovery; at least one stays visible. Resizing remains a drag-only
+boundary gesture. Filtering retains existing row nodes, links and selection.
+`refresh()` handles newly rendered rows; `dispose()` restores hidden rows and
+releases its controls/listeners. Apps retain their data and persistence.
+
+Use `search:false` when an app already supplies dataset search, and `sorting:false`
+for paginated or grouped datasets that require app-owned server sorting. The
+client helper must never present page-only sorting as sorting the whole dataset.
+
 ### Adjustable columns and stable lightboxes
+
+`SharedUI.createColumnManager(table, container, {order, hidden, pinFirst, onBeforeChange, onChange})`
+composes shared column dragging with native checkbox fields in an existing disclosure
+body. Its `state` is `{order, hidden}` for application persistence. The first column
+can stay pinned and visible; at least one column remains visible. Dispose a column
+resizer in `onBeforeChange` and recreate it in `onChange`. `dispose()` removes its
+controls/listeners and restores the table; the catalogue demonstrates this pattern.
+
 
 `SharedUI.createColumnDrag(table, {order, pinFirst, onBeforeChange, onChange})`
 lets someone drag a native column heading to reorder the sheet. Give each
@@ -493,7 +627,7 @@ icon-only action keeps its natural width. The catalogue's Popout shell example
 uses a native dialog.
 
 `SharedUI.createLightbox(dialog, {onNavigate, onClose})` enhances a native dialog
-with this content-sized popout frame, capped at 900 × 760 and by the viewport. Use three direct
+with this content-sized popout frame, capped at 42rem × 760px and by the viewport. Use three direct
 children: `header`, `[data-ui-lightbox-body]` scroll area, and `footer`.
 The helper marks the body as `[data-ui-popout-body]`. `open(trigger)` remembers focus, `close()` uses native dialog
 closure, and `dispose()` releases listeners. Escape and backdrop clicks dismiss;
@@ -636,7 +770,7 @@ Compose movable media with `ui-card ui-selectable ui-draggable`, `data-ui-resize
 
 For a lightbox, call `SharedUI.fitMedia(media, stage)` after inserting its native image/video and dispose the returned controller before replacement/closure. It observes the bounded stage and loaded metadata, and sizes the element itself to the aspect-preserving contain rectangle, including upscaling. Native video controls therefore stay over the picture rather than a letterboxed full-stage element. It performs no playback or application-state changes.
 
-Tag entry uses the same native field font and border as other controls. `.ui-tag` defaults to padded neutral grey; selected tags explicitly set `aria-pressed="true"`. `createTagInput` reserves a bounded two-row suggestion slot to prevent layout movement on focus/filtering. Use `.ui-review-dock.ui-panel.ui-stack` for centered lower media controls with safe-area-aware bottom clearance; the application supplies contents and a positioned stage.
+Tag entry uses the same native field font and border as other controls. `.ui-tag` defaults to padded neutral grey; selected tags explicitly set `aria-pressed="true"`. `createTagInput` anchors suggestions outside layout; the opt-in wrapping layout keeps its entry separate from a bounded chip list. Use `.ui-review-dock.ui-panel.ui-stack` for centered lower media controls with safe-area-aware bottom clearance; the application supplies contents and a positioned stage.
 
 `fitMedia(media, stage, {controlsOnIntent:true})` keeps a native video’s controls hidden when inserted, then reveals them on actual pointer movement, touch or keyboard focus. Disposal restores native attributes. Center review command/tag rows using the common `data-ui-align="center"` modifier on `ui-actions`/`ui-tags`.
 
@@ -648,7 +782,7 @@ The shared `ui-lightbox` shell fills the viewport without a second panel frame. 
 
 `createAvatar(name,{document,size:24})` composes the shared tag tokens into a fixed, passive circular presence indicator. Full names stay in the accessible label/title rather than affecting row geometry.
 
-`installZoomShortcuts(document,{canZoom,onZoom})` shares Command+Up/Right/+ and Command+Down/Left/− with native field, composed-path and IME guards. Apps supply bounded content transforms; never scale chrome. Dispose removes all handlers. `createZoomFeedback(document).show(percent)` updates one persistent, bottom-centered native minus/percentage/plus toolbar per document. It emits `ui:zoom` with direction −1/0/+1; zero resets. Apps own bounds and content geometry. Idle opacity increases on hover or keyboard focus. Native dialogs, menus and popovers suspend it automatically. Apps call `setVisible(false)` for custom overlays or non-content routes and restore it on close; dispose removes its listeners. The unframed `.ui-review-dock.ui-stack` centers review actions and tags without a surrounding panel border.
+`installZoomShortcuts(document,{canZoom,onZoom})` shares Command+Up/Right/+ and Command+Down/Left/− with native field, composed-path and IME guards. Apps supply bounded content transforms; never scale chrome. Dispose removes all handlers. `createZoomFeedback(document).show(percent)` updates one persistent, bottom-centered native minus/percentage/plus toolbar per document. It emits `ui:zoom` with direction −1/0/+1; zero resets. Apps own bounds and content geometry. The zoom group uses the same readable control surface as its context toolbar. Native dialogs, menus and popovers suspend it automatically. Apps call `setVisible(false)` for custom overlays or non-content routes and restore it on close; dispose removes its listeners. The unframed `.ui-review-dock.ui-stack` centers review actions and tags without a surrounding panel border.
 
 `createValueTransition({value,onChange,duration:110,view})` eases content values to a target on animation frames. Read `.target` when accumulating repeated shortcuts; `.value` is the current frame. The callback receives `{final}` so apps persist once at the end. `cancel` stops work for a direct gesture; `dispose` releases listeners. Hidden views settle without background animation; reduced-motion preferences use the final value immediately. Never apply content zoom to UI chrome.
 
@@ -764,7 +898,7 @@ For native line playheads, load the optional, separately validated `v1/timeline.
 
 ### Section actions and preview inspection
 
-`SharedUI.createSectionActions({root,actions,sprite,onChange})` adds native **Expand all** and **Collapse all** actions for `details.ui-section` within a root. Hidden sections remain untouched. It changes only native open state and reports `{open,sections}` for host-owned persistence. `refresh()` updates disabled states after host filtering or insertion; `dispose()` releases buttons/listeners. No section or form field is recreated.
+`SharedUI.createSectionActions({root,actions,sprite,fill:true,iconOnly:false,onChange})` adds native **Expand all** and **Collapse all** actions for `details.ui-section` within a root. Hidden sections remain untouched. It changes only native open state and reports `{open,sections}` for host-owned persistence. `refresh()` updates disabled states after host filtering or insertion; `dispose()` releases buttons/listeners. Pass `fill:false` to retain an authored intrinsic `.ui-inline` group and `iconOnly:true` for compact commands with complete accessible names. No section or form field is recreated.
 
 `SharedUI.createMediaViewport({surface,content,minScale:.125,maxScale:32,onChange})` lets a bounded preview inspect existing pixels without changing content dimensions or application state. Two-finger scroll/wheel pans; pinch or Ctrl/Alt/Command-wheel zooms around the pointer; Space + primary drag or middle drag also pans; Shift-wheel pans horizontally; double-click fits. Focus the surface for +/− zoom, arrow-key pan and 0/Escape to fit. Toolbar buttons, fields and editable content retain their native interaction. `zoom(factor,point)`, `pan(x,y)`, `fit()`, `.state` and `dispose()` allow host controls and cleanup. The host owns placement, clipping and existing creative overlays; `onChange` can reproject overlays. Transforms affect only the content node, leaving UI chrome unscaled. The Control fixture demonstrates both helpers with native sections and an SVG image.
 
@@ -776,6 +910,161 @@ Media viewport hosts can set `keyboard:false` to reserve all keys for transport/
 
 `SharedUI.renderProofSheet({items,title,width:3840,height:2160,background,color,font,signal})` composes loaded image previews onto a canvas, with contained 16:9 cells and measured labels. It returns `{canvas,cells}`. The host must supply real render outputs and label their sampling; the helper never invents data or changes a scene. Callers may supply theme typography/palette values and download the canvas as PNG. The catalogue includes a synthetic interactive fixture.
 
+### Responsive media review and touch intent
+
+Place a `.ui-review-dock.ui-stack[data-ui-position="flow"]` footer after the
+application's bounded media stage. Apps own stage geometry; the bottom controls
+reserve their own space and respect safe areas. The first child holds secondary
+tools and scrolls when expanded on short screens; the final navigation row stays
+visible. Put Previous/Next in the footer's final
+`.ui-actions.ui-fill` row. Keep secondary review controls in a native
+`details.ui-section`. Both packs share this layout; the media catalogue demonstrates it.
+
+`SharedUI.createPressHold(root,{onHold,accept,delay:450,tolerance:10})` recognizes a
+stationary primary touch or pen press. Return false from `onHold(event)` to decline
+it. Native scroll remains available; movement, a second pointer, cancellation,
+hidden views and blur cancel the timer. An accepted hold consumes the following
+pointer click without consuming keyboard activation. `cancel()` clears pending
+intent; `dispose()` removes listeners and timers. Hosts own selection, capture,
+panning, dragging and persistence, and must retain a visible keyboard/tap action.
+Resize handles retain their native target without requiring hover, so they work with touch as well as a pointer.
+
+Open native menus observe their panel size so late field/font reflow remains inside the viewport. Closing menus and disposing a document release that observer.
+
+
+### Container context toolbar
+
+`SharedUI.createContextToolbar(toolbar,{container:document.body,zoom:feedback.element})`
+keeps the existing native action row centered in its container and the zoom group
+right aligned with safe-area padding. A body container uses viewport coordinates;
+a positioned element uses its own bounds. Register every native action with `adoptAction` (including actions in nested
+`.ui-actions.ui-inline` groups); captions compact together through the normal
+shared action fitting. The toolbar retains its intrinsic width within the dock
+bounds. Context tools use 80% opacity while idle on hover-capable pointers. Zoom controls
+are transparent while idle and reveal on hover, keyboard focus, or a changed zoom
+value. They return to idle 1.2 seconds after the last zoom change; repeated redraws
+at the same zoom do not keep them visible. Their reserved layout space remains
+stable. Touch controls remain fully opaque. Hidden views, overlays and disposal
+cancel the activity timer; restoring a view does not flash the controls. Narrow containers center zoom above the command row when the two cannot
+coexist. The dock allows 16 px side padding (respecting safe areas) and keeps a
+6 px separation from right-aligned zoom so commands can use the available width. No controls are cloned. Call
+`refresh()` after visibility changes and `dispose()` to restore owned nodes and
+release observers/listeners. `createZoomFeedback` exposes `.element` and defaults
+to the same padded bottom-right position. Selected positioned media cards paint
+the shared contrast border above their content; apps must not add selection paint.
+
+Action fitting follows a group's current parent when an adopted toolbar moves
+into a context dock. It releases the old container observer so captions expand
+and compact against the dock's available space.
+
+
+`SharedUI.createResizablePanel(panel,{container,side:'right',min:240,max:640,minMain:280,value:352,property:'--ui-aside',onChange})` adds one accessible native separator. Drag with mouse/touch or use Left/Right (Shift for larger steps), Home/End and Escape. The container receives the bounded shared sizing property; the application owns panel placement and persistence. Narrow containers disable the horizontal handle. Cancellation, hidden views and disposal release capture/observers and preserve content. This is a resize primitive, not a docking/workspace manager. Positioned panels must establish their existing positioning context.
+
+Composed `.ui-field` textarea controls share the outer field border, fill the available value area and retain native vertical resizing. Hidden tag suggestions reserve no empty rows.
+
+Caption compaction priority is explicitly opt-in: mark only unmistakable actions
+such as Previous/Next arrows with `data-ui-compact-priority="0"`. Lower numeric
+ranks lose captions first, unranked actions last. Equal-fill rows retain natural
+width for those compacted arrows and balance the remaining labelled controls.
+Labels return when space allows; accessible names remain intact. Ordinary groups
+continue to compact together. The Media review example demonstrates this option.
+
+Use `data-ui-align="start"` on an action stack to align its native command
+captions with the same left edge as menu commands. Property rows make tag entry
+fill their value column, preserving the existing native input and chips.
+
+### Compact suggestions and inspector actions
+
+`createSuggestedInput(input,{options,excluded,onCommit,limit:6})` accepts arbitrary
+text with optional prefix suggestions. It preserves the existing input and uses
+a viewport-bounded overlay: focus and suggestion changes never reserve a new row
+or move adjacent controls. Arrow keys select a suggestion; Enter otherwise commits
+the literal entry, Escape dismisses, and IME composition remains native. No ghost
+text or routine draft notice is inserted. Applications retain their commit model.
+`createTagInput` uses this same overlay globally and adds comma-separated commits
+and shared tag choices. Dispose either helper with the owning field.
+
+`adoptPropertyAction(row,{name,action,icon,label:name,sprite})` places the original
+native button/link in the same value column as Aura's inspector inputs, with its
+name at the left and a named icon in a full-width compact action box. Existing
+handlers, native links and shared pending/success/error feedback stay intact.
+The Effects control panel catalogue demonstrates both primitives in both packs.
+
+Panel resize separators follow the panel's actual vertical bounds, so a shared
+full-width workspace footer remains clear. Native builders declare action icons
+and factories retain ownership; consumers must not repaint factory controls with
+legacy post-render label/icon decoration.
+
+`data-ui-layout="wrap"` is an explicit intrinsic wrapping action group. It sizes
+from its controls without size containment, stays bounded by its parent and
+wraps normally. Use it for centered review tools with a tag row aligned below;
+ordinary full-width action groups retain their existing containment.
+
+### Workspace control bars and compact sections
+
+Use the **review dock** (`.ui-review-dock[data-ui-position="flow"]`) for persistent media navigation and its optional review actions. Keep it in a reserved workspace row outside the media/inspector split. Use `createContextToolbar` for selection-dependent canvas tools anchored to a container, with optional zoom controls. Both compose the same native `.ui-actions` controls; the application owns only workspace tracks and media placement. They are separate compositions, not separate button implementations.
+
+Compact inspector groups use native `details.ui-section`: a left disclosure triangle, a bold top-level heading and quieter nested headings (`data-ui-level="2"`). Existing draggable application headings with their own collapse state may adopt `.ui-section-heading` plus `aria-expanded` and keyboard handling; retain their original nodes and handlers. Suggested inputs anchor an overlay to the exact field width, without a new flow row.
+
+`createTagInput(input, {field, chips, ...suggestions})` can retain a native field and selected-chip list on one stable row. The entry keeps its width while the chip strip scrolls horizontally. Pass the existing nodes; the application retains tag persistence and removal handlers. Suggestions remain a field-width overlay and never resize the inspector.
+
+`SharedUI.createColorWheel({root, values:[], choices:[], multiple:false, label, onChange})` supplies a native colour-wheel action, visible selection nodes and individually named removal actions. Click adds a node or removes a selected node; drag adjusts a node (mouse, pen or touch), with pointer capture and Escape/cancel restoring its starting selection. The wheel fills its container and shows a perimeter ring, highlighted pointer/drag target and live hex feedback. Arrow keys choose hue/saturation, Enter toggles and Delete removes. `multiple:true` allows up to 32 nodes; an optional hex `choices` palette snaps selections for categorical filters. Omitting choices permits arbitrary hue/saturation values for picker integrations. `setValues` updates without emitting; `clear` emits; `dispose` releases listeners and drawing buffers. The hue/saturation graphic is generated locally and sends no content or telemetry.
+
+Search bars use the existing native `.ui-field.ui-search` pattern with a decorative shared search SVG, a named `input[type=search]`, and the browser's native clear/search keyboard behavior. Adopt the existing input instead of replacing it.
+
+Native menus evaluate the original composed click path when dismissing outside
+clicks. Removing a selected tag or colour during its click does not close its
+containing menu; a real outside click and Escape retain normal dismissal.
+
+Consumer browser checks should run `SharedUI.auditControls(workspace)` after toolbar reflow. It reports native icon commands missing `adoptAction` registration as `unadopted-action`, alongside height drift and overlapping controls. Test nested context groups in narrow and wide containers; a painted button alone does not satisfy the shared action contract.
+
+Run `node test/serve-context-toolbar.mjs` and open its loopback URL for the real browser contract fixture. **Run toolbar checks** exercises both packs through repeated 320/560/1000 px resizing, checks nested native actions, constant control height, centered bounds, zoom separation and keyboard visibility, and proves the audit rejects an unregistered icon command. It uses synthetic controls only.
+
+Additional viewport commands such as Back to top compose inside `createZoomFeedback(...).element` as existing adopted native actions. Use icon-only captions with complete accessible names, then call `observeActions` on that group. They share its surface, opacity, keyboard visibility and container fitting; keep scroll/reset semantics application-owned. Do not create a separately positioned floating button beside the dock.
+
+### Safe workspace and grouped review controls
+
+Use `.ui-safe` on fullscreen workspace chrome, popouts or a dock that needs an explicit content inset. `--ui-safe-inset` defaults to two shared gaps (12 px compact, 8 px dense); padding also respects the largest device safe-area inset on all four edges. Ordinary `.ui-pad` spacing remains two shared gaps and ignores safe inset overrides. Read resolved `padding` to measure that default; a fallback does not declare the custom property. Apply it once at each actual chrome boundary rather than nesting padded wrappers. Existing `--ui-page-width` owns the outer page width, `--ui-popout-width` / `--ui-popout-height` bound panels, and `--ui-dock-width` bounds review docks (64rem by default). Context toolbars also honor `--ui-safe-inset` for viewport/container clearance. Applications own workspace tracks and media geometry in `@layer app`.
+
+`SharedUI.createReviewControls(root,{rating,actions,tags,navigation,layout:'bar',iconOnly:false})` adopts existing native slots. Rating stays one coherent group; commands and navigation wrap within the available width. The bar caps its width with `--ui-dock-width`; tags receive a readable full-width field before yielding to another row. Use `iconOnly:true` for deliberately compact media commands; accessible names and handlers remain. `addAction(existingButton)` registers dynamic commands, `refresh()` handles visibility, and `dispose()` restores owned styles. The default `layout:'stacked'` retains the earlier separate centered rows.
+
+Use `createTagInput(input,{field,chips,layout:'wrap',...options})` for an inspector or review bar. The entry stays above a real wrapping chip list; `--ui-tag-list-height` caps that list to three control rows by default. Excess tags remain reachable with native vertical scrolling and keyboard focus. Long text wraps inside each chip. Suggestions stay in a field-anchored overlay, and resizing does not rebuild fields, change drafts or commit tags. The earlier `inline` and `stacked` horizontal list layouts remain explicit choices. No narrow field width is imposed on plain `.ui-tags` markup.
+
+`createResizablePanel(panel,{container,min,max,minMain,value,...options})` uses the container's content width, excluding safe padding. It publishes `data-ui-resize-layout="side"` when both minimum panel and main widths fit, or `"stack"` otherwise. Domain grid CSS can follow that signal instead of adding a viewport breakpoint. It retains the preferred panel width across temporary shrinking; explicit resizing updates that preference. The separator follows the actual panel boundary. Disposal restores the prior property and layout attribute.
+
+The catalogue demonstrates live wrapped tags and bounded review controls. The loopback fixture server's `/review` exercises both packs and themes at 390/800/1440 px, repeated shrinking/growing, bounded long-tag lists, native draft/focus retention, suggestions, keyboard access and resize separator placement.
+
+### Shared colour and command panels
+
+`createColorPanel({root, choices, multiple, value, onChange})` renders a responsive native swatch grid; `setChoices` updates available colours and `setValue` updates selection without app paint. Choices are `[name, CSS colour]` pairs; `SharedUI.cardColors` is the shared default palette used by `createColorPicker`. Colour pickers toggle closed when their trigger is used again and size to their contents. `createFilterButton` uses the standard filter icon, caption and container-driven compaction. `createConfirmAction(trigger,{message,label,onConfirm})` supplies an anchored keyboard-accessible confirmation with Cancel first. Apps explicitly bind its `open` method and retain the original action's domain handler.
+
+Controller Boolean controls keep their native checkbox and form/change semantics, expose On/Off in the property value column, and use the inverted pressed surface. Context docks cap command width at 1200 px and one parent owns the fit of intrinsic nested groups, including groups moved from another container.
+
+For before/after text, use one unified diff inside a closed `details.ui-section`: `div.ui-prose > pre.ui-mono > code`. Keep unchanged context, prefix removed lines with `-` and added lines with `+`, and escape source text. Use `span.ui-error` for removed lines and `span.ui-success` for added lines; the signs keep the meaning clear without color. Preserve the original reviewed text independently of this display.
+
+Swatch panels also accept `groups:[{label:'Default',choices:[[name,value],…]},…]`. `setGroups` changes named sections; `setChoices` returns to a flat grid. `buttons` remains a flattened list and `setValue`/`onChange` keep the same values. `cardColorGroups` combines default/approval choices, followed by ten pastels. Groups share equal, button-sized columns; pickers hide their headings and use the compact value-column schema. Anchored confirmations and colour panels adopt the trigger's native dialog when opened, preserving modal keyboard focus and accessibility.
+
+
+## Collection filters
+
+Use the same native form for tables, galleries, lists and search results. Put the search `.ui-field.ui-search` beside `details.ui-disclosure[data-ui-filter]` in `.ui-actions.ui-toolbar`. Its `summary.ui-action` uses the filter icon. Put criterion `.ui-field` labels inside `.ui-disclosure-body.ui-stack > .ui-grid`, then Apply submit and Reset actions. The existing grid lays fields out as rows when wide and wraps when narrow. For an anchored gallery menu, keep `details.ui-menu[data-ui-filter]` and `.ui-menu-panel` instead; the controller preserves authored placement and classes. A closed disclosure takes only its trigger's space; opening retains the native nodes and values. The Collection filters catalogue demonstrates matching table records.
+
+`SharedUI.createFilterMenu(form,{label:'Filters',sprite,defaults:{},onChange(values,{reason,active})})` enhances the authored form. Mark native named inputs/selects with `data-ui-filter-field`; hidden routing fields stay unmarked. Empty is the default unless `defaults[name]` or `data-ui-filter-default` specifies another value. Checkbox/radio groups and multiselects return arrays. The summary counts active criteria, excluding disabled fields; `refresh()` rescans dynamically added criteria. `values` and `active` expose current state. `clear()` restores declared defaults, preserving routing fields, nodes, focus and open state. Mark its Reset action `data-ui-filter-clear`; provide a real reset URL for the no-JavaScript fallback. Escape closes the panel and returns focus to its summary; a second click toggles it natively. `dispose()` releases listeners without altering form contents. Apps own query matching, counts, navigation and debouncing: the helper never submits forms or stores app data. Native Apply works without JavaScript; `onChange` can update gallery results live or submit on explicit clear. Both packs share this contract.
+
+Context toolbars accept an existing `status` node: `createContextToolbar(toolbar,{container,zoom,status})` places it in a separate shared context box centered above commands. Its text never consumes command width; hide the node when no selection is active. Disposal restores the original node. Wide command rows may use up to 1200 px within symmetric zoom clearance and safe margins. Colour pickers use separator-only palette groups (`createColorPanel` also accepts `headings:false`) and compact property rows for Custom colour and Hex.
+
+The card palette places neutral/transparent first, then approval colours in one five-swatch group, followed by ten pastels. Pickers omit group headings and separate groups with padding. Responsive swatch grids share equal columns across groups and choose balanced row counts; native hit targets remain bounded by the container.
+
+Swatches cap both dimensions at the shared control height; extra container width never enlarges colour targets. The panel retains its full container width with consistent gaps and centered rows.
+
+Every `createColorPanel` owns one padded shared field box around its swatches.
+Gallery filters, card pickers and catalogue panels therefore share the same
+border and spacing; consumers must not add a second field wrapper.
+
+Inside a floating context dock, authored `details.ui-overflow` groups use the shared anchored native menu contract. Opening More never adds an in-flow row or changes dock height; secondary actions keep complete captions in a vertical menu. Existing nodes, handlers, values and original composition are retained and restored on disposal.
+
+Card pickers give the swatches the full panel width: five columns for the default group and two five-column pastel rows at ordinary phone and desktop widths. Custom colour and Hex use aligned compact property rows below the palette. The swatch group has one shared field border and an accessible name; no redundant side label consumes its width.
+
 
 ### Numbered document links
 
@@ -785,3 +1074,67 @@ Use `SharedUI.adoptNumberedAction(link,{number:1,label:'Bank statement.pdf',aria
 ### Distinct icons within a bar
 
 Each distinct action in one bar must use a distinct icon. Repeated document links use numbered square icons so their collapsed controls remain distinguishable. Keep accessible names and tooltips complete when captions collapse. All eligible captions in a navigation bar collapse together; do not force a few labels to stay visible while their neighbours collapse.
+
+
+Review toolbars can use `createReviewControls(root,{layout:"bar",navigation,...})`
+with the existing native navigation group inside the same root. Rating, commands,
+inline tag entry and navigation share one row when the container permits, then
+wrap without hiding actions behind a second toggle. The default stacked layout
+remains available. The catalogue demonstrates the adaptive bar; tag inputs retain
+their existing native entry and chips.
+
+Popout headers, bodies, footers and native menu panels use two shared gap units
+of edge padding. A form-wrapped dialog uses the same default 42rem shell width
+as a direct `.ui-popout` dialog; use the documented width token for domain needs.
+Context docks keep 24px bottom clearance, retain their nodes through browser
+back/forward restoration, and refresh their bounds on return.
+
+### Guided lessons
+
+`SharedUI.createGuide({root, sprite, onBack, onSkip, onRestart, onNext})` creates a nonmodal native popover with shared actions and a selection marker around a real control. Call `open()` and `update()` with `{title, text, position, total, target, canNext, nextLabel, status}`. A target can be a connected element or a resolver; call `refresh()` after the application changes views or selection. The component owns bounded viewport positioning, native control focus, Escape, resize/scroll handling, hidden-view suspension and disposal. It never changes the target, submits a form, advances on a timer, or stores application state. Lessons and successful-action events belong to the consumer. `canNext` is for explanatory steps; action steps advance only after their consumer receives acknowledgment. Close or dispose the guide before leaving its view. The catalogue demonstrates a real form acknowledgment and coaching inside an anchored native tray in both packs. A guide follows its target into an open popover, including one inside a modal dialog, so Focus control does not light-dismiss the target tray. No animation is used, including with Reduce Motion.
+
+### Compact native review and choice trays (1.16)
+
+Use `createReviewControls(root,{layout:'rows',rating,actions,tags,navigation,iconOnly:false,sprite})` for a separate tags row above one adaptive command bar. The shared helper groups the existing command nodes once; resizing never rebuilds them. `--ui-dock-width` defaults to `70%`, and `--ui-dock-max-width` defaults to `64rem`. Supply a media/workspace bound through that token when appropriate. The composition expands to available width in a narrow container; it consumes the percentage once, making its `.ui-review-dock` parent full width. The parent has no outer scrollport hiding primary commands; the tag list owns its bounded scrolling. Navigation uses its natural action widths in wrapping layouts; an authored `.ui-fill` is suspended so unequal labels cannot be squeezed into equal narrow cells. Dispose restores authored slots and styles.
+
+`createTagInput(input,{field,chips,layout:'field',...suggestions})` composes committed tags and the native entry in the existing `.ui-field` shell, using one border and focus indicator. Supply the existing form/field shell around the input, not a bare input. Chips and the trailing input share one wrapping flow, like a recipient field. There is no split input/chip column. The whole field is bounded to three control rows (`--ui-tag-list-height` overrides it); native vertical scrolling keeps every tag and the input reachable. Only initial adoption moves the chips inside the shell. The same nodes, native submission, input value and removal handlers remain; dispose restores placement. Dense tags use the native control padding and a 20px minimum, while coarse pointers retain 44px targets.
+
+Use `adoptPropertyRow(row,{name,control,actions,layout:'compact'})` for a small inspector. It gives related rows an aligned eight-character label column (`--ui-property-label-width` overrides it) and the rest to the value, using the current shared density. The default technical property composition remains unchanged. For simple settings use `<label class="ui-check"><input type="checkbox">Show metadata</label>` rather than a separate On/Off command. Put record actions in `.ui-actions[data-ui-layout="vertical"][data-ui-align="start"]`; adopted SVG and text stay left aligned together.
+
+A searchable recent-choice tray composes an existing native search input, `.ui-actions[data-ui-layout="vertical"][data-ui-align="start"]` choice buttons and optionally a separate small create form inside `.ui-popout`. Set `--ui-popout-width:22rem` for a small tray. Call `createAnchoredPopover(trigger,{element,onClose})` with that authored native popover. It owns dialog-parent placement, viewport bounds, resizing, scrolling, native light dismissal, Escape and focus return. It returns `open`, `close`, `refresh`, `setTrigger(nextTrigger)` and `dispose`. Closing does not destroy or reset content. The application retains choice history, search filtering, persistence, uncertain requests and retry state. Ordinary keys remain native inside the tray and do not escape into domain shortcuts.
+
+`createResponsiveSlot(field,{primary,fallback,minWidth:240})` moves one existing search field between two stable hosts. Keep the primary host in a shrinkable allocated header track; it remains measurable while empty. Put the fallback host first in the filter section; the helper hides that empty host while search is in the header. Use a named native form. The helper retains native form association when the field leaves its form, defers relocation through IME composition, and preserves focus/caret. Moving a focused search into a closed native details section opens that section. Filter forms include associated external controls in values, counts, changes and clear. Dispose restores placement and attributes. Never clone or mirror the search input.
+
+Use `.ui-link` on a native anchor, button or summary for a compact underlined text action. It shares the unframed native control reset and the shared visible focus indicator. Native summary keyboard activation keeps full documents available behind a compact disclosure, as shown in the catalogue.
+
+Native panel/popover/details entrances use a 90ms opacity and 2px slide with Web Animations, without fill or layout-height animation. `animatePanel(element)` also supports an explicitly revealed panel. Native actions, focus and input proceed immediately; the element is never recreated. Hidden documents and Reduce Motion skip/cancel the animation. The audit checks declared missing SVGs, hidden icon paint, empty symbol geometry and malformed references without fetching a sprite; consumers should additionally verify their same-origin sprite request and symbol IDs in browser fixtures.
+
+The loopback browser fixture server also exposes `/compact`. **Run compact native checks** verifies both packs at 390/1440 px, the 70% review composition, tag-shell and disposal identity, and two independent documents with native search form association, focused fallback opening, caret/IME retention, anchored-popover Escape focus return and Reduce Motion suppression.
+
+Context docks reserve the zoom slot while an overlay temporarily hides its controls; opening More never changes caption fit. `runAction` accepts `successState:'idle'` for repeatable semantic actions (Hide/Show): completion is announced without replacing the action icon or retaining success paint. Colour panels accept `maxColumns` (default 5), allowing a compact filter palette without changing card-picker geometry.
+
+Anchored popovers accept `bindTrigger:false` when an existing command adapter already owns click handling. The app then calls `toggle` from its click command (or `open`/`close` explicitly); the helper still owns bounds, dismissal, ARIA and focus. This avoids two click handlers toggling the same menu twice.
+
+Action feedback retains an existing semantic icon through success/error and re-adoption; iconless actions may use a feedback glyph. Busy feedback remains immediate. Item rows align text to the start, including a truncated label that fills the remaining row.
+
+
+### Action appearance, visual choices and content width (1.17)
+
+`SharedUI.setActionLayout(root,'beside'|'icons'|'above')` applies an inherited appearance to native adopted actions without replacing their SVG, caption, focus or listeners. Beside is the standard icon and caption. Icons uses a 26px glyph in a target at least 48px; Above uses a 32px glyph in a target at least 80px with the caption underneath. Coarse pointers retain at least 44px. Native headers, menu panels, composed `.ui-field` controls, `.ui-item` rows and physically scaled graphic actions retain beside layout. Call this helper when restoring or changing the application's saved appearance; the returned `data-ui-action-layout` attribute reports the setting and is not a CSS-only switch. Action groups keep their existing fit: captions collapse together only when required; opening More cannot change it. If even the large icon targets cannot fit a bar, the registered group temporarily uses normal-density icon targets; growing restores its saved appearance. Applications own persistence. `adoptAction` also gives newly added header/menu/field/item commands their readable defaults.
+
+`createAdaptiveDensity(root,{container=root})` opts a workspace into actual-container density: below 360px Dense, below 760px Compact, 760–1600px Base, above 1600px Comfortable. It retains desktop 24px minima and coarse-pointer 44px targets. Its scoped ResizeObserver suspends in hidden documents; `refresh()` handles explicit placement changes and `dispose()` restores the prior density and releases listeners. Controls, input values, form association and IME remain native. Do not run it on a box whose width is determined by its controls.
+
+Compose a visual library, board or help destination with a native button or link: `.ui-visual-card.ui-stack.ui-item`, first child `[data-ui-card-preview]`, then `.ui-label` and `.ui-meta`. Use `.ui-fit-media` on a decorative preview image (`alt=""`); retain a complete accessible name on the native card. Shared UI supplies paint, focus, spacing, full captions and the default 16:9 preview. Applications own source URLs, preview geometry overrides, selection and activation. A parent `.ui-grid` supplies responsive tracks; set `--ui-grid-min` for the content. Never adopt the whole preview card as an icon action: it is already one native compound choice. Selection uses the existing `.ui-selectable` and semantic ARIA/data state.
+
+`.ui-content.ui-pad` gives ordinary pages shared gutters and a centered width based on the actual parent: fill narrow containers up to 48rem, honor `--ui-page-width` above that, and cap at 96rem. Apply it once. Canvas/media workspaces keep domain tracks. Existing `.ui-popout` owns bounded header/body/footer panels: use `--ui-popout-width:22rem` for a compact choice tray, place scrolling choices in `[data-ui-popout-body]`, and keep decisions in the direct footer. A short Help menu uses visual destinations, not a full-screen document. The Action appearance catalogue demonstrates all three modes, native draft retention and visual choices in both packs.
+
+This release removes undocumented pre-SharedUI control aliases and generic SVG wrappers. Use native controls, the documented `.ui-*` roles, `data-ui-variant`, and `svg.ui-icon`. Field/toolbar/list surface paint is consolidated with their existing native definitions; generated assets remain one-way build output.
+
+
+For a centered bounded tile grid, keep the existing `.ui-grid` with default `auto-fit`, set `--ui-grid-min:20rem; --ui-grid-max:30rem`, and use `justify-content:center` as domain geometry. One visual card then grows to 30rem and centers; several cards form centered rows and wrap inside the actual container. The maximum defaults to `1fr` for ordinary forms and grids. Do not use `data-ui-grid="fill"` for this composition: fill intentionally reserves empty tracks. The bounded-grid catalogue demonstrates one, three and six native visual choices.
+
+Composed checkbox and radio labels (`.ui-check.ui-field` / `.ui-choice.ui-field`) retain the native field minimum, including 26px Dense fields. Ordinary checks and buttons retain the control minimum (24px Dense); coarse pointers retain at least44px. The catalogue's Audio tools checkbox demonstrates the composition beside a native search-and-Copy field.
+
+Each density boundary resolves field padding from its own control padding. A compact search field stays 30px high even inside a comfortable page or after a responsive slot moves it out of a dense menu. Coarse-pointer fields retain the shared 44px minimum.
+
+Use `label.ui-icon-choice.ui-action` for a full-surface toggle choice: shared SVG, `.ui-label`, then a native checkbox or radio. The label owns the visible surface and focus ring; the native input retains checked state, keyboard activation and form submission without a separate square checkbox. The catalogue demonstrates Group by Colour and Show hidden.
