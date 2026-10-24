@@ -394,29 +394,3 @@
   }
   @keyframes ui-spin { to { transform:rotate(1turn); } }
 }
-
-/* Compact component hierarchies. Host apps own data, scope and editing state. */
-@layer ui.controls {
-  .ui-control-tree { min-inline-size:0;min-block-size:0;overflow:auto;overscroll-behavior:contain;font-size:var(--ui-control-size); }
-  .ui-control-tree-item { min-inline-size:0;outline:0; }
-  .ui-control-tree-line { display:grid;grid-template-columns:12px 12px minmax(0,1fr);align-items:center;gap:3px;min-block-size:22px;padding:1px 5px 1px calc(2px + var(--control-tree-depth,0)*10px);cursor:pointer;border-radius:var(--ui-radius-small); }
-  .ui-control-tree-line>.ui-icon { inline-size:12px;block-size:12px;color:var(--ui-muted); }
-  .ui-control-tree-expander { display:grid;place-items:center;font-size:12px;color:var(--ui-muted); }
-  .ui-control-tree-label { min-inline-size:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;font:var(--ui-control-font); }
-  .ui-control-tree-item[aria-level="1"]>.ui-control-tree-line { font-weight:600; }
-  .ui-control-tree-item[data-ui-variation=true]:not([data-ui-unavailable=true])>.ui-control-tree-line>.ui-control-tree-label { color:var(--ui-accent); }
-  .ui-control-tree-item[aria-selected=true]>.ui-control-tree-line { background:var(--ui-accent-soft);box-shadow:inset 2px 0 var(--ui-accent);font-weight:600; }
-  .ui-control-tree-item:focus-visible>.ui-control-tree-line { outline:2px solid var(--ui-focus,var(--ui-accent));outline-offset:-2px; }
-  .ui-control-tree-item[data-ui-unavailable=true]>.ui-control-tree-line { color:var(--ui-muted);opacity:.65; }
-}
-
-@layer ui.controls {
-  /* A reserved trailing action slot keeps values perfectly aligned, even with no key/ƒx actions. */
-  .ui-property-row[data-ui-property-layout=trailing] { grid-template-columns:minmax(0,1fr) minmax(8ch,var(--control-value-width,35%)) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap))); }
-  .ui-property-row[data-ui-property-layout=trailing] > [data-ui-property-value] { grid-column:2; }
-  .ui-property-row[data-ui-property-layout=trailing] > .ui-actions { grid-column:3;justify-content:flex-end; }
-  .ui-vertical-splitter { position:relative;flex:none;inline-size:100%;block-size:9px;cursor:ns-resize;touch-action:none;outline-offset:-2px; }
-  .ui-vertical-splitter::before { content:'';position:absolute;inset-inline:calc(50% - 20px);inset-block-start:3px;block-size:3px;border-radius:8px;background:var(--ui-line-strong); }
-  .ui-vertical-splitter:is(:hover,:focus-visible,[data-dragging=true])::before { background:var(--ui-accent); }
-  .ui-vertical-splitter:focus-visible { outline:2px solid var(--ui-accent); }
-}
