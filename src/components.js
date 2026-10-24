@@ -293,6 +293,45 @@
     const element=document.createElement('span');element.className='ui-avatar ui-tag';const label=String(name||'Editor');element.textContent=Array.from(label.trim()).slice(0,2).join('').toUpperCase();element.title=label;element.setAttribute('aria-label',label);size=Math.max(20,Math.min(44,Number(size)||24));
     element.style.setProperty('--ui-tag-height',size+'px');element.style.setProperty('--ui-tag-radius','50%');element.style.setProperty('--ui-tag-padding','0');element.style.inlineSize=size+'px';element.style.blockSize=size+'px';element.style.flex='none';element.style.display='grid';element.style.placeItems='center';element.style.overflow='hidden';return element;
   };
+  // Fullscreen a viewer container: native dialogs cannot request fullscreen.
+  // Keep the open top-layer viewer and its existing media/playback intact.
+  UI.createFullscreen=(button,{scope=null,target=null,media=null,sprite='/shared-ui/icons.svg'}={})=>{
+    const doc=button.ownerDocument,view=doc.defaultView,removers=[];
+    scope ||= button.closest('dialog')||doc.documentElement;target ||= scope===doc.documentElement?scope:scope.querySelector('[data-ui-lightbox-content]')||(scope.tagName==='DIALOG'?null:doc.documentElement);
+    if(!target||target.ownerDocument!==doc||scope.ownerDocument!==doc||target.tagName==='DIALOG')throw new TypeError('Fullscreen needs a non-dialog target in the same document');
+    const old={hidden:button.hidden,disabled:button.disabled,pressed:button.getAttribute('aria-pressed')};
+    let disposed=false,pending=false,wanted=false,owned=false,video=null,nativeOwned=false;
+    const element=()=>doc.fullscreenElement||doc.webkitFullscreenElement;
+    const request=()=>typeof target.requestFullscreen==='function'&&doc.fullscreenEnabled!==false?target.requestFullscreen:typeof target.webkitRequestFullscreen==='function'&&doc.webkitFullscreenEnabled!==false?target.webkitRequestFullscreen:null;
+    const active=()=>element()===target||Boolean(video?.webkitDisplayingFullscreen);
+    const listen=(owner,type,fn)=>{owner.addEventListener(type,fn);removers.push(()=>owner.removeEventListener(type,fn));};
+    const nativeChanged=()=>{if(!video?.webkitDisplayingFullscreen)nativeOwned=false;sync();};
+    function sync(){if(disposed)return;const full=active();button.hidden=old.hidden||!request()&&typeof video?.webkitEnterFullscreen!=='function';button.disabled=old.disabled;button.setAttribute('aria-pressed',String(full));UI.adoptAction(button,{label:full?'Exit fullscreen':'Fullscreen',ariaLabel:full?'Exit fullscreen':'Fullscreen',icon:full?'fit':'fullscreen',title:full?'Exit fullscreen':'Fullscreen',sprite});}
+    function refresh(){
+      if(disposed)return;
+      const next=typeof media==='function'?media():media||scope.querySelector('video');
+      if(next!==video){if(nativeOwned)video?.webkitExitFullscreen?.();video?.removeEventListener('webkitbeginfullscreen',nativeChanged);video?.removeEventListener('webkitendfullscreen',nativeChanged);video=next;nativeOwned=false;video?.addEventListener('webkitbeginfullscreen',nativeChanged);video?.addEventListener('webkitendfullscreen',nativeChanged);}
+      sync();
+    }
+    async function exit(){
+      wanted=false;
+      try{if(owned&&element()===target){const leave=doc.exitFullscreen||doc.webkitExitFullscreen;if(leave)await leave.call(doc);}if(nativeOwned)video?.webkitExitFullscreen?.();}catch(_){}finally{if(!pending||element()===target)owned=false;nativeOwned=false;sync();}
+    }
+    async function toggle(){
+      if(disposed||pending||old.disabled)return false;
+      refresh();pending=true;UI.setActionState(button,{state:'idle',sprite});sync();
+      try{
+        if(active()){wanted=false;const leave=doc.exitFullscreen||doc.webkitExitFullscreen;if(element()===target&&leave)await leave.call(doc);else video?.webkitExitFullscreen?.();owned=false;nativeOwned=false;}
+        else{wanted=true;const enter=request();if(enter){owned=true;await enter.call(target);if(disposed||!wanted)await exit();}else if(typeof video?.webkitEnterFullscreen==='function'){nativeOwned=true;video.webkitEnterFullscreen();}else return false;}
+        return true;
+      }catch(_){wanted=false;owned=false;nativeOwned=false;if(!disposed)UI.setActionState(button,{state:'error',message:'Fullscreen is unavailable. Try again in a supported browser.',sprite});return false;}
+      finally{pending=false;sync();}
+    }
+    function changed(){if(!element()&&!pending)owned=false;if(owned&&!wanted)void exit();sync();}
+    function dispose(){if(disposed)return;disposed=true;void exit();for(const remove of removers)remove();video?.removeEventListener('webkitbeginfullscreen',nativeChanged);video?.removeEventListener('webkitendfullscreen',nativeChanged);button.hidden=old.hidden;button.disabled=old.disabled;if(old.pressed===null)button.removeAttribute('aria-pressed');else button.setAttribute('aria-pressed',old.pressed);}
+    listen(button,'click',()=>{void toggle();});listen(doc,'fullscreenchange',changed);listen(doc,'webkitfullscreenchange',changed);listen(scope,'close',()=>{void exit();});listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
+    refresh();return {refresh,toggle,exit,dispose,get active(){return active();}};
+  };
   UI.fitMedia=(media,stage=media.parentElement,{controlsOnIntent=false}={})=>{
     const view=media.ownerDocument.defaultView,old={width:media.style.width,height:media.style.height,controls:media.controls,tabIndex:media.getAttribute('tabindex')};const removers=[];let disposed=false;
     function fit(){if(disposed)return;const style=view.getComputedStyle(stage),width=stage.clientWidth-parseFloat(style.paddingLeft||0)-parseFloat(style.paddingRight||0),height=stage.clientHeight-parseFloat(style.paddingTop||0)-parseFloat(style.paddingBottom||0),ratio=(media.videoWidth||media.naturalWidth||Number(media.getAttribute('width')))/(media.videoHeight||media.naturalHeight||Number(media.getAttribute('height')));if(!(width>0&&height>0&&ratio>0))return;const w=Math.min(width,height*ratio);media.style.width=w+'px';media.style.height=w/ratio+'px';}
