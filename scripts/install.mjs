@@ -10,11 +10,13 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const hash=(bytes,algorithm='sha256')=>createHash(algorithm).update(bytes).digest(algorithm==='sha384'?'base64':'hex');
 export function installBundle(target,{check=false,source=path.join(root,'public/v1')}={}) {
   if(!target)throw new Error('Pass --target with the app’s generated shared-ui asset directory');
-  const names=['styles.css','runtime.js','icons.svg','manifest.json'];
+  const names=['styles.css','runtime.js','icons.svg','manifest.json','control-tree.css'];
   const files=new Map(names.map(name=>[name,fs.readFileSync(path.join(source,name))]));
   const release=JSON.parse(files.get('manifest.json'));
   if(release.protocol!==1||!/^1\.\d+\.\d+$/.test(release.version)||hash(files.get('styles.css'))!==release.revision||'sha384-'+hash(files.get('styles.css'),'sha384')!==release.integrity||release.stylesheet!==`styles.${release.revision}.css`)throw new Error('Shared UI bundle integrity failed');
   new vm.Script(files.get('runtime.js').toString(),{filename:'runtime.js'});
+  const treeCss=files.get('control-tree.css').toString();
+  if(Buffer.byteLength(treeCss)>4096||/@import|url\s*\(/i.test(treeCss))throw new Error('Invalid optional control tree styles');
   const icons=files.get('icons.svg').toString();
   if(!icons.startsWith('<svg xmlns="http://www.w3.org/2000/svg">')||/<script|\bon\w+\s*=|\bhref\s*=/i.test(icons))throw new Error('Shared UI icons must be a passive local sprite');
   files.set('bundle.json',Buffer.from(JSON.stringify({repository:'https://github.com/andyherle/shared-ui',version:release.version,revision:release.revision,files:Object.fromEntries([...files].map(([name,bytes])=>[name,hash(bytes)]))},null,2)+'\n'));
