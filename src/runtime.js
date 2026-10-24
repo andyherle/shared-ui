@@ -173,11 +173,12 @@
       restore();
       const css=view.getComputedStyle(root),base=parseFloat(css.getPropertyValue('--ui-control-size'))||12;
       const requested=scaleRatio===undefined?size:base*scaleRatio;
-      const effective=coarse.matches?Math.max(16,requested):requested,ratio=effective/base;
+      const round=value=>Number(value.toFixed(6));
+      const effective=round(coarse.matches?Math.max(16,requested):requested),ratio=effective/base;
       // Read the baseline before writing: computed styles are live; scaling must never compound.
       const values=Object.entries(defaults).map(([name,fallback])=>[name,css.getPropertyValue('--ui-'+name).trim()||(name==='control-icon'&&css.getPropertyValue('--ui-action-icon').trim())||(typeof fallback==='number'?fallback+'px':fallback)]);
       for(const [name,value]of values){
-        let scaled=value.replace(/(-?\d*\.?\d+)px\b/g,(_,n)=>(Number(n)*ratio)+'px');
+        let scaled=value.replace(/(-?\d*\.?\d+)px\b/g,(_,n)=>round(Number(n)*ratio)+'px');
         if(coarse.matches&&['control-height','field-height','tag-height'].includes(name))scaled=`max(44px, ${scaled})`;
         style.setProperty('--ui-'+name,scaled);
       }
