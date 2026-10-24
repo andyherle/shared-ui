@@ -158,22 +158,27 @@
     const dispose=()=>{if(disposed)return;disposed=true;observer.disconnect();doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',hide);view.removeEventListener('pageshow',visibility);previous===null?root.removeAttribute('data-ui-density'):root.setAttribute('data-ui-density',previous);};
     const hide=event=>event.persisted?observer.disconnect():dispose();doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',hide);view.addEventListener('pageshow',visibility);visibility();return {refresh,dispose};
   }
-  function createControlScale(root,{fontSize=12}={}){
+  function createControlScale(root,{fontSize,scale}={}){
     const doc=root.ownerDocument,view=doc.defaultView,style=root.style,coarse=view.matchMedia('(pointer:coarse)');
     const defaults={'control-height':30,'field-height':30,'tag-height':26,gap:6,'control-inset':8,'control-padding':'4px 8px','field-padding':'4px 8px','range-thumb':12,'range-width':128,'switch-width':36,'switch-height':22,'switch-thumb':16,'switch-inset':2,'control-icon':18};
     const names=[...Object.keys(defaults),'control-size','action-icon'].map(name=>'--ui-'+name);
     const previous=new Map(names.map(name=>[name,[style.getPropertyValue(name),style.getPropertyPriority(name)]]));
-    let size,disposed=false;
+    let size,scaleRatio,disposed=false;
+    if(fontSize!==undefined&&scale!==undefined)throw new TypeError('Use either fontSize or scale, not both');
+    const rawScale=root.getAttribute?.('data-ui-control-scale')??root.closest?.('[data-ui-control-scale]')?.getAttribute('data-ui-control-scale');
+    const initialScale=fontSize===undefined&&scale===undefined&&rawScale!=null?Number(rawScale):scale;
     function restore(){for(const [name,[value,priority]]of previous)value?style.setProperty(name,value,priority):style.removeProperty(name);}
     function refresh(){
       if(disposed||doc.hidden)return;
       restore();
       const css=view.getComputedStyle(root),base=parseFloat(css.getPropertyValue('--ui-control-size'))||12;
-      const effective=coarse.matches?Math.max(16,size):size,ratio=effective/base;
+      const requested=scaleRatio===undefined?size:base*scaleRatio;
+      const round=value=>Number(value.toFixed(6));
+      const effective=round(coarse.matches?Math.max(16,requested):requested),ratio=effective/base;
       // Read the baseline before writing: computed styles are live; scaling must never compound.
       const values=Object.entries(defaults).map(([name,fallback])=>[name,css.getPropertyValue('--ui-'+name).trim()||(name==='control-icon'&&css.getPropertyValue('--ui-action-icon').trim())||(typeof fallback==='number'?fallback+'px':fallback)]);
       for(const [name,value]of values){
-        let scaled=value.replace(/(-?\d*\.?\d+)px\b/g,(_,n)=>(Number(n)*ratio)+'px');
+        let scaled=value.replace(/(-?\d*\.?\d+)px\b/g,(_,n)=>round(Number(n)*ratio)+'px');
         if(coarse.matches&&['control-height','field-height','tag-height'].includes(name))scaled=`max(44px, ${scaled})`;
         style.setProperty('--ui-'+name,scaled);
       }
@@ -181,11 +186,13 @@
       style.setProperty('--ui-action-icon','var(--ui-control-icon)');
       api.refreshActions?.(doc);
     }
-    function setFontSize(value){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError('Control font size must be a positive finite number');size=value;refresh();return size;}
+    function setFontSize(value){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError('Control font size must be a positive finite number');size=value;scaleRatio=undefined;refresh();return size;}
+    function setScale(value){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError('Control scale must be a positive finite number');scaleRatio=value;size=undefined;refresh();return scaleRatio;}
     function hide(event){if(!event.persisted)dispose();}
     function dispose(){if(disposed)return;disposed=true;restore();coarse.removeEventListener('change',refresh);doc.removeEventListener('ui:styles',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pageshow',refresh);view.removeEventListener('pagehide',hide);api.refreshActions?.(doc);}
-    setFontSize(fontSize);coarse.addEventListener('change',refresh);doc.addEventListener('ui:styles',refresh);doc.addEventListener('visibilitychange',refresh);view.addEventListener('pageshow',refresh);view.addEventListener('pagehide',hide);
-    return {setFontSize,refresh,dispose};
+    if(fontSize!==undefined)setFontSize(fontSize);else if(initialScale!==undefined)setScale(initialScale);else setFontSize(12);
+    coarse.addEventListener('change',refresh);doc.addEventListener('ui:styles',refresh);doc.addEventListener('visibilitychange',refresh);view.addEventListener('pageshow',refresh);view.addEventListener('pagehide',hide);
+    return {setFontSize,setScale,refresh,dispose};
   }
   function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
@@ -940,7 +947,7 @@
   // Inspector rows share name/action/value columns; original controls stay alive.
   UI.adoptPropertyRow=(row,{name,control,actions,layout='standard'}={})=>{
     if(!row||!control||row.ownerDocument!==control.ownerDocument||actions&&row.ownerDocument!==actions.ownerDocument)throw new TypeError('Property rows require controls from one document');
-    if(!['standard','compact'].includes(layout))throw new TypeError('Unknown property row layout');
+    if(!['standard','compact','trailing'].includes(layout))throw new TypeError('Unknown property row layout');
     const doc=row.ownerDocument;
     if(!actions){actions=doc.createElement('div');actions.className='ui-actions ui-inline';actions.hidden=true;}
     const input=control.matches?.('input,select,textarea')?control:control.querySelector('input,select,textarea');
@@ -953,6 +960,12 @@
     control.dataset.uiPropertyValue='';
     Object.assign(control.style,{gridColumn:'3',gridRow:'1',minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     if(layout==='compact')Object.assign(row.style,{gridTemplateColumns:'minmax(0,var(--ui-property-label-width,8ch)) auto minmax(0,1fr)',font:'var(--ui-control-font)'});
+    if(layout==='trailing'){
+      row.dataset.uiPropertyLayout='trailing';
+      row.style.gridTemplateColumns='minmax(0,1fr) minmax(8ch,var(--control-value-width,35%)) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap)))';
+      control.style.gridColumn='2';actions.style.gridColumn='3';
+      actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
+    }
     row.append(actions,control);return {element:row,label,control,actions};
   };
   UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
@@ -2004,6 +2017,91 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
   return {element,dispose(){activeFinish?.(true);for(const remove of removers)remove();},sync(next,nextSpec,parameters){spec=nextSpec;endSpec=parameters.find(item=>(item.key||item.id)===spec.rangeControl.end);element.hidden=!endSpec;if(!endSpec)return;if(!dragging){start=next;other=Number(endSpec.value??endSpec.default??0);paint();}}};
 }
 
+})();
+
+/* Compact, application-neutral component hierarchy. Apps supply their navigation model and
+   render only the currently selected controls; Shared UI owns rows, focus and keyboard grammar. */
+(() => {
+  'use strict';
+  if(typeof window==='undefined'||!window.SharedUI)return;
+  const UI=window.SharedUI;
+  UI.createCompactControlTree=function({navigation,onSelect,onChange=()=>{},onSearch=()=>{},onContextMenu=()=>{},sprite='./shared-ui/icons.svg'}={}){
+    if(!navigation||typeof navigation.rows!=='function'||typeof navigation.key!=='function')throw new TypeError('A control-tree navigation model is required');
+    const doc=document,root=doc.createElement('div');
+    root.className='ui-control-tree';root.setAttribute('role','tree');root.setAttribute('aria-label','Components');
+    let signature='',focused='',query='',typed='',typedAt=0;
+    const items=()=>[...root.querySelectorAll('[role=treeitem]')];
+    const rowFor=id=>items().find(n=>n.dataset.component===id);
+    const focus=id=>{focused=id;for(const item of items())item.tabIndex=item.dataset.component===id?0:-1;rowFor(id)?.focus({preventScroll:true});rowFor(id)?.scrollIntoView({block:'nearest'});};
+    function render(){
+      const rows=navigation.rows(query);
+      const next=JSON.stringify([rows.map(n=>[n.id,n.parent,n.label,n.description,n.depth,n.children,n.expanded,n.available,n.protected,n.selectors?.length||0]),navigation.selected]);
+      if(signature===next)return;signature=next;
+      const hadFocus=root.contains(doc.activeElement),oldFocus=hadFocus?doc.activeElement.closest('[data-component]')?.dataset.component:focused,scroll=root.scrollTop;
+      if(!rows.some(n=>n.id===focused))focused=rows.some(n=>n.id===navigation.selected)?navigation.selected:rows[0]?.id??'';
+      root.replaceChildren();const groups=new Map([[null,root]]);
+      for(const n of rows){
+        const item=doc.createElement('div');item.className='ui-control-tree-item';item.dataset.component=n.id;item.setAttribute('role','treeitem');item.setAttribute('aria-label',n.label);
+        item.setAttribute('aria-selected',String(n.id===navigation.selected));item.setAttribute('aria-level',String(n.depth+1));item.tabIndex=n.id===focused?0:-1;
+        const siblings=rows.filter(r=>r.parent===n.parent);item.setAttribute('aria-setsize',String(siblings.length));item.setAttribute('aria-posinset',String(siblings.findIndex(r=>r.id===n.id)+1));
+        const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--control-tree-depth',String(n.depth));
+        const expander=doc.createElement('span');expander.className='ui-control-tree-expander';expander.textContent=n.children?(n.expanded?'▾':'▸'):'';expander.dataset.expand='';expander.setAttribute('aria-hidden','true');
+        const symbol=doc.createElementNS('http://www.w3.org/2000/svg','svg');symbol.classList.add('ui-icon');symbol.setAttribute('aria-hidden','true');
+        const use=doc.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',sprite+'#'+(n.protected?'ui-lock':n.children?'ui-folder':'ui-sliders'));symbol.append(use);
+        const label=doc.createElement('span');label.className='ui-control-tree-label';label.textContent=n.label;line.append(expander,symbol,label);item.append(line);
+        const variants=Boolean(n.selectors?.length&&!n.protected);if(variants){item.dataset.uiVariation='true';item.setAttribute('aria-description','Switchable appearance variations');}
+        if(n.protected)item.dataset.uiProtected='true';if(n.available===false)item.dataset.uiUnavailable='true';
+        item.title=(n.description||n.label)+(variants?' · Variations available':'');
+        line.onclick=event=>{if(event.target.closest('[data-expand]')&&n.children){navigation.toggle(n.id);onChange();render();focus(n.id);}else{focused=n.id;onSelect(n.id);render();focus(n.id);}};
+        item.oncontextmenu=event=>onContextMenu(n,event);
+        item.onfocus=event=>{if(event.target===item){focused=n.id;for(const entry of items())entry.tabIndex=entry===item?0:-1;}};
+        (groups.get(n.parent)||root).append(item);
+        if(n.children){item.setAttribute('aria-expanded',String(n.expanded));const group=doc.createElement('div');group.className='ui-control-tree-children';group.setAttribute('role','group');item.append(group);groups.set(n.id,group);}
+      }
+      if(!rows.length){const empty=doc.createElement('p');empty.className='ui-meta';empty.textContent='No matching component.';root.append(empty);}
+      root.scrollTop=scroll;if(hadFocus&&rowFor(oldFocus))focus(oldFocus);
+    }
+    root.addEventListener('keydown',event=>{
+      const item=event.target.closest('[role=treeitem]');if(!item||event.target!==item)return;
+      const id=item.dataset.component;
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(event.key)&&!event.altKey){
+        event.preventDefault();event.stopPropagation();const next=navigation.key(id,event.key,query);onChange();render();focus(next);return;
+      }
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();onSelect(id);return;}
+      if(event.key.length===1&&!event.metaKey&&!event.ctrlKey&&!event.altKey){
+        const now=performance.now();typed=now-typedAt<650?typed+event.key.toLowerCase():event.key.toLowerCase();typedAt=now;
+        const rows=navigation.rows(query),index=rows.findIndex(n=>n.id===id),ordered=[...rows.slice(index+1),...rows.slice(0,index+1)],next=ordered.find(n=>n.label.toLowerCase().startsWith(typed));
+        if(next){event.preventDefault();event.stopPropagation();focus(next.id);}
+      }
+    });
+    root.addEventListener('keyup',event=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))event.stopPropagation();});
+    return {element:root,render,focus,setQuery(value){query=value;signature='';render();onSearch(query);},get query(){return query;},reveal(){navigation.select(navigation.selected,{record:false});render();rowFor(navigation.selected)?.scrollIntoView({block:'nearest'});}};
+  };
+})();
+
+/* A split between adjacent vertical sections, with keyboard and pointer resizing.
+   The host owns persistence; Shared UI owns the handle, geometry and semantics. */
+(() => {
+  'use strict';
+  if(typeof window==='undefined'||!window.SharedUI)return;
+  window.SharedUI.createVerticalSplitter=function(top,{value=180,min=80,max=()=>700,onChange=()=>{},label='Resize sections'}={}){
+    if(!top?.ownerDocument)throw new TypeError('A section is required');
+    const doc=top.ownerDocument,handle=doc.createElement('div'),view=doc.defaultView;
+    handle.className='ui-vertical-splitter';handle.setAttribute('role','separator');handle.tabIndex=0;
+    handle.setAttribute('aria-label',label);handle.setAttribute('aria-orientation','horizontal');
+    handle.title='Drag to resize · Arrow Up/Down · double-click to reset';
+    const original=value;let size=value,drag=null;
+    const bounds=()=>({min:Math.max(0,typeof min==='function'?Number(min()):Number(min)),max:Math.max(0,typeof max==='function'?Number(max()):Number(max))});
+    function setValue(next,final=false){const range=bounds();size=Math.max(range.min,Math.min(Math.max(range.min,range.max),Math.round(next)));
+      top.style.blockSize=size+'px';handle.setAttribute('aria-valuemin',String(range.min));handle.setAttribute('aria-valuemax',String(Math.max(range.min,range.max)));handle.setAttribute('aria-valuenow',String(size));onChange(size,{final});}
+    const move=event=>{if(drag&&event.pointerId===drag.pointerId)setValue(drag.height+event.clientY-drag.y);};
+    const stop=event=>{if(!drag||event.pointerId!==drag.pointerId)return;drag=null;delete handle.dataset.dragging;setValue(size,true);};
+    handle.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();drag={pointerId:event.pointerId,y:event.clientY,height:top.getBoundingClientRect().height};handle.dataset.dragging='true';handle.setPointerCapture(event.pointerId);});
+    handle.addEventListener('pointermove',move);for(const name of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(name,stop);
+    handle.addEventListener('keydown',event=>{const delta={ArrowUp:-16,ArrowDown:16,PageUp:-64,PageDown:64}[event.key];if(delta!==undefined){event.preventDefault();setValue(size+delta,true);}else if(event.key==='Home'||event.key==='End'){event.preventDefault();setValue(event.key==='Home'?original:bounds().max,true);}});
+    handle.addEventListener('dblclick',()=>setValue(original,true));
+    setValue(value);return {element:handle,setValue,get value(){return size;}};
+  };
 })();
 
 /* Native filter forms shared by tables, galleries and other collections. */
