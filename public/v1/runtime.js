@@ -964,7 +964,7 @@
     let label=row.querySelector('[data-ui-property-label]')||row.querySelector('.parameter-head > label,.parameter-head > strong');if(!label)return;
     let entry=propertyActions.get(row);
     if(!entry&&(typeof options.onReset==='function'||typeof options.onActivate==='function')){
-      const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';
+      const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';button.className='ui-graphic-action';button.dataset.uiLabel='always';
       button.style.color=label.style.color;Object.assign(button.style,{gridColumn:'1',gridRow:'1',textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
       const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
       entry={button,name,busy:false};
@@ -1643,7 +1643,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI,pools=new WeakMap();
   const actionSelector='.ui-action',overflowSelector='details.ui-overflow';
-  const fixedLabel='[data-ui-label=hidden],[data-ui-label=always],.ui-item';
+  const fixedLabel='[data-ui-label=hidden],[data-ui-label=always],.ui-item,.ui-menu-panel .ui-action';
   const number=value=>parseFloat(value)||0;
   function poolFor(doc){
     if(pools.has(doc))return pools.get(doc);
@@ -1661,7 +1661,8 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     function actionWidth(node,compact=false){
       const css=style(node),label=node.querySelector(':scope > .ui-label'),icon=node.querySelector(':scope > svg.ui-icon');
       if(!label||!icon)return outer(node);
-      const hidden=compact||node.dataset.uiLabel==='hidden'||css.getPropertyValue?.('--ui-action-caption').trim()==='none';
+      const essential=node.dataset.uiLabel==='always'||node.matches('.ui-item')||Boolean(node.closest('.ui-menu-panel'))&&node.dataset.uiLabel!=='hidden';
+      const hidden=!essential&&(compact||node.dataset.uiLabel==='hidden'||css.getPropertyValue?.('--ui-action-caption').trim()==='none');
       const glyph=number(style(icon).width)||18;
       const toggle=node.matches('.ui-toggle')?node.querySelector(':scope > input'):null;
       const extra=(node.tagName==='SUMMARY'&&!node.parentElement.matches(overflowSelector)?14:0)+(toggle?outer(toggle)+number(css.columnGap):0);
@@ -1713,6 +1714,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       if(group.closest(overflowSelector))return;
       const owner=group.parentElement;if(group.matches('.ui-inline,[data-ui-layout=inline]')&&owner?.matches('.ui-actions,.ui-toolbar')&&owner.dataset.uiLayout!=='vertical'&&style(owner).flexDirection!=='column'){untrack(group);register(owner);return;}
       const css=style(group),nodes=children(group).filter(node=>!['absolute','fixed'].includes(style(node).position)),actions=descendants(nodes).filter(eligible);
+      for(const node of descendants(nodes).filter(node=>node.matches('[data-ui-label=always],.ui-item'))){restoreCompact(node);setCompact(node,false);}
       for(const node of actions)restoreCompact(node);
       const overflows=priorities(nodes);
       const vertical=group.dataset.uiLayout==='vertical'||css.flexDirection==='column';

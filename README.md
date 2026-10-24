@@ -1138,3 +1138,7 @@ Composed checkbox and radio labels (`.ui-check.ui-field` / `.ui-choice.ui-field`
 Each density boundary resolves field padding from its own control padding. A compact search field stays 30px high even inside a comfortable page or after a responsive slot moves it out of a dense menu. Coarse-pointer fields retain the shared 44px minimum.
 
 Use `label.ui-icon-choice.ui-action` for a full-surface toggle choice: shared SVG, `.ui-label`, then a native checkbox or radio. The label owns the visible surface and focus ring; the native input retains checked state, keyboard activation and form submission without a separate square checkbox. The catalogue demonstrates Group by Colour and Show hidden.
+
+### Semantic labels in compact toolbars
+
+Use `data-ui-label="always"` for navigation and decisions whose identity must stay visible. `ui-item` record names and labelled menu choices also retain their captions in icon-only appearance. Icon-only toolbar preferences apply to decorative action captions, not the names of records or destinations. Reflow clears a prior compact state when a caption becomes explicit.

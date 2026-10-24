@@ -276,7 +276,7 @@
     @container ui-actions (max-width:32rem) { [data-ui-header-context] { display:none; } [data-ui-header-status] { position:static; order:2; flex:1 0 100%; } }
     .ui-action {
       &:not(.ui-item,.ui-graphic-action) { flex-direction:var(--ui-action-flow,row); min-inline-size:max(var(--ui-control-height),var(--ui-action-size,0px)); min-block-size:max(var(--ui-control-height),var(--ui-action-size,0px)); }
-      & > .ui-label { display:var(--ui-action-caption,inline); }
+      &:not(.ui-item,[data-ui-label]) > .ui-label { display:var(--ui-action-caption,inline); }
       &:has(>svg.ui-icon) > .ui-label { white-space:nowrap; }
       &[data-ui-label=hidden]:has(>svg.ui-icon) > .ui-label { display:none; }
       &[aria-busy=true]::before { content:""; border:2px solid currentColor; border-inline-end-color:#0000; border-radius:50%; animation:ui-spin .8s linear infinite; }

@@ -12,6 +12,7 @@ test('property names reset only on double-click or keyboard activation, coalesci
  const {UI,row,label}=kit();let calls=0,release;
  const reset=()=>{calls++;return new Promise(resolve=>release=resolve);};
  UI.setPropertyAction(row,{onReset:reset});const name=label.replacement;
+ assert.equal(name.className,'ui-graphic-action');assert.equal(name.dataset.uiLabel,'always','property identity is not an optional toolbar caption');
  name.listeners.get('click')({detail:1});assert.equal(calls,0,'single pointer click does nothing');
  name.listeners.get('dblclick')();name.listeners.get('dblclick')();assert.equal(calls,1,'pending reset is not duplicated');assert.equal(name.disabled,true);
  release();await new Promise(setImmediate);assert.equal(name.disabled,false);
