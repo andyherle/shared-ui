@@ -17,7 +17,7 @@ test('consumer plan is read-only, apply requires a pinned release, and check ver
   updateConsumers(config, {apply: true, expectedVersion: plan.version, expectedRevision: plan.revision});
   assert.ok(updateConsumers(config).consumers.every(item => item.current));
   assert.equal(fs.readFileSync(path.join(root, 'one/app.js'), 'utf8'), 'private source stays here');
-  assert.deepEqual(fs.readdirSync(path.join(root, 'one/static/shared-ui')).sort(), ['bundle.json', 'icons.svg', 'manifest.json', 'runtime.js', 'styles.css']);
+  assert.deepEqual(fs.readdirSync(path.join(root, 'one/static/shared-ui')).sort(), ['bundle.json', 'control-tree.css', 'icons.svg', 'manifest.json', 'runtime.js', 'styles.css']);
 });
 test('unsafe second destination prevents changes to the first consumer', t => {
   const {root, config} = fixture(t); config.consumers[1].assets = '../escape';

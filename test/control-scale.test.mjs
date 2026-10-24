@@ -44,3 +44,21 @@ test('a precision density scales its existing icon baseline',()=>{
  const f=fixture();Object.assign(f.baseline,{'--ui-control-size':'10px','--ui-action-icon':'10px'});
  const control=module.exports.createControlScale(f.root,{fontSize:12});assert.equal(f.style.getPropertyValue('--ui-control-icon'),'12px');control.dispose();
 });
+
+test('relative control scale is opt-in, follows density and never compounds',()=>{
+ const f=fixture();f.root.getAttribute=key=>key==='data-ui-control-scale'?'0.8':null;
+ const control=module.exports.createControlScale(f.root);
+ assert.equal(Number.parseFloat(f.style.getPropertyValue('--ui-control-size')).toFixed(1),'9.6');
+ assert.equal(f.style.getPropertyValue('--ui-field-height'),'24px');
+ control.setScale(0.5);assert.equal(f.style.getPropertyValue('--ui-control-size'),'6px');
+ assert.equal(f.style.getPropertyValue('--ui-field-padding'),'2px 4px');
+ Object.assign(f.baseline,{'--ui-control-size':'10px','--ui-field-height':'24px'});
+ f.doc.fire('ui:styles');assert.equal(f.style.getPropertyValue('--ui-control-size'),'5px');
+ assert.equal(f.style.getPropertyValue('--ui-field-height'),'12px');
+ control.setFontSize(9);assert.equal(f.style.getPropertyValue('--ui-control-size'),'9px');
+ for(const invalid of [0,-1,Infinity,NaN,'0.8'])assert.throws(()=>control.setScale(invalid),/positive finite/);
+ control.dispose();
+ assert.equal(f.style.getPropertyValue('--ui-control-size'),'');
+ const plain=fixture(),plainControl=module.exports.createControlScale(plain.root);assert.equal(plainControl.setScale(1),1);plainControl.dispose();
+ assert.throws(()=>module.exports.createControlScale(fixture().root,{fontSize:10,scale:0.8}),/either/);
+});

@@ -158,22 +158,27 @@
     const dispose=()=>{if(disposed)return;disposed=true;observer.disconnect();doc.removeEventListener('visibilitychange',visibility);view.removeEventListener('pagehide',hide);view.removeEventListener('pageshow',visibility);previous===null?root.removeAttribute('data-ui-density'):root.setAttribute('data-ui-density',previous);};
     const hide=event=>event.persisted?observer.disconnect():dispose();doc.addEventListener('visibilitychange',visibility);view.addEventListener('pagehide',hide);view.addEventListener('pageshow',visibility);visibility();return {refresh,dispose};
   }
-  function createControlScale(root,{fontSize=12}={}){
+  function createControlScale(root,{fontSize,scale}={}){
     const doc=root.ownerDocument,view=doc.defaultView,style=root.style,coarse=view.matchMedia('(pointer:coarse)');
     const defaults={'control-height':30,'field-height':30,'tag-height':26,gap:6,'control-inset':8,'control-padding':'4px 8px','field-padding':'4px 8px','range-thumb':12,'range-width':128,'switch-width':36,'switch-height':22,'switch-thumb':16,'switch-inset':2,'control-icon':18};
     const names=[...Object.keys(defaults),'control-size','action-icon'].map(name=>'--ui-'+name);
     const previous=new Map(names.map(name=>[name,[style.getPropertyValue(name),style.getPropertyPriority(name)]]));
-    let size,disposed=false;
+    let size,scaleRatio,disposed=false;
+    if(fontSize!==undefined&&scale!==undefined)throw new TypeError('Use either fontSize or scale, not both');
+    const rawScale=root.getAttribute?.('data-ui-control-scale')??root.closest?.('[data-ui-control-scale]')?.getAttribute('data-ui-control-scale');
+    const initialScale=fontSize===undefined&&scale===undefined&&rawScale!=null?Number(rawScale):scale;
     function restore(){for(const [name,[value,priority]]of previous)value?style.setProperty(name,value,priority):style.removeProperty(name);}
     function refresh(){
       if(disposed||doc.hidden)return;
       restore();
       const css=view.getComputedStyle(root),base=parseFloat(css.getPropertyValue('--ui-control-size'))||12;
-      const effective=coarse.matches?Math.max(16,size):size,ratio=effective/base;
+      const requested=scaleRatio===undefined?size:base*scaleRatio;
+      const round=value=>Number(value.toFixed(6));
+      const effective=round(coarse.matches?Math.max(16,requested):requested),ratio=effective/base;
       // Read the baseline before writing: computed styles are live; scaling must never compound.
       const values=Object.entries(defaults).map(([name,fallback])=>[name,css.getPropertyValue('--ui-'+name).trim()||(name==='control-icon'&&css.getPropertyValue('--ui-action-icon').trim())||(typeof fallback==='number'?fallback+'px':fallback)]);
       for(const [name,value]of values){
-        let scaled=value.replace(/(-?\d*\.?\d+)px\b/g,(_,n)=>(Number(n)*ratio)+'px');
+        let scaled=value.replace(/(-?\d*\.?\d+)px\b/g,(_,n)=>round(Number(n)*ratio)+'px');
         if(coarse.matches&&['control-height','field-height','tag-height'].includes(name))scaled=`max(44px, ${scaled})`;
         style.setProperty('--ui-'+name,scaled);
       }
@@ -181,11 +186,13 @@
       style.setProperty('--ui-action-icon','var(--ui-control-icon)');
       api.refreshActions?.(doc);
     }
-    function setFontSize(value){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError('Control font size must be a positive finite number');size=value;refresh();return size;}
+    function setFontSize(value){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError('Control font size must be a positive finite number');size=value;scaleRatio=undefined;refresh();return size;}
+    function setScale(value){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError('Control scale must be a positive finite number');scaleRatio=value;size=undefined;refresh();return scaleRatio;}
     function hide(event){if(!event.persisted)dispose();}
     function dispose(){if(disposed)return;disposed=true;restore();coarse.removeEventListener('change',refresh);doc.removeEventListener('ui:styles',refresh);doc.removeEventListener('visibilitychange',refresh);view.removeEventListener('pageshow',refresh);view.removeEventListener('pagehide',hide);api.refreshActions?.(doc);}
-    setFontSize(fontSize);coarse.addEventListener('change',refresh);doc.addEventListener('ui:styles',refresh);doc.addEventListener('visibilitychange',refresh);view.addEventListener('pageshow',refresh);view.addEventListener('pagehide',hide);
-    return {setFontSize,refresh,dispose};
+    if(fontSize!==undefined)setFontSize(fontSize);else if(initialScale!==undefined)setScale(initialScale);else setFontSize(12);
+    coarse.addEventListener('change',refresh);doc.addEventListener('ui:styles',refresh);doc.addEventListener('visibilitychange',refresh);view.addEventListener('pageshow',refresh);view.addEventListener('pagehide',hide);
+    return {setFontSize,setScale,refresh,dispose};
   }
   function adoptAction(element,{icon,label,labelStates,ariaLabel,iconOnly,title,sprite='./shared-ui/icons.svg'}={}){
     if(!element?.matches?.('button,a,summary'))throw new TypeError('A native button, link or summary is required');
