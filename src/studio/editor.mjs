@@ -409,8 +409,6 @@ async function compare(version) {
 }
 async function listDocuments() {
   const result = await api('documents.list');
-  // Appearance profiles use the same store but their dedicated native inspector.
-  result.documents = result.documents.filter(item => item.scope.kind !== 'appearance');
   $('#documents').replaceChildren();
   if (!result.documents.length) {const empty = el('option', '', 'No saved documents'); empty.value = ''; $('#documents').append(empty);}
   for (const item of result.documents) {const option = el('option', '', `${item.name} · ${item.target.appId}/${item.target.viewId}`); option.value = item.documentId; $('#documents').append(option);}

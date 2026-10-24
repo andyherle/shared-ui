@@ -17,11 +17,6 @@ const assets = new Map([
   ['/editor.css', ['../src/studio/editor.css', 'text/css']],
   ['/preview.html', ['../src/studio/preview.html', 'text/html']],
   ['/preview.mjs', ['../src/studio/preview.mjs', 'text/javascript']],
-  ['/appearance.html', ['../src/appearance/studio.html', 'text/html']],
-  ['/appearance-demo.html', ['../src/appearance/demo.html', 'text/html']],
-  ...['schema.mjs', 'controller.mjs', 'persistence.mjs', 'editor.mjs', 'studio-persistence.mjs',
-      'studio-page.mjs', 'demo-registry.mjs', 'demo.mjs', 'editor.css'].map(name =>
-        ['/appearance/' + name, ['../src/appearance/' + name, name.endsWith('.css') ? 'text/css' : 'text/javascript']]),
   ...['styles.css', 'runtime.js', 'icons.svg'].map(name => [`/v1/${name}`, [`../public/v1/${name}`, name.endsWith('css') ? 'text/css' : name.endsWith('svg') ? 'image/svg+xml' : 'text/javascript']])
 ]);
 export async function startStudio({service, port = 41913, token = randomBytes(32).toString('hex')}) {
