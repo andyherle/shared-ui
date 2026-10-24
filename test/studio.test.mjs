@@ -196,7 +196,7 @@ test('replacing the registered root with a symlink fails closed', t => {
   assert.throws(() => h.read(), errorCode('UNSAFE_STORE'));
 });
 test('private state cannot be placed inside the public source repository', () => {
-  assert.throws(() => createAuthoringService({directory: path.resolve('test/unsafe-store'), views: DEMO_VIEWS, writable: true}), /outside the public repository/);
+  assert.throws(() => createAuthoringService({directory: path.resolve('test/unsafe-store'), views: DEMO_VIEWS, writable: true}), /outside the public repository|outside Git working trees/);
 });
 test('malformed store data fails as an operation error without a replacement write', t => {
   const h = harness(t); h.create(); const file = path.join(h.directory, 'studio.json'); fs.writeFileSync(file, '{broken');
