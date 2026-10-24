@@ -74,6 +74,9 @@ export function buildSite(directory=root){
   for(const file of ['runtime.js','components.js','compositions.js','floating-panel.js','diagnostics.js','lab.js','composition-lab.js'])new vm.Script(read(file),{filename:file});
   const css=buildCSS(JSON.parse(read('tokens.json')),read('controls.css'));
   const floatingCss=floatingPanelFixtureCSS(read('controls.css'));
+  const controlTreeCss=compactCSS(read('control-tree.css'));
+  if(Buffer.byteLength(controlTreeCss)>4096||gzipSync(controlTreeCss).length>1536||/@import|url\s*\(/i.test(controlTreeCss))
+    throw new Error('Optional control-tree CSS must remain below 4 KiB with no external imports');
   const helper=read('floating-panel.js');
   // Composition layout is shared behavior. Bound raw and transfer size independently.
   const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css).length;
@@ -89,7 +92,7 @@ export function buildSite(directory=root){
   const assets=new Map([
     ...debugAssets(directory,compactCSS),...timelineAssets(directory,compactCSS),
     ['debug.html',read('debug-lab.html').replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],['debug-lab.js',read('debug-lab.js')],
-    ['v1/'+release.stylesheet,css],['v1/styles.css',css],
+    ['v1/'+release.stylesheet,css],['v1/styles.css',css],['v1/control-tree.css',controlTreeCss],
     ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('filters.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
     ['v1/floating-panel.fixture.css',floatingCss],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
