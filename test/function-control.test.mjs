@@ -35,6 +35,23 @@ test('expression text remains editable while finite text values can scrub',()=>{
  const g=fixture();g.UI.createFunctionControl(g.input,{canScrub:()=>false});g.down();g.move(120);g.up();assert.deepEqual(g.changes,[]);
 });
 
+test('optional step snapping keeps drag values on the declared keyboard grid',()=>{
+ const f=fixture();f.input.type='text';f.input.value='1.23456789';f.UI.createFunctionControl(f.input,{step:()=>.01,min:0,snap:true});
+ f.down();f.move(110);assert.equal(f.input.value,'1.33');
+ f.move(111,{altKey:true});assert.equal(f.input.value,'1.331');
+ f.up();assert.equal(f.changes.at(-1)[0],'change');
+});
+
+test('tiny steppers call the same increments without adding keyboard tab stops',()=>{
+ const f=fixture(),calls=[];
+ f.doc.createElement=tag=>{const attrs={},children=[],listeners=new Map();return {tagName:tag.toUpperCase(),children,dataset:{},append(node){children.push(node);},remove(){},setAttribute(k,v){attrs[k]=v;},getAttribute(k){return attrs[k];},addEventListener(k,cb){listeners.set(k,cb);},removeEventListener(k){listeners.delete(k);},fire(k,event={}){listeners.get(k)?.(event);}};};
+ const arrows=f.UI.createNumberSteppers(f.input,{label:'Rotation',step:()=>.25,onStep:delta=>calls.push(delta)});
+ assert.equal(arrows.element.children.length,2);assert.equal(arrows.element.children[0].tabIndex,-1);
+ assert.equal(arrows.element.children[0].title,'Increase Rotation by 0.25');
+ arrows.element.children[0].fire('click',{});arrows.element.children[1].fire('click',{shiftKey:true});assert.deepEqual(calls,[1,-10]);
+ f.input.disabled=true;arrows.sync();assert.equal(arrows.element.children[0].disabled,true);arrows.element.children[0].fire('click',{});assert.deepEqual(calls,[1,-10]);arrows.dispose();
+});
+
 test('a displayed formula result scrubs the independent base at full precision',()=>{
  const f=fixture();f.input.type='text';f.input.value='99';f.UI.createFunctionControl(f.input,{getValue:()=>1.23456789});
  f.down();f.move(110);f.up();assert.equal(f.input.value,'2.23456789');assert.equal(f.changes.at(-1)[1],'2.23456789');

@@ -317,11 +317,12 @@
     const box=panel.getBoundingClientRect(),left=Math.max(8,Math.min(box.left,view.innerWidth-box.width-8)),top=up?trigger.top-box.height:trigger.bottom;
     panel.style.translate=`${left-box.left}px ${Math.max(8,top)-box.top}px`;panel.scrollTop=scrollTop;
   };
-  UI.createFunctionControl=(input,{getValue=null,canScrub=()=>true,step=()=>Number(input.step)||.01,min=()=>input.min===''?-Infinity:Number(input.min),max=()=>input.max===''?Infinity:Number(input.max)}={})=>{
+  UI.createFunctionControl=(input,{getValue=null,canScrub=()=>true,step=()=>Number(input.step)||.01,min=()=>input.min===''?-Infinity:Number(input.min),max=()=>input.max===''?Infinity:Number(input.max),snap=false}={})=>{
     if(!['number','text'].includes(input.type))throw new TypeError('Function controls require a native numeric or expression input');
     const numeric=()=>input.type==='number'?input.valueAsNumber:input.value.trim()===''?NaN:Number(input.value);
     const doc=input.ownerDocument,view=doc.defaultView,removers=[];let gesture=null,disposed=false;
     const read=value=>typeof value==='function'?value():value;
+    const rounded=(value,increment,origin)=>Number((origin+Math.round((value-origin)/increment)*increment).toPrecision(12));
     input.classList.add('ui-function-value');
     function listen(owner,type,fn){owner.addEventListener(type,fn);removers.push(()=>owner.removeEventListener(type,fn));}
     function emit(type){input.dispatchEvent(new view.Event(type,{bubbles:true}));}
@@ -340,7 +341,8 @@
       if(!gesture.moved&&Math.abs(dx)<3)return;
       if(!gesture.moved){gesture.moved=true;input.dataset.uiDragging='';input.focus({preventScroll:true});}
       event.preventDefault();const scale=event.altKey ? .1 : event.shiftKey ? 10 : 1;
-      gesture.value=Math.max(read(min),Math.min(read(max),Number((gesture.value+dx*Math.abs(read(step)||.01)*scale).toPrecision(12))));gesture.x=event.clientX;
+      const lower=read(min),upper=read(max),increment=Math.abs(read(step)||.01)*scale,candidate=gesture.value+dx*increment;
+      gesture.value=Math.max(lower,Math.min(upper,read(snap)?rounded(candidate,increment,0):Number(candidate.toPrecision(12))));gesture.x=event.clientX;
       if(numeric()!==gesture.value){input.value=String(gesture.value);emit('input');}
     });
     listen(input,'pointerup',event=>{if(event.pointerId===gesture?.id)finish();});
@@ -349,6 +351,18 @@
     listen(doc,'visibilitychange',()=>{if(doc.visibilityState==='hidden')finish(true);});
     const dispose=()=>{if(disposed)return;finish(true);disposed=true;for(const remove of removers)remove();input.classList.remove('ui-function-value');};listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
     return {dispose};
+  };
+  UI.createNumberSteppers=(input,{label='Value',step=()=>Number(input.step)||.01,onStep=()=>{}}={})=>{
+    const doc=input.ownerDocument,group=doc.createElement('span'),buttons=[],handlers=[];
+    group.className='ui-actions ui-inline';group.dataset.uiLayout='vertical';group.dataset.uiDensity='micro';group.setAttribute('role','group');group.setAttribute('aria-label',`${label} adjustment`);
+    for(const direction of [1,-1]){
+      const button=doc.createElement('button');button.type='button';button.className='ui-action';button.tabIndex=-1;button.textContent=direction>0?'▴':'▾';
+      const handler=event=>{if(!input.disabled&&!input.readOnly)onStep(direction*(event.shiftKey?10:event.altKey?0.1:1),event);};
+      button.addEventListener('click',handler);buttons.push(button);handlers.push(handler);group.append(button);
+    }
+    const sync=()=>{const amount=Number(typeof step==='function'?step():step)||.01;for(let i=0;i<buttons.length;i++){const name=(i===0?'Increase ':'Decrease ')+label+' by '+amount;buttons[i].title=name;buttons[i].setAttribute('aria-label',name);buttons[i].disabled=Boolean(input.disabled||input.readOnly);}};
+    sync();
+    return {element:group,sync,dispose(){for(let i=0;i<buttons.length;i++)buttons[i].removeEventListener('click',handlers[i]);group.remove();}};
   };
   UI.createAdaptiveSlot=(node,{container,target}={})=>{
     if(!container||!target||node.ownerDocument!==target.ownerDocument||!container.contains(node)||!container.contains(target))throw new TypeError('Adaptive controls need one toolbar and menu');
