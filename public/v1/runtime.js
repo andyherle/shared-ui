@@ -2095,9 +2095,9 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     function setValue(next,final=false){const range=bounds();size=Math.max(range.min,Math.min(Math.max(range.min,range.max),Math.round(next)));
       top.style.blockSize=size+'px';handle.setAttribute('aria-valuemin',String(range.min));handle.setAttribute('aria-valuemax',String(Math.max(range.min,range.max)));handle.setAttribute('aria-valuenow',String(size));onChange(size,{final});}
     const move=event=>{if(drag&&event.pointerId===drag.pointerId)setValue(drag.height+event.clientY-drag.y);};
-    const stop=event=>{if(!drag||event.pointerId!==drag.pointerId)return;drag=null;delete handle.dataset.dragging;setValue(size,true);};
-    handle.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();drag={pointerId:event.pointerId,y:event.clientY,height:top.getBoundingClientRect().height};handle.dataset.dragging='true';handle.setPointerCapture(event.pointerId);});
-    handle.addEventListener('pointermove',move);for(const name of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(name,stop);
+    const stop=event=>{if(!drag||event.pointerId!==drag.pointerId)return;drag=null;delete handle.dataset.dragging;view.removeEventListener('pointermove',move,true);view.removeEventListener('pointerup',stop,true);view.removeEventListener('pointercancel',stop,true);setValue(size,true);};
+    handle.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();drag={pointerId:event.pointerId,y:event.clientY,height:top.getBoundingClientRect().height};handle.dataset.dragging='true';handle.setPointerCapture(event.pointerId);view.addEventListener('pointermove',move,true);view.addEventListener('pointerup',stop,true);view.addEventListener('pointercancel',stop,true);});
+    handle.addEventListener('lostpointercapture',stop);
     handle.addEventListener('keydown',event=>{const delta={ArrowUp:-16,ArrowDown:16,PageUp:-64,PageDown:64}[event.key];if(delta!==undefined){event.preventDefault();setValue(size+delta,true);}else if(event.key==='Home'||event.key==='End'){event.preventDefault();setValue(event.key==='Home'?original:bounds().max,true);}});
     handle.addEventListener('dblclick',()=>setValue(original,true));
     setValue(value);return {element:handle,setValue,get value(){return size;}};
