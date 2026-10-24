@@ -1,0 +1,20 @@
+/* Optional editor layout. Shared UI supplies native control paint and palettes. */
+@layer app {
+  .appearance-editor { min-width: 0; --ui-gap: 10px; }
+  .appearance-editor .ui-field { flex: 1 1 10rem; min-width: 0; }
+  .appearance-editor input, .appearance-editor select, .appearance-editor textarea { max-width: 100%; }
+  .appearance-controls { max-height: min(42vh, 28rem); overflow: auto; overscroll-behavior: contain; padding: 2px; }
+  .appearance-control { padding-block: 8px; }
+  .appearance-control input[type="range"] { width: 100%; }
+  .appearance-code { width: 100%; min-width: 0; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+  textarea.appearance-code { resize: vertical; min-height: 7rem; }
+  pre.appearance-code { max-height: 18rem; overflow: auto; }
+  .appearance-source-path { overflow-wrap: anywhere; }
+  .appearance-status { min-height: 2.5em; }
+  .appearance-tools { flex-wrap: wrap; }
+  .appearance-studio { max-width: 76rem; margin: 0 auto; }
+  .appearance-studio-grid { display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 24px; }
+  .appearance-demo-panel { box-sizing: border-box; width: var(--demo-panel-width, 320px); max-width: 100%; border-radius: var(--demo-panel-radius, 8px); padding: var(--demo-panel-padding, 16px); }
+  .appearance-demo-grip { display: block; width: var(--demo-grip-width, 32px); height: var(--demo-grip-height, 4px); opacity: var(--demo-grip-opacity, .5); background: currentColor; border-radius: 2px; margin: 12px auto; pointer-events: none; }
+  @media(max-width: 700px) { .appearance-studio-grid { grid-template-columns: minmax(0, 1fr); } }
+}
