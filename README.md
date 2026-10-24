@@ -1146,6 +1146,9 @@ Use `data-ui-label="always"` for navigation and decisions whose identity must st
 
 ### Compact component tree
 
+Load the opt-in `control-tree.css` alongside `styles.css` in pages that use
+this component. The main Shared UI stylesheet remains unchanged for other apps.
+
 A component hierarchy can reuse the same compact rows and keyboard behavior across apps.
 The app owns its navigation state, control data, and the editor shown for the selected row:
 
