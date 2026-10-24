@@ -126,7 +126,7 @@
   // Inspector rows share name/action/value columns; original controls stay alive.
   UI.adoptPropertyRow=(row,{name,control,actions,layout='standard'}={})=>{
     if(!row||!control||row.ownerDocument!==control.ownerDocument||actions&&row.ownerDocument!==actions.ownerDocument)throw new TypeError('Property rows require controls from one document');
-    if(!['standard','compact','trailing'].includes(layout))throw new TypeError('Unknown property row layout');
+    if(!['standard','compact','trailing','leading-actions'].includes(layout))throw new TypeError('Unknown property row layout');
     const doc=row.ownerDocument;
     if(!actions){actions=doc.createElement('div');actions.className='ui-actions ui-inline';actions.hidden=true;}
     const input=control.matches?.('input,select,textarea')?control:control.querySelector('input,select,textarea');
@@ -144,6 +144,12 @@
       row.style.gridTemplateColumns='minmax(0,1fr) minmax(8ch,var(--control-value-width,35%)) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap)))';
       control.style.gridColumn='2';actions.style.gridColumn='3';
       actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
+    }
+    if(layout==='leading-actions'){
+      row.dataset.uiPropertyLayout='leading-actions';
+      row.style.gridTemplateColumns='minmax(0,1fr) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap))) minmax(8ch,var(--control-value-width,35%))';
+      actions.style.gridColumn='2';actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
+      control.style.gridColumn='3';
     }
     row.append(actions,control);return {element:row,label,control,actions};
   };
@@ -198,7 +204,7 @@
     action.setAttribute('aria-pressed',String(Boolean(keyframed)));return changed;
   };
   UI.createBooleanControl=({label,value=false,variant='regular',onChange=()=>{},document=window.document}={})=>{
-    const element=document.createElement('label');element.className=variant==='controller'?'ui-switch ui-controller-toggle':'ui-switch';
+    const element=document.createElement('label');element.className=variant==='controller'?'ui-switch ui-controller-toggle':variant==='compact-box'?'ui-switch ui-box-switch':'ui-switch';
     const input=document.createElement('input');input.type='checkbox';input.setAttribute('aria-label',String(label));input.setAttribute('role','switch');
     const output=document.createElement('span');output.className='ui-label';element.append(input,output);
     const setValue=value=>{input.checked=Boolean(value);output.textContent=input.checked?'On':'Off';element.title=String(label)+': '+output.textContent;};
