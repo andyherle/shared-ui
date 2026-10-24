@@ -126,7 +126,7 @@
   // Inspector rows share name/action/value columns; original controls stay alive.
   UI.adoptPropertyRow=(row,{name,control,actions,layout='standard'}={})=>{
     if(!row||!control||row.ownerDocument!==control.ownerDocument||actions&&row.ownerDocument!==actions.ownerDocument)throw new TypeError('Property rows require controls from one document');
-    if(!['standard','compact'].includes(layout))throw new TypeError('Unknown property row layout');
+    if(!['standard','compact','trailing'].includes(layout))throw new TypeError('Unknown property row layout');
     const doc=row.ownerDocument;
     if(!actions){actions=doc.createElement('div');actions.className='ui-actions ui-inline';actions.hidden=true;}
     const input=control.matches?.('input,select,textarea')?control:control.querySelector('input,select,textarea');
@@ -139,6 +139,12 @@
     control.dataset.uiPropertyValue='';
     Object.assign(control.style,{gridColumn:'3',gridRow:'1',minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     if(layout==='compact')Object.assign(row.style,{gridTemplateColumns:'minmax(0,var(--ui-property-label-width,8ch)) auto minmax(0,1fr)',font:'var(--ui-control-font)'});
+    if(layout==='trailing'){
+      row.dataset.uiPropertyLayout='trailing';
+      row.style.gridTemplateColumns='minmax(0,1fr) minmax(8ch,var(--control-value-width,35%)) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap)))';
+      control.style.gridColumn='2';actions.style.gridColumn='3';
+      actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
+    }
     row.append(actions,control);return {element:row,label,control,actions};
   };
   UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
@@ -1217,7 +1223,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
         const item=doc.createElement('div');item.className='ui-control-tree-item';item.dataset.component=n.id;item.setAttribute('role','treeitem');item.setAttribute('aria-label',n.label);
         item.setAttribute('aria-selected',String(n.id===navigation.selected));item.setAttribute('aria-level',String(n.depth+1));item.tabIndex=n.id===focused?0:-1;
         const siblings=rows.filter(r=>r.parent===n.parent);item.setAttribute('aria-setsize',String(siblings.length));item.setAttribute('aria-posinset',String(siblings.findIndex(r=>r.id===n.id)+1));
-        const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--ui-tree-depth',String(n.depth));
+        const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--control-tree-depth',String(n.depth));
         const expander=doc.createElement('span');expander.className='ui-control-tree-expander';expander.textContent=n.children?(n.expanded?'▾':'▸'):'';expander.dataset.expand='';expander.setAttribute('aria-hidden','true');
         const symbol=doc.createElementNS('http://www.w3.org/2000/svg','svg');symbol.classList.add('ui-icon');symbol.setAttribute('aria-hidden','true');
         const use=doc.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',sprite+'#'+(n.protected?'ui-lock':n.children?'ui-folder':'ui-sliders'));symbol.append(use);
@@ -1249,5 +1255,30 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     });
     root.addEventListener('keyup',event=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))event.stopPropagation();});
     return {element:root,render,focus,setQuery(value){query=value;signature='';render();onSearch(query);},get query(){return query;},reveal(){navigation.select(navigation.selected,{record:false});render();rowFor(navigation.selected)?.scrollIntoView({block:'nearest'});}};
+  };
+})();
+
+/* A split between adjacent vertical sections, with keyboard and pointer resizing.
+   The host owns persistence; Shared UI owns the handle, geometry and semantics. */
+(() => {
+  'use strict';
+  if(typeof window==='undefined'||!window.SharedUI)return;
+  window.SharedUI.createVerticalSplitter=function(top,{value=180,min=80,max=()=>700,onChange=()=>{},label='Resize sections'}={}){
+    if(!top?.ownerDocument)throw new TypeError('A section is required');
+    const doc=top.ownerDocument,handle=doc.createElement('div'),view=doc.defaultView;
+    handle.className='ui-vertical-splitter';handle.setAttribute('role','separator');handle.tabIndex=0;
+    handle.setAttribute('aria-label',label);handle.setAttribute('aria-orientation','horizontal');
+    handle.title='Drag to resize · Arrow Up/Down · double-click to reset';
+    const original=value;let size=value,drag=null;
+    const bounds=()=>({min:Math.max(0,typeof min==='function'?Number(min()):Number(min)),max:Math.max(0,typeof max==='function'?Number(max()):Number(max))});
+    function setValue(next,final=false){const range=bounds();size=Math.max(range.min,Math.min(Math.max(range.min,range.max),Math.round(next)));
+      top.style.blockSize=size+'px';handle.setAttribute('aria-valuemin',String(range.min));handle.setAttribute('aria-valuemax',String(Math.max(range.min,range.max)));handle.setAttribute('aria-valuenow',String(size));onChange(size,{final});}
+    const move=event=>{if(drag&&event.pointerId===drag.pointerId)setValue(drag.height+event.clientY-drag.y);};
+    const stop=event=>{if(!drag||event.pointerId!==drag.pointerId)return;drag=null;delete handle.dataset.dragging;setValue(size,true);};
+    handle.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();drag={pointerId:event.pointerId,y:event.clientY,height:top.getBoundingClientRect().height};handle.dataset.dragging='true';handle.setPointerCapture(event.pointerId);});
+    handle.addEventListener('pointermove',move);for(const name of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(name,stop);
+    handle.addEventListener('keydown',event=>{const delta={ArrowUp:-16,ArrowDown:16,PageUp:-64,PageDown:64}[event.key];if(delta!==undefined){event.preventDefault();setValue(size+delta,true);}else if(event.key==='Home'||event.key==='End'){event.preventDefault();setValue(event.key==='Home'?original:bounds().max,true);}});
+    handle.addEventListener('dblclick',()=>setValue(original,true));
+    setValue(value);return {element:handle,setValue,get value(){return size;}};
   };
 })();
