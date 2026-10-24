@@ -18,7 +18,7 @@ Layout CSS may position and size application-specific media, timelines, canvases
 
 ## Control/config panels
 
-Use `<aside class="ui-control-panel" data-ui-density="compact">` on an existing control surface. Compact starts at 12 px text and 30 px controls. `SharedUI.createControlScale(panel, {fontSize:12})` returns `setFontSize(number)`, `refresh()` and `dispose()`. Any positive finite font size, including decimals, scales the existing density's text, fields, actions, icons, switches and spacing proportionally. It never transforms the DOM or replaces controls. Scaling always starts from the original density; it does not compound. Coarse pointers retain 44 px targets and at least 16 px field text. CSS refresh and pointer changes recalculate the baseline; hidden views defer work. Disposal restores prior inline tokens and releases listeners. Applications own persistence and should keep the size setting outside the scaled panel.
+Use `<aside class="ui-control-panel" data-ui-density="compact">` on an existing control surface. Compact starts at 12 px text and 30 px controls. `SharedUI.createControlScale(panel, {fontSize:12})` retains the existing absolute size API: `setFontSize(number)`, `refresh()` and `dispose()`. For a per-app **default zoom-like scale**, use `SharedUI.createControlScale(panel, {scale:0.83})`, or put `data-ui-control-scale="0.83"` on the panel or an ancestor and call `createControlScale(panel)`. A ratio of 0.83 makes controls roughly two browser zoom-out steps more compact without scaling the canvas or page. `setScale(number)` updates the ratio, and `setFontSize(number)` switches back to absolute sizing; passing both options throws. Ratios recalculate against each density's original control size, so `micro` and `compact` keep their own proportions. Any positive finite size or ratio scales native controls, labels, icons, switches and spacing without transforms, DOM replacement or compounding. Coarse pointers retain 44 px targets and at least 16 px field text. CSS refresh and pointer changes recalculate the baseline; hidden views defer work. Disposal restores prior inline tokens and releases listeners. Applications own persistence and should keep the scale setting outside the scaled panel.
 
 `micro` remains an optional precision-desktop profile: 12 px control minimum, 10 px text/icons and 2 px group gaps. Native fields, longer labels and multiline editors may grow; nothing clips text to force a row height.
 
@@ -1142,3 +1142,28 @@ Use `label.ui-icon-choice.ui-action` for a full-surface toggle choice: shared SV
 ### Semantic labels in compact toolbars
 
 Use `data-ui-label="always"` for navigation and decisions whose identity must stay visible. `ui-item` record names and labelled menu choices also retain their captions in icon-only appearance. Icon-only toolbar preferences apply to decorative action captions, not the names of records or destinations. Reflow clears a prior compact state when a caption becomes explicit.
+
+
+### Compact component tree
+
+A component hierarchy can reuse the same compact rows and keyboard behavior across apps.
+The app owns its navigation state, control data, and the editor shown for the selected row:
+
+```js
+const tree = SharedUI.createCompactControlTree({
+  navigation, // rows(query), key(id,key,query), toggle(id), select(id), selected
+  sprite: '/shared-ui/icons.svg',
+  onSelect: componentId => openControls(componentId),
+  onChange: () => saveNavigation(),
+});
+sidebar.append(tree.element);
+tree.render();
+```
+
+Rows may declare `id`, `parent`, `label`, `depth`, `children`, `expanded`,
+`protected`, `available`, and `selectors`. A row with selectors exposes a variation
+accent, while folders retain ARIA hierarchy, keyboard expansion, typeahead and focus
+after re-render. Use `tree.setQuery(text)` for search. Hosts can pass
+`onContextMenu(row,event)` for domain-specific Copy/Archive commands; no
+destructive action is built into Shared UI. Controls stay owned by the selected
+component, without repeated Advanced subgroups or a separate popup.
