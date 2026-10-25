@@ -235,6 +235,20 @@
     adoptAction(button,{...(entry.icon?{icon:entry.icon}:state==='idle'?{}:{icon:state==='success'?'check':state==='error'?'warning':'refresh'}),...(label===undefined?{}:{label}),ariaLabel:message?entry.name+': '+message:entry.name,title:message||entry.name,sprite});entry.applying=false;
     let live=button.querySelector('[data-ui-feedback]');if(!live){live=button.ownerDocument.createElement('span');live.className='ui-sr-only';live.dataset.uiFeedback='action';live.setAttribute('role','status');live.setAttribute('aria-live','polite');button.append(live);}if(live.textContent!==message)live.textContent=message;return button;
   }
+  // Native form readiness without replacing fields or shifting action slots.
+  function createSubmitGuard(form,{buttons=[...form.querySelectorAll('[data-ui-submit]')],canSubmit=()=>true}={}) {
+    const view=form.ownerDocument.defaultView,initial=buttons.map(button=>button.disabled);let disposed=false;
+    function refresh(){
+      if(disposed)return false;
+      const ready=canSubmit()&&form.getAttribute('aria-busy')!=='true'&&[...form.elements].every(field=>field.disabled||field.validity?.valid!==false);
+      buttons.forEach((button,index)=>{button.disabled=initial[index]||!ready;});return ready;
+    }
+    function submit(event){if(!refresh()){event.preventDefault();event.stopImmediatePropagation();}}
+    function reset(){queueMicrotask(refresh);}
+    function pagehide(event){if(!event.persisted)dispose();}
+    function dispose(){if(disposed)return;disposed=true;form.removeEventListener('input',refresh);form.removeEventListener('change',refresh);form.removeEventListener('reset',reset);form.removeEventListener('submit',submit,true);view.removeEventListener('pagehide',pagehide);buttons.forEach((button,index)=>{button.disabled=initial[index];});}
+    form.addEventListener('input',refresh);form.addEventListener('change',refresh);form.addEventListener('reset',reset);form.addEventListener('submit',submit,true);view.addEventListener('pagehide',pagehide);refresh();return {refresh,dispose};
+  }
   async function runAction(button,operation,{pending='Working…',success='Done',successState='success',sprite}={}){if(!['idle','success'].includes(successState))throw new TypeError('Unknown success state');setActionState(button,{state:'pending',message:pending,sprite});try{const result=await operation();setActionState(button,{state:successState,message:success,sprite});return result;}catch(error){setActionState(button,{state:'error',message:error.message||'Action failed',sprite});throw error;}}
   const cardColorCache=new Map();
   function resolveCardColor(color){
@@ -810,7 +824,7 @@
     return {element:panel,open,update,close,dispose,refresh:queue};
   }
 
-  const api={version:'1.18.2',setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.19.0',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
