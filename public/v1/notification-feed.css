@@ -1,0 +1,109 @@
+/* Optional native notification composition. Load after the Shared UI baseline. */
+@layer ui.tokens {
+  [data-ui="portal"] {
+    color-scheme: dark;
+    --ui-bg: light-dark(#f6f8f7, #101413);
+    --ui-surface: light-dark(#ffffff, #191e1c);
+    --ui-surface-raised: light-dark(#ffffff, #212824);
+    --ui-surface-soft: light-dark(#eaf0ec, #25312b);
+    --ui-text: light-dark(#192b23, #eef5f0);
+    --ui-muted: light-dark(#52685b, #a8baae);
+    --ui-subtle: light-dark(#607367, #92a79a);
+    --ui-line: light-dark(#dce6df, #ffffff17);
+    --ui-line-strong: light-dark(#a8bdb0, #ffffff38);
+    --ui-control: light-dark(#cbd9d0, #ffffff26);
+    --ui-accent: light-dark(#20654b, #9ae3bb);
+    --ui-accent-hover: light-dark(#174d38, #b9efd0);
+    --ui-accent-soft: light-dark(#e2f1e8, #9ae3bb19);
+    --ui-primary: light-dark(#25583f, #b5e9ca);
+    --ui-on-primary: light-dark(#ffffff, #132b1d);
+    --ui-radius: 12px;
+    --ui-radius-small: 10px;
+    --ui-body-size: 15px;
+    --ui-h1: 26px;
+    --ui-h2: 20px;
+    --ui-h3: 16px;
+    --ui-notification-inset: 14px 4px;
+    --ui-notification-gap: 12px;
+    --ui-notification-mark-size: 30px;
+    --ui-notification-radius: 0;
+    --ui-notification-surface: transparent;
+    --ui-compose-radius: 20px;
+    --ui-compose-inset: 16px;
+  }
+  [data-ui="portal"][data-ui-density="compact"] {
+    --ui-control-height: 34px;
+    --ui-field-height: 36px;
+    --ui-control-size: 13px;
+    --ui-control-padding: 6px 11px;
+  }
+  @media (pointer: coarse) {
+    [data-ui="portal"][data-ui-density] {
+      --ui-control-height: 44px;
+      --ui-field-height: 44px;
+      --ui-control-size: 16px;
+      --ui-control-padding: 8px 11px;
+    }
+  }
+}
+@layer ui.controls {
+  /* Component geometry is independent of palette. Any pack can use these roles. */
+  .ui-compose {
+    padding: var(--ui-compose-inset, 12px);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-compose-radius, var(--ui-radius));
+    background: var(--ui-surface);
+  }
+  .ui-compose textarea.ui-inline-field { inline-size: 100%; padding: 0; line-height: 1.55; }
+  .ui-feed { display: grid; gap: var(--ui-feed-gap, 0); min-inline-size: 0; }
+  .ui-notification {
+    position: relative;
+    min-inline-size: 0;
+    border-block-end: 1px solid var(--ui-line);
+    border-radius: var(--ui-notification-radius, var(--ui-radius));
+    background: var(--ui-notification-surface, var(--ui-surface));
+    isolation: isolate;
+  }
+  .ui-notification-body {
+    display: grid;
+    grid-template-columns: var(--ui-notification-mark-size, 28px) minmax(0, 1fr);
+    gap: var(--ui-notification-gap, 10px);
+    padding: var(--ui-notification-inset, 12px);
+    min-inline-size: 0;
+    position: relative;
+  }
+  .ui-notification-mark {
+    display: grid; place-items: center; align-self: start;
+    inline-size: var(--ui-notification-mark-size, 28px);
+    aspect-ratio: 1; border-radius: 50%;
+    color: var(--ui-accent); background: var(--ui-accent-soft);
+  }
+  .ui-notification-content { min-inline-size: 0; }
+  .ui-notification-title { margin: 0; font-size: var(--ui-notification-title-size, 1em); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+  .ui-notification-meta { margin: 3px 0 0; color: var(--ui-muted); font-size: var(--ui-control-size); }
+  .ui-notification-actions { margin-block-start: 8px; align-items: center; }
+  .ui-notification-actions > [data-ui-trailing] { margin-inline-start: auto; }
+  .ui-notification .ui-disclosure-body { padding: var(--ui-gap) 0; }
+  .ui-notification textarea { inline-size: 100%; }
+  .ui-notification-receipt { grid-column: 1 / -1; }
+  .ui-notification-receipt > summary { display: flex; align-items: center; gap: 10px; min-block-size: var(--ui-control-height); cursor: pointer; }
+  .ui-notification-receipt > summary > span:first-of-type { flex: 1; min-inline-size: 0; }
+  .ui-notification-receipt > summary::marker { color: var(--ui-muted); }
+  .ui-notification-receipt > [data-ui-receipt-body] { margin-block-start: 12px; }
+  .ui-notification [data-status] { margin-block: 6px 0; }
+  .ui-notification [data-status]:empty { margin: 0; }
+  [data-ui-swipe] { touch-action: pan-y pinch-zoom; }
+  [data-ui-swipe][data-ui-swipe-intent] { overflow: clip; }
+  [data-ui-swipe] > .ui-notification-body { transform: translateX(var(--ui-swipe-offset, 0px)); }
+  [data-ui-swipe][data-ui-swipe-intent]::before {
+    position: absolute; inset-block: 0; display: flex; align-items: center;
+    padding: 10px; color: var(--ui-accent); font: var(--ui-control-font);
+  }
+  [data-ui-swipe-intent="right"]::before { content: attr(data-ui-swipe-right); inset-inline-start: 0; }
+  [data-ui-swipe-intent="left"]::before { content: attr(data-ui-swipe-left); inset-inline-end: 0; }
+  [data-ui-swipe-ready]::before { font-weight: 700; }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-ui-swipe]:not([data-ui-swipe-intent]) > .ui-notification-body { transition: transform 120ms ease-out; }
+  }
+  @media (forced-colors: active) { .ui-notification-mark { border: 1px solid CanvasText; } }
+}
