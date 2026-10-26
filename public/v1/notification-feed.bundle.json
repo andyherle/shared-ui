@@ -1,0 +1,10 @@
+{
+  "protocol": 1,
+  "component": "notification-feed",
+  "version": 1,
+  "repository": "https://github.com/andyherle/shared-ui",
+  "files": {
+    "notification-feed.css": "7a578e822e4bcb56d63b429c3236ffeab6e63c2ebe19d2b9cd0e93fa4183be12",
+    "swipe-actions.mjs": "5116c4c22ef30623540b7c5eedbe4a026488c6d4ad7201b4191fc0918559789b"
+  }
+}
