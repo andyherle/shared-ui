@@ -117,3 +117,10 @@ test('missing or stale page version cannot downgrade the bundled runtime contrac
 });
 
 test('removing an inside action keeps its menu open using the original composed click path',()=>{const e=environment(),menu={open:true,matches:()=>true,contains:()=>false,querySelector:()=>null},removed={closest:()=>null};e.doc.dispatchEvent({type:'toggle',target:menu});e.doc.dispatchEvent({type:'click',target:removed,composedPath:()=>[removed,menu,e.doc]});assert.equal(menu.open,true);e.doc.dispatchEvent({type:'click',target:removed,composedPath:()=>[removed,e.doc]});assert.equal(menu.open,false);e.instance.dispose();});
+
+test('disclosure fades preserve header containing blocks while explicit panels may slide',()=>{
+ let frames;const element={ownerDocument:{hidden:false,defaultView:{matchMedia:()=>({matches:false})}},animate(value){frames=value;return {cancel(){}}}};
+ module.exports.animatePanel(element,{translate:false});assert.equal(frames.some(frame=>'transform' in frame),false);
+ module.exports.animatePanel(element);assert.equal(frames[0].transform,'translateY(2px)');
+ element.ownerDocument.defaultView.matchMedia=()=>({matches:true});assert.equal(module.exports.animatePanel(element,{translate:false}),undefined);
+});
