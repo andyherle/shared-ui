@@ -824,7 +824,7 @@
     return {element:panel,open,update,close,dispose,refresh:queue};
   }
 
-  const api={version:'1.19.0',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.20.0',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -970,22 +970,23 @@
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
     row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto minmax(0,clamp(45%,calc(100% - 2 * var(--ui-control-height) - 10ch),60%))',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(label.style,{gridColumn:'1',gridRow:'1',minInlineSize:'0',overflowWrap:'anywhere'});
-    Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'0',justifyContent:'flex-end'});
+    actions.dataset.uiPropertyActions='';
+    Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'max-content',inlineSize:'max-content',maxInlineSize:'none',flexWrap:'nowrap',containerType:'normal',justifyContent:'flex-end'});
     control.dataset.uiPropertyValue='';
     Object.assign(control.style,{gridColumn:'3',gridRow:'1',minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     if(layout==='compact')Object.assign(row.style,{gridTemplateColumns:'minmax(0,var(--ui-property-label-width,8ch)) auto minmax(0,1fr)',font:'var(--ui-control-font)'});
     if(layout==='trailing'){
       row.dataset.uiPropertyLayout='trailing';
-      row.style.gridTemplateColumns='minmax(0,1fr) minmax(8ch,var(--control-value-width,35%)) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap)))';
+      row.style.gridTemplateColumns='minmax(0,1fr) minmax(0,var(--control-value-width,35%)) max-content';
       control.style.gridColumn='2';actions.style.gridColumn='3';
-      actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
     }
     if(layout==='leading-actions'){
       row.dataset.uiPropertyLayout='leading-actions';
-      row.style.gridTemplateColumns='minmax(0,1fr) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap))) minmax(8ch,var(--control-value-width,35%))';
-      actions.style.gridColumn='2';actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
+      row.style.gridTemplateColumns='minmax(0,1fr) max-content minmax(0,var(--control-value-width,35%))';
+      actions.style.gridColumn='2';
       control.style.gridColumn='3';
     }
+    if(layout==='trailing'||layout==='leading-actions'){row.style.containerType='inline-size';row.style.containerName='ui-property';}
     row.append(actions,control);return {element:row,label,control,actions};
   };
   UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
@@ -999,7 +1000,10 @@
     if(!entry&&(typeof options.onReset==='function'||typeof options.onActivate==='function')){
       const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';button.className='ui-graphic-action';button.dataset.uiLabel='always';
       button.style.color=label.style.color;Object.assign(button.style,{gridColumn:'1',gridRow:'1',textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
-      const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
+      const name=label.textContent;UI.adoptAction(button,{label:name});
+      const treeIcon=[...(label.children||[])].find(child=>child.dataset.uiTreeIcon);
+      if(treeIcon){button.dataset.uiTreeRow=label.dataset.uiTreeRow;button.insertBefore(treeIcon,button.firstChild);}
+      label.replaceWith(button);label=button;
       entry={button,name,busy:false};
       const reset=async()=>{if(entry.busy||typeof entry.onReset!=='function')return;entry.busy=true;button.disabled=true;button.setAttribute('aria-busy','true');try{await entry.onReset();}catch(error){button.title=error.message;}finally{entry.busy=false;button.disabled=!entry.onReset&&!entry.onActivate;button.setAttribute('aria-busy','false');}};
       button.addEventListener('dblclick',()=>void reset());
@@ -2092,63 +2096,108 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
 
 })();
 
-/* Compact, application-neutral component hierarchy. Apps supply their navigation model and
-   render only the currently selected controls; Shared UI owns rows, focus and keyboard grammar. */
+/* Compact, application-neutral component hierarchy. Apps supply navigation and optionally
+   stable inline content hosts; Shared UI owns rows, visibility, focus and keyboard grammar. */
 (() => {
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI;
-  UI.createCompactControlTree=function({navigation,onSelect,onChange=()=>{},onSearch=()=>{},onContextMenu=()=>{},sprite='./shared-ui/icons.svg'}={}){
+  // A native disclosure or property label can share the hierarchy's compact row grammar.
+  UI.adoptControlTreeRow=function(target,{kind,enabled=true,sprite='./shared-ui/icons.svg'}={}){
+    if(!target?.ownerDocument||!['group','control'].includes(kind))throw new TypeError('A tree group summary or control label is required');
+    let icon=[...target.children].find(child=>child.dataset.uiTreeIcon);
+    if(!enabled){delete target.dataset.uiTreeRow;icon?.remove();return target;}
+    target.dataset.uiTreeRow=kind;
+    if(!icon){const doc=target.ownerDocument;icon=doc.createElementNS('http://www.w3.org/2000/svg','svg');icon.classList.add('ui-icon');icon.setAttribute('aria-hidden','true');icon.setAttribute('viewBox','0 0 24 24');icon.append(doc.createElementNS('http://www.w3.org/2000/svg','use'));target.insertBefore(icon,target.firstChild);}
+    icon.dataset.uiTreeIcon=kind;icon.firstElementChild.setAttribute('href',sprite+'#ui-'+(kind==='group'?'layers':'sliders'));return target;
+  };
+  UI.createCompactControlTree=function({navigation,onSelect,onChange=()=>{},onSearch=()=>{},onContextMenu=null,sprite='./shared-ui/icons.svg'}={}){
     if(!navigation||typeof navigation.rows!=='function'||typeof navigation.key!=='function')throw new TypeError('A control-tree navigation model is required');
     const doc=document,root=doc.createElement('div');
     root.className='ui-control-tree';root.setAttribute('role','tree');root.setAttribute('aria-label','Components');
-    let signature='',focused='',query='',typed='',typedAt=0;
-    const items=()=>[...root.querySelectorAll('[role=treeitem]')];
-    const rowFor=id=>items().find(n=>n.dataset.component===id);
+    let signature='',focused='',query='',typed='',typedAt=0,inlineContent=null,visible=[];
+    const entries=new Map(),empty=doc.createElement('p'),parked=doc.createElement('div');empty.className='ui-meta';empty.textContent='No matching component.';parked.hidden=true;
+    const items=()=>visible.map(id=>entries.get(id)?.item).filter(Boolean);
+    const rowFor=id=>visible.includes(id)?entries.get(id)?.item:null;
     const focus=id=>{focused=id;for(const item of items())item.tabIndex=item.dataset.component===id?0:-1;rowFor(id)?.focus({preventScroll:true});rowFor(id)?.scrollIntoView({block:'nearest'});};
+    const syncChildren=(parent,children)=>{
+      let cursor=parent.firstElementChild;
+      for(const child of children){if(child!==cursor)parent.insertBefore(child,cursor);cursor=child.nextElementSibling;}
+      for(const child of [...parent.children])if(!children.includes(child))child.remove();
+    };
+    function entryFor(n){
+      let entry=entries.get(n.id);if(entry)return entry;
+      const item=doc.createElement('div');item.className='ui-control-tree-item';item.dataset.component=n.id;item.setAttribute('role','treeitem');
+      const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';
+      const expander=doc.createElement('span');expander.className='ui-control-tree-expander';expander.dataset.expand='';expander.setAttribute('aria-hidden','true');
+      const symbol=doc.createElementNS('http://www.w3.org/2000/svg','svg');symbol.classList.add('ui-icon');symbol.setAttribute('aria-hidden','true');
+      const use=doc.createElementNS('http://www.w3.org/2000/svg','use');symbol.append(use);
+      const label=doc.createElement('span');label.className='ui-control-tree-label';line.append(expander,symbol,label);item.append(line);
+      const group=doc.createElement('div');group.className='ui-control-tree-children';group.setAttribute('role','group');
+      entry={item,line,expander,use,label,group,content:null,node:n};entries.set(n.id,entry);
+      line.onclick=event=>{const node=entry.node;if(event.target.closest('[data-expand]')&&(node.expandable??node.children)){navigation.toggle(node.id);render();focus(node.id);onChange();}else{focused=node.id;onSelect(node.id);render();focus(node.id);}};
+      item.oncontextmenu=event=>{const target=event.target||item;if(target.closest?.('[role=treeitem]')!==item||entry.content?.contains(target))return;onContextMenu?.(entry.node,event);};
+      item.onfocus=event=>{if(event.target===item){focused=entry.node.id;for(const other of items())other.tabIndex=other===item?0:-1;}};
+      return entry;
+    }
     function render(){
       const rows=navigation.rows(query);
-      const next=JSON.stringify([rows.map(n=>[n.id,n.parent,n.label,n.description,n.depth,n.children,n.expanded,n.available,n.protected,n.selectors?.length||0]),navigation.selected]);
-      if(signature===next)return;signature=next;
-      const hadFocus=root.contains(doc.activeElement),oldFocus=hadFocus?doc.activeElement.closest('[data-component]')?.dataset.component:focused,scroll=root.scrollTop;
+      const next=JSON.stringify([rows.map(n=>[n.id,n.parent,n.label,n.description,n.depth,n.children,n.expandable,n.expanded,n.available,n.protected,n.selectors?.length||0]),navigation.selected]);
+      if(signature===next)return;
+      const active=doc.activeElement,hadFocus=root.contains(active),oldFocus=hadFocus?active.closest('[data-component]')?.dataset.component:focused,treeFocus=hadFocus&&active===entries.get(oldFocus)?.item,scroll=root.scrollTop;
       if(!rows.some(n=>n.id===focused))focused=rows.some(n=>n.id===navigation.selected)?navigation.selected:rows[0]?.id??'';
-      root.replaceChildren();const groups=new Map([[null,root]]);
+      visible=rows.map(n=>n.id);
+      const groups=new Map([[null,root]]),desired=new Map([[root,[]]]),siblings=new Map();
+      for(const n of rows){if(!siblings.has(n.parent))siblings.set(n.parent,[]);siblings.get(n.parent).push(n.id);}
       for(const n of rows){
-        const item=doc.createElement('div');item.className='ui-control-tree-item';item.dataset.component=n.id;item.setAttribute('role','treeitem');item.setAttribute('aria-label',n.label);
+        const entry=entryFor(n),{item,line,expander,use,label,group}=entry;entry.node=n;item.hidden=false;item.setAttribute('aria-label',n.label);
         item.setAttribute('aria-selected',String(n.id===navigation.selected));item.setAttribute('aria-level',String(n.depth+1));item.tabIndex=n.id===focused?0:-1;
-        const siblings=rows.filter(r=>r.parent===n.parent);item.setAttribute('aria-setsize',String(siblings.length));item.setAttribute('aria-posinset',String(siblings.findIndex(r=>r.id===n.id)+1));
-        const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--control-tree-depth',String(n.depth));
-        const expander=doc.createElement('span');expander.className='ui-control-tree-expander';expander.textContent=n.children?(n.expanded?'▾':'▸'):'';expander.dataset.expand='';expander.setAttribute('aria-hidden','true');
-        const symbol=doc.createElementNS('http://www.w3.org/2000/svg','svg');symbol.classList.add('ui-icon');symbol.setAttribute('aria-hidden','true');
-        const use=doc.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',sprite+'#'+(n.protected?'ui-lock':n.children?'ui-folder':'ui-sliders'));symbol.append(use);
-        const label=doc.createElement('span');label.className='ui-control-tree-label';label.textContent=n.label;line.append(expander,symbol,label);item.append(line);
-        const variants=Boolean(n.selectors?.length&&!n.protected);if(variants){item.dataset.uiVariation='true';item.setAttribute('aria-description','Switchable appearance variations');}
-        if(n.protected)item.dataset.uiProtected='true';if(n.available===false)item.dataset.uiUnavailable='true';
-        item.title=(n.description||n.label)+(variants?' · Variations available':'');
-        line.onclick=event=>{if(event.target.closest('[data-expand]')&&n.children){navigation.toggle(n.id);onChange();render();focus(n.id);}else{focused=n.id;onSelect(n.id);render();focus(n.id);}};
-        item.oncontextmenu=event=>onContextMenu(n,event);
-        item.onfocus=event=>{if(event.target===item){focused=n.id;for(const entry of items())entry.tabIndex=entry===item?0:-1;}};
-        (groups.get(n.parent)||root).append(item);
-        if(n.children){item.setAttribute('aria-expanded',String(n.expanded));const group=doc.createElement('div');group.className='ui-control-tree-children';group.setAttribute('role','group');item.append(group);groups.set(n.id,group);}
+        const peers=siblings.get(n.parent);item.setAttribute('aria-setsize',String(peers.length));item.setAttribute('aria-posinset',String(peers.indexOf(n.id)+1));
+        line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--control-tree-depth',String(n.depth));
+        const expandable=Boolean(n.expandable??n.children);expander.textContent=expandable?(n.expanded?'▾':'▸'):'';
+        if(expandable)item.setAttribute('aria-expanded',String(Boolean(n.expanded)));else item.removeAttribute('aria-expanded');
+        use.setAttribute('href',sprite+'#'+(n.protected?'ui-lock':n.children?'ui-folder':'ui-sliders'));label.textContent=n.label;
+        const variants=Boolean(n.selectors?.length&&!n.protected);if(variants)item.dataset.uiVariation='true';else delete item.dataset.uiVariation;
+        const variationHint=variants?'Switchable appearance variations'+(onContextMenu?'. Right-click or press Shift+F10 for options.':''):'';
+        if(variationHint)item.setAttribute('aria-description',variationHint);else item.removeAttribute('aria-description');
+        if(n.protected)item.dataset.uiProtected='true';else delete item.dataset.uiProtected;if(n.available===false)item.dataset.uiUnavailable='true';else delete item.dataset.uiUnavailable;
+        item.title=(n.description||n.label)+(variationHint?' · '+variationHint:'');
+        const content=inlineContent?.(n)||null;
+        if(content&&(content.ownerDocument!==doc||content===root||content.contains(root)))throw new TypeError('Inline tree content must be a separate node in the same document');
+        entry.content=content;if(content){content.dataset.uiTreeContent=n.id;content.style.setProperty('--control-tree-depth',String(n.depth+1));content.hidden=!n.expanded;}
+        syncChildren(item,[line,...(content?[content]:[]),...(n.children?[group]:[])]);
+        const parent=groups.get(n.parent)||root;desired.get(parent).push(item);
+        if(n.children){group.hidden=!n.expanded;groups.set(n.id,group);desired.set(group,[]);}
       }
-      if(!rows.length){const empty=doc.createElement('p');empty.className='ui-meta';empty.textContent='No matching component.';root.append(empty);}
-      root.scrollTop=scroll;if(hadFocus&&rowFor(oldFocus))focus(oldFocus);
+      if(!rows.length)desired.set(root,[empty]);
+      // Keep editors reachable by their host while a branch or filter hides its row.
+      // Visible navigation excludes these parked items from focus and keyboard traversal.
+      const hidden=[];for(const [id,entry]of entries)if(!visible.includes(id)){entry.item.hidden=true;entry.item.tabIndex=-1;hidden.push(entry.item);}
+      if(hidden.length){desired.get(root).push(parked);desired.set(parked,hidden);}
+      for(const [parent,children]of desired)syncChildren(parent,children);
+      signature=next;root.scrollTop=scroll;
+      if(hadFocus&&rowFor(oldFocus)){
+        if(treeFocus||!root.contains(active)||active.closest('[hidden]'))focus(oldFocus);
+        else if(doc.activeElement!==active)active.focus({preventScroll:true});
+      }
     }
-    root.addEventListener('keydown',event=>{
+    const keydown=event=>{
       const item=event.target.closest('[role=treeitem]');if(!item||event.target!==item)return;
-      const id=item.dataset.component;
+      const id=item.dataset.component;if(entries.get(id)?.item!==item)return;
+      if(onContextMenu&&(event.key==='ContextMenu'||event.key==='F10'&&event.shiftKey)){event.preventDefault();event.stopPropagation();onContextMenu(entries.get(id).node,event);return;}
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(event.key)&&!event.altKey){
-        event.preventDefault();event.stopPropagation();const next=navigation.key(id,event.key,query);onChange();render();focus(next);return;
+        event.preventDefault();event.stopPropagation();const next=navigation.key(id,event.key,query);render();focus(next);onChange();return;
       }
-      if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();onSelect(id);return;}
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();onSelect(id);render();focus(id);return;}
       if(event.key.length===1&&!event.metaKey&&!event.ctrlKey&&!event.altKey){
         const now=performance.now();typed=now-typedAt<650?typed+event.key.toLowerCase():event.key.toLowerCase();typedAt=now;
         const rows=navigation.rows(query),index=rows.findIndex(n=>n.id===id),ordered=[...rows.slice(index+1),...rows.slice(0,index+1)],next=ordered.find(n=>n.label.toLowerCase().startsWith(typed));
         if(next){event.preventDefault();event.stopPropagation();focus(next.id);}
       }
-    });
-    root.addEventListener('keyup',event=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))event.stopPropagation();});
-    return {element:root,render,focus,setQuery(value){query=value;signature='';render();onSearch(query);},get query(){return query;},reveal(){navigation.select(navigation.selected,{record:false});render();rowFor(navigation.selected)?.scrollIntoView({block:'nearest'});}};
+    };
+    const keyup=event=>{if(event.target===entries.get(event.target?.dataset?.component)?.item&&[' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))event.stopPropagation();};
+    root.addEventListener('keydown',keydown);root.addEventListener('keyup',keyup);
+    return {element:root,render,focus,setInlineContent(provider){if(provider!==null&&typeof provider!=='function')throw new TypeError('Inline tree content needs a provider or null');inlineContent=provider;signature='';render();},setQuery(value){query=value;signature='';render();onSearch(query);},get query(){return query;},reveal(){navigation.select(navigation.selected,{record:false});render();rowFor(navigation.selected)?.scrollIntoView({block:'nearest'});},dispose(){root.removeEventListener('keydown',keydown);root.removeEventListener('keyup',keyup);for(const entry of entries.values()){entry.line.onclick=null;entry.item.oncontextmenu=null;entry.item.onfocus=null;}entries.clear();visible=[];}};
   };
 })();
 
