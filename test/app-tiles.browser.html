@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-ui="postvisual" data-ui-source="../public/v1/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Launcher tile regression</title><link rel="stylesheet" href="../public/v1/styles.css" data-ui-baseline><script src="../public/v1/runtime.js" defer></script>
+<style>@layer app { main { padding:16px; } #fixture { max-inline-size:100%; } nav { --ui-grid-min:80px; gap:8px; } }</style>
+<main class="ui-stack"><button id="run" type="button">Run launcher checks</button><output id="result" role="status">Ready</output><section id="fixture"><nav class="ui-grid" aria-label="Sample apps"></nav></section></main>
+<script>
+const fixture=document.querySelector('#fixture'),grid=fixture.querySelector('nav'),result=document.querySelector('#result');
+for(const name of ['References','Deliverables','Ledger','Mirroring','Documents','Portainer','PV Socials']) {
+  const tile=document.createElement('a');tile.href='#';tile.className='ui-action ui-app-tile';tile.dataset.uiVariant='quiet';tile.setAttribute('aria-label','Open '+name);
+  tile.innerHTML='<span class="ui-card ui-app-symbol"><svg class="ui-icon" aria-hidden="true"><use href="../public/v1/icons.svg#ui-file"/></svg></span><span class="ui-label"></span>';
+  tile.lastChild.textContent=name;grid.append(tile);
+}
+const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+document.querySelector('#run').onclick=async()=>{try {
+  let count=0;
+  for(const pack of ['postvisual','personal'])for(const theme of ['dark','light'])for(const mode of ['beside','icons','above'])for(const width of [280,320,390,768,820]) {
+    document.documentElement.dataset.ui=pack;document.documentElement.dataset.theme=theme;fixture.style.width=width+'px';SharedUI.setActionLayout(fixture,mode);await frame();
+    if(grid.scrollWidth>grid.clientWidth+1)throw Error('Grid overflow');
+    for(const tile of grid.children) {
+      const symbol=tile.firstElementChild,label=tile.lastElementChild,box=tile.getBoundingClientRect(),icon=symbol.getBoundingClientRect(),caption=label.getBoundingClientRect();
+      if(getComputedStyle(tile).flexDirection!=='column'||getComputedStyle(label).display==='none'||!caption.height)throw Error('Launcher layout/caption changed in '+mode);
+      if(caption.top<icon.bottom||caption.right>box.right+1||label.scrollWidth>label.clientWidth+1)throw Error('Caption squeezed beside icon: '+label.textContent);
+      if(Math.abs((icon.left+icon.right)-(box.left+box.right))>1)throw Error('Icon is not centered');
+      if(icon.width<44||box.height<44)throw Error('Touch target too small');
+      if(tile.getAttribute('aria-label')!=='Open '+label.textContent)throw Error('Destination name lost');
+      count++;
+    }
+  }
+  document.documentElement.dataset.ui='postvisual';document.documentElement.dataset.theme='dark';SharedUI.setActionLayout(fixture,'beside');fixture.style.width='820px';
+  result.textContent='PASSED '+count+' launcher checks: both packs, both themes, all action appearances, 280/320/390/768/820px';
+} catch(error) {result.textContent='FAILED '+error.message;throw error;}};
+</script></html>

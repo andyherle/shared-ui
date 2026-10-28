@@ -1177,6 +1177,8 @@ after re-render. Use `tree.setQuery(text)` for search. Hosts can pass
 destructive action is built into Shared UI. Controls stay owned by the selected
 component, without repeated Advanced subgroups or a separate popup.
 
-Launcher tiles use `.ui-app-tile` with `.ui-app-symbol` and `.ui-label`. Shared UI owns the compact 56 px symbol, control typography and wrapping captions aligned beneath the icons. Do not force one-line captions or override tile height in an app. Native page scrolling and pinch zoom stay available outside explicitly opted-in canvas/drag surfaces. The Compact decisions catalogue exercises nested forms, long captions, feedback and native Reply disclosure in one bounded card.
+Launcher tiles use `.ui-app-tile` with `.ui-app-symbol` and `.ui-label`. Shared UI owns the compact 56 px symbol, control typography and wrapping captions aligned beneath the icons. Launcher tiles retain this column layout and their destination captions in every action appearance. Do not force one-line captions or override tile height in an app. Native page scrolling and pinch zoom stay available outside explicitly opted-in canvas/drag surfaces. The Compact decisions catalogue exercises nested forms, long captions, feedback and native Reply disclosure in one bounded card.
 
 A fixed mobile launcher row can set `--ui-fill:4`, `--ui-grid-min:0px` and `--ui-grid-max:1fr` on `.ui-grid`; center and bound the grid with domain placement. Keep shared tile sizing and touch targets.
+
+Launcher layout regression: serve the repository and open `test/app-tiles.browser.html`. Run its checks to verify destination captions beneath symbols in both packs, both themes, every action appearance and narrow/desktop containers.
