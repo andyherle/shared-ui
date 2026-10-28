@@ -57,3 +57,10 @@ test('the next intentional press and keyboard activation survive a prior swipe',
   assert.equal(prevented,false);h.cleanup();
  }
 });
+
+test('selection created during an active gesture prevents commitment',()=>{
+ for(const phase of ['move','release']){
+  const h=harness();h.start();if(phase==='release')h.root.emit('pointermove',h.point(280,100));
+  h.doc.getSelection=()=>({type:'Range'});if(phase==='move')h.root.emit('pointermove',h.point(280,100));h.root.emit('pointerup',h.point(280,100));assert.deepEqual(h.events,[]);h.cleanup();
+ }
+});

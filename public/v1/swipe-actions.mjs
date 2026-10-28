@@ -36,6 +36,7 @@ export function mountSwipeActions(root) {
   });
   on(root, 'pointermove', event => {
     if (!active || event.pointerId !== active.id) return;
+    if (doc.getSelection()?.type === 'Range') { reset(); return; }
     const dx = event.clientX - active.x, dy = event.clientY - active.y;
     if (!active.direction) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 12) return;
@@ -56,7 +57,7 @@ export function mountSwipeActions(root) {
     if (!active || event.pointerId !== active.id) return;
     const {row, direction, x, y} = active;
     const dx = event.clientX - x, dy = event.clientY - y;
-    const commit = direction && Math.abs(dx) >= 80 && Math.abs(dy) <= 48 && Math.abs(dx) >= Math.abs(dy) * 1.6 && (dx > 0 ? 'right' : 'left') === direction;
+    const commit = doc.getSelection()?.type !== 'Range' && direction && Math.abs(dx) >= 80 && Math.abs(dy) <= 48 && Math.abs(dx) >= Math.abs(dy) * 1.6 && (dx > 0 ? 'right' : 'left') === direction;
     reset();
     if (commit && row.isConnected && !row.matches('[aria-busy="true"],[data-ui-swipe-disabled]')) {
       suppressClick = {row, until: Date.now() + 500};
