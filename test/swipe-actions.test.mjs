@@ -32,3 +32,19 @@ test('busy rows, screen edges, controls and non-touch pointers are excluded',()=
 test('multitouch, hidden views and teardown release listeners',()=>{
  for(const mode of ['multi','hidden','teardown']){const h=harness();h.start();h.root.emit('pointermove',h.point(200,100));if(mode==='multi')h.root.emit('pointerdown',h.point(210,100,{pointerId:2,isPrimary:false}));if(mode==='hidden'){h.doc.hidden=true;h.doc.emit('visibilitychange');}if(mode==='teardown')h.cleanup();h.root.emit('pointerup',h.point(280,100));assert.equal(h.events.length,0);h.cleanup();assert.ok([...h.root.listeners.values()].every(v=>v.length===0));}
 });
+
+test('native summaries require an explicit swipe start opt-in and taps stay native',()=>{
+ for (const opted of [false,true]) {
+  const h=harness(); const summary={hasAttribute:()=>opted};
+  h.target.closest=s=>s==='[data-ui-swipe]'?h.row:s==='summary'?summary:null;
+  h.start(); h.root.emit('pointermove',h.point(280,100)); h.root.emit('pointerup',h.point(280,100));
+  assert.deepEqual(h.events,opted?['right']:[]); h.cleanup();
+ }
+ const h=harness();h.start();h.root.emit('pointerup',h.point(180,100));assert.deepEqual(h.events,[]);h.cleanup();
+});
+test('a committed summary swipe consumes its synthetic click without toggling details',()=>{
+ const h=harness(); h.row.contains=()=>true;
+ h.start();h.root.emit('pointermove',h.point(280,100));h.root.emit('pointerup',h.point(280,100));
+ let prevented=false,stopped=false;h.root.emit('click',{target:h.target,preventDefault(){prevented=true},stopPropagation(){stopped=true}});
+ assert.equal(prevented,true);assert.equal(stopped,true);h.cleanup();
+});

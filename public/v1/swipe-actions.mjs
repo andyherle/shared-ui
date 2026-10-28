@@ -6,7 +6,7 @@ export function mountSwipeActions(root) {
   const doc = root.ownerDocument;
   const win = doc.defaultView;
   const listeners = [];
-  let active = null;
+  let active = null, suppressClick = null;
   const on = (target, type, fn, options) => {
     target.addEventListener(type, fn, options);
     listeners.push(() => target.removeEventListener(type, fn, options));
@@ -26,7 +26,9 @@ export function mountSwipeActions(root) {
     const row = event.target.closest('[data-ui-swipe]');
     if (!row || !root.contains(row) || row.matches('[aria-busy="true"],[data-ui-swipe-disabled]')) return;
     if (event.clientX < 24 || event.clientX > win.innerWidth - 24) return;
-    if (event.target.closest('a,button,input,textarea,select,summary,[contenteditable],pre,[data-ui-no-swipe]')) return;
+    if (event.target.closest('a,button,input,textarea,select,img,video,canvas,[contenteditable],pre,[data-ui-no-swipe]')) return;
+    const summary = event.target.closest('summary');
+    if (summary && !summary.hasAttribute('data-ui-swipe-start')) return;
     if (doc.getSelection()?.type === 'Range') return;
     active = {row, id: event.pointerId, x: event.clientX, y: event.clientY, dx: 0, dy: 0, direction: ''};
   });
@@ -55,9 +57,14 @@ export function mountSwipeActions(root) {
     const commit = direction && Math.abs(dx) >= 80 && Math.abs(dy) <= 48 && Math.abs(dx) >= Math.abs(dy) * 1.6 && (dx > 0 ? 'right' : 'left') === direction;
     reset();
     if (commit && row.isConnected && !row.matches('[aria-busy="true"],[data-ui-swipe-disabled]')) {
+      suppressClick = {row, until: Date.now() + 500};
       row.dispatchEvent(new win.CustomEvent('ui:swipe', {bubbles: true, detail: {direction}}));
     }
   });
+  on(root, 'click', event => {
+    if (!suppressClick || Date.now() > suppressClick.until || !suppressClick.row.contains(event.target)) return;
+    suppressClick = null; event.preventDefault(); event.stopPropagation();
+  }, true);
   on(root, 'pointercancel', reset);
   // Touch starts with implicit capture on the hit element. Its bubbling loss
   // during transfer to the row is not cancellation of the row's gesture.
