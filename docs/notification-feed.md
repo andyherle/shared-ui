@@ -23,7 +23,7 @@ The installer owns exactly `notification-feed.css`, `swipe-actions.mjs` and `not
 
 ## Gestures are optional shortcuts
 
-Import `mountSwipeActions(root)` from the local `swipe-actions.mjs`. Mark a row `data-ui-swipe`, with meaningful `data-ui-swipe-right="Reply"` and `data-ui-swipe-left="Dismiss"` labels. Handle `ui:swipe` by opening the existing native reply disclosure or activating its native dismissal control. All actions must remain available without gestures or JavaScript. A swipe must never imply approval.
+Import `mountSwipeActions(root)` from the local `swipe-actions.mjs`. Mark a row `data-ui-swipe`, with meaningful `data-ui-swipe-right="Reply"` and `data-ui-swipe-left="Dismiss"` labels. Handle `ui:swipe` by opening the existing native reply disclosure or activating its native dismissal control. All actions must remain available without gestures or JavaScript. A swipe must never imply approval. A native `summary` is excluded unless it explicitly opts in with `data-ui-swipe-start`; opt in only the row heading, keeping links and controls excluded. A committed swipe consumes its synthetic click so the heading does not toggle twice, while the next intentional press and keyboard activation remain native.
 
 The helper has no fetch, storage, timers or application state. It locks horizontal intention, respects vertical scrolling, excludes controls/text selection/edge navigation, cancels on multi-touch, pointer cancellation, focus loss or hidden views, and commits only after an 80px gesture. `data-ui-swipe-disabled` or `aria-busy="true"` suppresses it. Applications must also reject dismissal of unsent/pending replies. Call its returned cleanup on teardown and remount after a restored page.
 

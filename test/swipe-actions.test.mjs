@@ -48,3 +48,12 @@ test('a committed summary swipe consumes its synthetic click without toggling de
  let prevented=false,stopped=false;h.root.emit('click',{target:h.target,preventDefault(){prevented=true},stopPropagation(){stopped=true}});
  assert.equal(prevented,true);assert.equal(stopped,true);h.cleanup();
 });
+
+test('the next intentional press and keyboard activation survive a prior swipe',()=>{
+ for(const mode of ['press','keyboard']){
+  const h=harness();h.row.contains=()=>true;h.start();h.root.emit('pointermove',h.point(280,100));h.root.emit('pointerup',h.point(280,100));
+  if(mode==='press')h.root.emit('pointerdown',h.point(180,100,{pointerType:'mouse'}));
+  let prevented=false;h.root.emit('click',{target:h.target,detail:mode==='keyboard'?0:1,preventDefault(){prevented=true},stopPropagation(){}});
+  assert.equal(prevented,false);h.cleanup();
+ }
+});

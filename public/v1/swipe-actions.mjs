@@ -21,6 +21,8 @@ export function mountSwipeActions(root) {
     if (row.hasPointerCapture?.(id)) row.releasePointerCapture(id);
   };
   on(root, 'pointerdown', event => {
+    // A new press is an intentional action, never the prior swipe's click.
+    suppressClick = null;
     if (active) { reset(); return; }
     if (event.pointerType !== 'touch' || !event.isPrimary) return;
     const row = event.target.closest('[data-ui-swipe]');
@@ -62,7 +64,7 @@ export function mountSwipeActions(root) {
     }
   });
   on(root, 'click', event => {
-    if (!suppressClick || Date.now() > suppressClick.until || !suppressClick.row.contains(event.target)) return;
+    if (event.detail === 0 || !suppressClick || Date.now() > suppressClick.until || !suppressClick.row.contains(event.target)) return;
     suppressClick = null; event.preventDefault(); event.stopPropagation();
   }, true);
   on(root, 'pointercancel', reset);
