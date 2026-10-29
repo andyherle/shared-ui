@@ -163,7 +163,7 @@ test('button feedback preserves its handler and icon contract through pending, s
  UI.setActionState(button,{state:'pending',message:'Saving'});assert.equal(button.getAttribute('aria-busy'),'true');assert.ok(button.classList.contains('ui-warning'));assert.equal(button.onclick,handler);
  UI.setActionState(button,{state:'success',message:'Saved'});assert.ok(button.classList.contains('ui-success'));assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);
  UI.adoptAction(button,{icon:'save',label:'Save'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/,'feedback keeps the action purpose through re-adoption');
- UI.setActionState(button,{state:'idle'});assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);assert.ok(button.classList.contains('primary'));
+ UI.setActionState(button,{state:'idle',message:'Done'});assert.equal(button.getAttribute('aria-label'),'Save the selected project');assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);assert.ok(button.classList.contains('primary'));
  await assert.rejects(UI.runAction(button,async()=>{throw new Error('Offline')}),/Offline/);assert.equal(button.dataset.uiActionState,'error');assert.equal(button.onclick,handler);assert.match(button.querySelector('svg').querySelector('use').getAttribute('href'),/#ui-save$/);
 });
 

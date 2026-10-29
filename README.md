@@ -1182,3 +1182,11 @@ Launcher tiles use `.ui-app-tile` with `.ui-app-symbol` and `.ui-label`. Shared 
 A fixed mobile launcher row can set `--ui-fill:4`, `--ui-grid-min:0px` and `--ui-grid-max:1fr` on `.ui-grid`; center and bound the grid with domain placement. Keep shared tile sizing and touch targets.
 
 Launcher layout regression: serve the repository and open `test/app-tiles.browser.html`. Run its checks to verify destination captions beneath symbols in both packs, both themes, every action appearance and narrow/desktop containers.
+
+
+### Compact response-curve values
+
+Use `createCurveValue(options)` in a property row for a cubic response curve. It accepts the same label, points, defaults, invert, axis labels, endpoint labels, onChange and onError as `createCurveControl`, plus the local sprite. Its native value button shows a small live curve preview; opening it reveals the existing full editor in a bounded `.ui-popout`. Exact handle fields are disclosed deliberately. Escape, outside dismissal, focus return, native keyboard handles and draft preservation use the shared popover/editor owners. `sync`, `open`, `close` and `dispose` retain those same nodes. The consumer owns accepted values, scalar mapping and History. The Effects control panel catalogue demonstrates it in both packs.
+
+
+Switchable rows in the compact control tree expose a native choices action when `onContextMenu` is supplied. Pointer, touch and keyboard users can open the same application-owned choices; right-click and Shift+F10 remain available. The action never selects a variation by itself, and rows without choices gain no action. Native child controls keep their normal editing keys.

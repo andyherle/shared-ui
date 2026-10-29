@@ -232,7 +232,7 @@
     if(state!=='idle'){button.classList.remove('primary','ui-primary');button.removeAttribute('data-ui-variant');button.classList.add(state==='success'?'ui-success':state==='error'?'ui-error':'ui-warning');}
     else{if(entry.primary)button.classList.add('primary');if(entry.uiPrimary)button.classList.add('ui-primary');if(entry.variant!==null)button.setAttribute('data-ui-variant',entry.variant);}
     entry.applying=true;if(state==='idle'&&!entry.icon)button.querySelector(':scope > svg')?.remove();
-    adoptAction(button,{...(entry.icon?{icon:entry.icon}:state==='idle'?{}:{icon:state==='success'?'check':state==='error'?'warning':'refresh'}),...(label===undefined?{}:{label}),ariaLabel:message?entry.name+': '+message:entry.name,title:message||entry.name,sprite});entry.applying=false;
+    adoptAction(button,{...(entry.icon?{icon:entry.icon}:state==='idle'?{}:{icon:state==='success'?'check':state==='error'?'warning':'refresh'}),...(label===undefined?{}:{label}),ariaLabel:state==='idle'?entry.name:message?entry.name+': '+message:entry.name,title:state==='idle'?entry.name:message||entry.name,sprite});entry.applying=false;
     let live=button.querySelector('[data-ui-feedback]');if(!live){live=button.ownerDocument.createElement('span');live.className='ui-sr-only';live.dataset.uiFeedback='action';live.setAttribute('role','status');live.setAttribute('aria-live','polite');button.append(live);}if(live.textContent!==message)live.textContent=message;return button;
   }
   // Native form readiness without replacing fields or shifting action slots.
@@ -377,11 +377,11 @@
     if(!element||trigger.ownerDocument!==element.ownerDocument||typeof element.showPopover!=='function')throw new TypeError('Use native popover content and a trigger in one document');
     const doc=trigger.ownerDocument,view=doc.defaultView,off=[],original={parent:element.parentNode,next:element.nextSibling,style:element.getAttribute('style'),popover:element.getAttribute('popover')};let anchor=trigger,anchorAttrs,disposed=false,shown=false,pressedOpen=false;
     const attrs=['aria-haspopup','aria-controls','aria-expanded'],savedId=element.getAttribute('id');if(!element.id)element.id='ui-popover-'+view.crypto.randomUUID();element.popover='auto';
-    Object.assign(element.style,{position:'fixed',inset:'auto',margin:'0',maxInlineSize:'calc(100vw - 24px)',maxBlockSize:'calc(100dvh - 24px)'});
+    Object.assign(element.style,{position:'fixed',inset:'auto',margin:'0',blockSize:'fit-content',minBlockSize:'0',maxInlineSize:'calc(100vw - 24px)',maxBlockSize:'min(var(--ui-popout-height,760px),calc(100dvh - 24px))'});
     const listen=(node,type,fn,options)=>{node.addEventListener(type,fn,options);off.push(()=>node.removeEventListener(type,fn,options));};
     function attach(next){anchor=next;anchorAttrs=attrs.map(name=>anchor.getAttribute(name));anchor.setAttribute('aria-haspopup','dialog');anchor.setAttribute('aria-controls',element.id);anchor.setAttribute('aria-expanded',String(shown));anchor.addEventListener('pointerdown',pointer);if(bindTrigger)anchor.addEventListener('click',toggle);}
     function detach(){anchor.removeEventListener('pointerdown',pointer);anchor.removeEventListener('click',toggle);attrs.forEach((name,i)=>anchorAttrs[i]===null?anchor.removeAttribute(name):anchor.setAttribute(name,anchorAttrs[i]));}
-    function refresh(){if(disposed||!element.matches(':popover-open'))return;const r=anchor.getBoundingClientRect(),safe=Math.max(12,parseFloat(view.getComputedStyle(element).getPropertyValue('--ui-safe-inset'))||0),below=view.innerHeight-r.bottom-safe-6,above=r.top-safe-6;Object.assign(element.style,{maxInlineSize:Math.max(0,view.innerWidth-2*safe)+'px',maxBlockSize:Math.max(0,Math.max(below,above))+'px'});const p=element.getBoundingClientRect(),top=below>=p.height||below>=above?r.bottom+6:r.top-p.height-6;element.style.left=Math.max(safe,Math.min(r.left,view.innerWidth-p.width-safe))+'px';element.style.top=Math.max(safe,Math.min(top,view.innerHeight-p.height-safe))+'px';}
+    function refresh(){if(disposed||!element.matches(':popover-open'))return;const r=anchor.getBoundingClientRect(),safe=Math.max(12,parseFloat(view.getComputedStyle(element).getPropertyValue('--ui-safe-inset'))||0),below=view.innerHeight-r.bottom-safe-6,above=r.top-safe-6;Object.assign(element.style,{maxInlineSize:Math.max(0,view.innerWidth-2*safe)+'px',maxBlockSize:'min(var(--ui-popout-height,760px),'+Math.max(0,Math.max(below,above))+'px)'});const p=element.getBoundingClientRect(),top=below>=p.height||below>=above?r.bottom+6:r.top-p.height-6;element.style.left=Math.max(safe,Math.min(r.left,view.innerWidth-p.width-safe))+'px';element.style.top=Math.max(safe,Math.min(top,view.innerHeight-p.height-safe))+'px';}
     function closed(){if(!shown)return;shown=false;anchor.setAttribute('aria-expanded','false');onClose();if(anchor.isConnected&&(element.contains(doc.activeElement)||doc.activeElement===doc.body))anchor.focus({preventScroll:true});}
     function close(){panelAnimations.get(element)?.cancel();if(element.matches(':popover-open'))element.hidePopover();closed();}
     function open(){if(disposed||anchor.disabled)return;const owner=anchor.closest('dialog')||doc.body;if(element.parentNode!==owner)owner.append(element);element.showPopover();shown=true;anchor.setAttribute('aria-expanded','true');refresh();animatePanel(element);}
@@ -824,7 +824,7 @@
     return {element:panel,open,update,close,dispose,refresh:queue};
   }
 
-  const api={version:'1.19.0',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+  const api={version:'1.20.0',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
@@ -867,16 +867,18 @@
     return {cancel,dispose};
   };
   // Host-owned content, one shared native preview/selection pattern.
-  UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite}={})=>{
-    const doc=root.ownerDocument,original=root.className,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
+  UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite,minColumnWidth,aspectRatio='16 / 9',actionIcon='scenes'}={})=>{
+    if(minColumnWidth!==undefined&&!/^\d+(?:\.\d+)?(?:px|rem|em)$/.test(String(minColumnWidth)))throw new TypeError('Preview column width must use px, rem or em');
+    const doc=root.ownerDocument,original=root.className,originalColumns=root.style.gridTemplateColumns,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
+    if(minColumnWidth!==undefined)root.style.gridTemplateColumns=`repeat(auto-fill,minmax(min(100%,${minColumnWidth}),1fr))`;
     function update(items,selectedId){
       const keep=new Set(items.map(item=>String(item.id)));
       for(const [id,card]of cards)if(!keep.has(id)){card.element.remove();cards.delete(id);}
       for(const item of items){const id=String(item.id);let card=cards.get(id);
         if(!card){const element=doc.createElement('article');element.className='ui-card ui-stack ui-selectable';element.dataset.itemId=id;
-          const media=doc.createElement('button');media.type='button';media.className='ui-media-button';media.style.aspectRatio='16 / 9';
+          const media=doc.createElement('button');media.type='button';media.className='ui-media-button';media.style.aspectRatio=String(aspectRatio);
           const image=doc.createElement('img');image.alt='';image.loading='lazy';Object.assign(image.style,{inlineSize:'100%',blockSize:'100%',objectFit:'contain'});media.append(image);
-          const caption=doc.createElement('div');caption.className='ui-pad ui-stack';const action=doc.createElement('button');action.type='button';action.className='ui-item';action.dataset.uiVariant='quiet';UI.adoptAction(action,{label:item.label,icon:'scenes',sprite});
+          const caption=doc.createElement('div');caption.className='ui-pad ui-stack';const action=doc.createElement('button');action.type='button';action.className='ui-item';action.dataset.uiVariant='quiet';UI.adoptAction(action,{label:item.label,...(actionIcon?{icon:actionIcon}:{}),sprite});
           const detail=doc.createElement('small');detail.className='ui-meta';caption.append(action,detail);
           const select=()=>onSelect(id);media.addEventListener('click',select);action.addEventListener('click',select);
           if(onManage){const manage=doc.createElement('button');manage.type='button';UI.adoptAction(manage,{label:'Manage '+item.label,icon:'more',sprite});manage.addEventListener('click',()=>onManage(id));caption.append(manage);}
@@ -888,8 +890,68 @@
         const position=items.findIndex(row=>String(row.id)===id);if(root.children[position]!==card.element)root.insertBefore(card.element,root.children[position]||null);
       }
     }
-    return {update,dispose(){root.replaceChildren();root.className=original;delete root.dataset.uiGrid;cards.clear();}};
+    return {update,dispose(){root.replaceChildren();root.className=original;if(minColumnWidth!==undefined)root.style.gridTemplateColumns=originalColumns;delete root.dataset.uiGrid;cards.clear();}};
   };
+  // Searchable native preview catalogue. Apps supply images from their own renderer.
+  UI.createShapeBrowser=({root,onSelect=()=>{},sprite}={})=>{
+    if(!root?.ownerDocument)throw new TypeError('Shape browser needs a root element');
+    const doc=root.ownerDocument,originalClass=root.className,originalBusy=root.getAttribute('aria-busy');
+    const off=[],listen=(node,type,handler)=>{node.addEventListener(type,handler);off.push(()=>node.removeEventListener(type,handler));};
+    root.classList.add('ui-stack');
+    const toolbar=doc.createElement('div');toolbar.className='ui-toolbar';
+    const field=(label,input)=>{const wrap=doc.createElement('label');wrap.className=input.type==='search'?'ui-field ui-search':'ui-field';const text=doc.createElement('span');text.className='ui-label';text.textContent=label;wrap.append(text,input);return wrap;};
+    const search=doc.createElement('input');search.type='search';search.placeholder='Search shapes';search.setAttribute('aria-label','Search shapes');
+    const pack=doc.createElement('select');pack.setAttribute('aria-label','Shape pack');
+    const previewSize=doc.createElement('input');previewSize.type='range';previewSize.className='ui-range';previewSize.min='56';previewSize.max='160';previewSize.step='8';previewSize.value='80';previewSize.setAttribute('aria-label','Preview size');
+    const sizeField=field('Preview size',previewSize);sizeField.style.minInlineSize='min(100%,16rem)';
+    const sizeValue=doc.createElement('span');sizeValue.className='ui-meta';sizeField.append(sizeValue);
+    toolbar.append(field('Search',search),field('Pack',pack),sizeField);
+    const gallery=doc.createElement('div');gallery.setAttribute('aria-label','Shape previews');
+    const status=doc.createElement('output');status.className='ui-meta';status.setAttribute('aria-live','polite');
+    root.append(toolbar,gallery,status);
+    let items=[],selectedId='',visible=[],busy=false,disposed=false;
+    const words=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const packOf=item=>String(item.pack||'Shapes');
+    const mediaButtons=()=>[...gallery.querySelectorAll('.ui-media-button')];
+    const focusCard=id=>{const buttons=mediaButtons();for(const button of buttons)button.tabIndex=button.closest('[data-item-id]')?.dataset.itemId===id?0:-1;buttons.find(button=>button.tabIndex===0)?.focus();};
+    const setBusy=(value,message)=>{busy=Boolean(value);root.setAttribute('aria-busy',String(busy));search.disabled=busy;pack.disabled=busy;for(const button of gallery.querySelectorAll('button'))button.disabled=busy;if(message)status.textContent=String(message);};
+    const choose=async id=>{if(busy||disposed||!items.some(item=>item.id===id))return;setBusy(true,'Applying shape…');try{await onSelect(id);if(disposed)return;selectedId=id;render();}catch(error){if(!disposed){status.textContent=error?.message||String(error);status.dataset.error='true';}}finally{if(!disposed)setBusy(false);}};
+    const catalogue=UI.createPreviewCatalogue({root:gallery,onSelect:id=>void choose(String(id)),sprite,minColumnWidth:'80px',aspectRatio:1,actionIcon:false});
+    const resize=()=>{const size=Math.max(56,Math.min(160,Number(previewSize.value)||80));previewSize.value=String(size);sizeValue.textContent=`${size} px`;previewSize.setAttribute('aria-valuetext',`${size} pixels`);gallery.style.gridTemplateColumns=`repeat(auto-fill,minmax(min(100%,${size}px),1fr))`;};
+    listen(previewSize,'input',resize);resize();
+    function render(){
+      const terms=words(search.value).trim().split(/\s+/).filter(Boolean),active=doc.activeElement?.closest?.('[data-item-id]')?.dataset.itemId;
+      visible=items.filter(item=>(!pack.value||packOf(item)===pack.value)&&terms.every(term=>words([item.id,item.label,packOf(item),item.detail,...(item.tags||[])].join(' ')).includes(term)));
+      catalogue.update(visible.map(item=>({...item,detail:''})),selectedId);
+      const focusId=visible.some(item=>item.id===active)?active:visible.some(item=>item.id===selectedId)?selectedId:visible[0]?.id;
+      for(const card of gallery.querySelectorAll('[data-item-id]')){const primary=card.querySelector('.ui-media-button');if(primary){primary.tabIndex=card.dataset.itemId===focusId?0:-1;primary.setAttribute('aria-label','Use '+(visible.find(item=>item.id===card.dataset.itemId)?.label||card.dataset.itemId));}for(const button of card.querySelectorAll('button')){button.disabled=busy;if(button!==primary)button.tabIndex=-1;}}
+      status.textContent=visible.length?`${visible.length} of ${items.length} shapes`:'No shapes match. Clear the search or select another pack.';delete status.dataset.error;
+    }
+    listen(search,'input',render);listen(pack,'change',render);
+    listen(search,'keydown',event=>{if(event.key==='Escape'&&search.value){event.preventDefault();event.stopPropagation();search.value='';render();}else if(event.key==='ArrowDown'&&visible.length){event.preventDefault();focusCard(visible[0].id);}else if(event.key==='Enter'&&visible.length===1){event.preventDefault();void choose(visible[0].id);}});
+    listen(gallery,'keydown',event=>{
+      if(busy||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key)||!event.target.closest?.('.ui-media-button'))return;
+      const buttons=mediaButtons(),index=buttons.indexOf(event.target);if(index<0||!buttons.length)return;
+      event.preventDefault();event.stopPropagation();let next=index;
+      if(event.key==='Home')next=0;else if(event.key==='End')next=buttons.length-1;else if(event.key==='ArrowLeft')next=Math.max(0,index-1);else if(event.key==='ArrowRight')next=Math.min(buttons.length-1,index+1);else{
+        const here=buttons[index].getBoundingClientRect(),down=event.key==='ArrowDown',rows=buttons.map((button,i)=>({i,rect:button.getBoundingClientRect()})).filter(entry=>down?entry.rect.top>here.top+2:entry.rect.top<here.top-2);
+        if(rows.length){const row=down?Math.min(...rows.map(entry=>entry.rect.top)):Math.max(...rows.map(entry=>entry.rect.top));next=rows.filter(entry=>Math.abs(entry.rect.top-row)<2).sort((a,b)=>Math.abs(a.rect.left-here.left)-Math.abs(b.rect.left-here.left))[0].i;}
+      }
+      focusCard(buttons[next].closest('[data-item-id]').dataset.itemId);
+    });
+    listen(gallery,'focusin',event=>{if(event.target.matches?.('.ui-media-button'))for(const button of mediaButtons())button.tabIndex=button===event.target?0:-1;});
+    return {
+      update(next,selection=''){
+        const ids=new Set();items=(Array.isArray(next)?next:[]).filter(item=>item&&item.id!=null&&!ids.has(String(item.id))&&ids.add(String(item.id))).map(item=>({...item,id:String(item.id),label:String(item.label||item.id),tags:Array.isArray(item.tags)?item.tags:[]}));selectedId=String(selection??'');
+        const selectedPack=pack.value,packs=[...new Set(items.map(packOf))].sort((a,b)=>a.localeCompare(b));pack.replaceChildren();const all=doc.createElement('option');all.value='';all.textContent='All packs';pack.append(all);for(const name of packs){const option=doc.createElement('option');option.value=name;option.textContent=name;pack.append(option);}pack.value=packs.includes(selectedPack)?selectedPack:'';render();
+      },
+      setBusy,
+      setStatus(message,error=false){status.textContent=String(message||'');if(error)status.dataset.error='true';else delete status.dataset.error;},
+      focusSearch(){search.focus();},
+      dispose(){disposed=true;for(const remove of off)remove();catalogue.dispose();toolbar.remove();gallery.remove();status.remove();root.className=originalClass;if(originalBusy===null)root.removeAttribute('aria-busy');else root.setAttribute('aria-busy',originalBusy);},
+    };
+  };
+
   UI.renderProofSheet=async({items,width=3840,height=2160,title='Proof sheet',background='#101419',color='#f4f5f7',font='sans-serif',signal}={})=>{
     if(!Array.isArray(items)||!items.length||items.length>48)throw Error('Choose 1–48 proof images');
     if(!Number.isInteger(width)||!Number.isInteger(height)||width<640||height<360||width>7680||height>4320)throw Error('Invalid proof sheet size');
@@ -970,22 +1032,23 @@
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
     row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto minmax(0,clamp(45%,calc(100% - 2 * var(--ui-control-height) - 10ch),60%))',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(label.style,{gridColumn:'1',gridRow:'1',minInlineSize:'0',overflowWrap:'anywhere'});
-    Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'0',justifyContent:'flex-end'});
+    actions.dataset.uiPropertyActions='';
+    Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'max-content',inlineSize:'max-content',maxInlineSize:'none',flexWrap:'nowrap',containerType:'normal',justifyContent:'flex-end'});
     control.dataset.uiPropertyValue='';
     Object.assign(control.style,{gridColumn:'3',gridRow:'1',minInlineSize:'0',inlineSize:'100%',maxInlineSize:'100%'});
     if(layout==='compact')Object.assign(row.style,{gridTemplateColumns:'minmax(0,var(--ui-property-label-width,8ch)) auto minmax(0,1fr)',font:'var(--ui-control-font)'});
     if(layout==='trailing'){
       row.dataset.uiPropertyLayout='trailing';
-      row.style.gridTemplateColumns='minmax(0,1fr) minmax(8ch,var(--control-value-width,35%)) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap)))';
+      row.style.gridTemplateColumns='minmax(0,1fr) minmax(0,var(--control-value-width,35%)) max-content';
       control.style.gridColumn='2';actions.style.gridColumn='3';
-      actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
     }
     if(layout==='leading-actions'){
       row.dataset.uiPropertyLayout='leading-actions';
-      row.style.gridTemplateColumns='minmax(0,1fr) var(--control-action-slot,calc(2 * var(--ui-control-height) + var(--ui-gap))) minmax(8ch,var(--control-value-width,35%))';
-      actions.style.gridColumn='2';actions.style.inlineSize='100%';actions.style.justifyContent='flex-end';
+      row.style.gridTemplateColumns='minmax(0,1fr) max-content minmax(0,var(--control-value-width,35%))';
+      actions.style.gridColumn='2';
       control.style.gridColumn='3';
     }
+    if(layout==='trailing'||layout==='leading-actions'){row.style.containerType='inline-size';row.style.containerName='ui-property';}
     row.append(actions,control);return {element:row,label,control,actions};
   };
   UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
@@ -999,7 +1062,10 @@
     if(!entry&&(typeof options.onReset==='function'||typeof options.onActivate==='function')){
       const button=row.ownerDocument.createElement('button');button.type='button';button.dataset.uiPropertyLabel='';button.dataset.uiSurface='graphic';button.className='ui-graphic-action';button.dataset.uiLabel='always';
       button.style.color=label.style.color;Object.assign(button.style,{gridColumn:'1',gridRow:'1',textAlign:'start',justifyContent:'start',justifySelf:'stretch',margin:'0',padding:'0'});
-      const name=label.textContent;UI.adoptAction(button,{label:name});label.replaceWith(button);label=button;
+      const name=label.textContent;UI.adoptAction(button,{label:name});
+      const treeIcon=[...(label.children||[])].find(child=>child.dataset.uiTreeIcon);
+      if(treeIcon){button.dataset.uiTreeRow=label.dataset.uiTreeRow;button.insertBefore(treeIcon,button.firstChild);}
+      label.replaceWith(button);label=button;
       entry={button,name,busy:false};
       const reset=async()=>{if(entry.busy||typeof entry.onReset!=='function')return;entry.busy=true;button.disabled=true;button.setAttribute('aria-busy','true');try{await entry.onReset();}catch(error){button.title=error.message;}finally{entry.busy=false;button.disabled=!entry.onReset&&!entry.onActivate;button.setAttribute('aria-busy','false');}};
       button.addEventListener('dblclick',()=>void reset());
@@ -1531,195 +1597,8 @@
     if(event.key==='ArrowRight'||event.key==='ArrowDown')next=tabs[(index+1)%tabs.length];else if(event.key==='ArrowLeft'||event.key==='ArrowUp')next=tabs[(index-1+tabs.length)%tabs.length];else if(event.key==='Home')next=tabs[0];else if(event.key==='End')next=tabs.at(-1);
     if(next){event.preventDefault();activate(next);next.focus();}
   });
-UI.createCurveControl=({label='Response',points:initial=[1/3,0,2/3,1],defaults:initialDefaults=initial,invert=false,xLabel:horizontal='Progress',yLabel:vertical='Response',endpointLabels=['Start','End'],onChange=()=>{},onError=console.error,document=window.document}={})=>{
-  const plot=([x,y])=>[30+x*240,144-y*120];
-  function svgNode(name,attrs={}){const node=document.createElementNS('http://www.w3.org/2000/svg',name);for(const [key,value]of Object.entries(attrs))node.setAttribute(key,String(value));return node;}
-  const clampUnit=value=>Math.max(0,Math.min(1,value)),CURVE_PRESETS={Linear:[1/3,1/3,2/3,2/3],Smooth:[1/3,0,2/3,1],Early:[.2,.65,.5,1],Late:[.5,0,.8,.35]};
-  let points=[...initial],drag=null,available=true,disposed=false;const removers=[];
-  function listen(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
-  const element=document.createElement('div');element.className='ui-curve-control ui-stack';
-  const graph=svgNode('svg',{viewBox:'0 0 300 176',role:'group','aria-label':`${label} curve editor`});
-  const grid=svgNode('path',{class:'bezier-grid',d:'M30 24V144H270M30 84H270M150 24V144M270 24V144M30 24H270'});
-  const fill=svgNode('path',{class:'bezier-fill'}),path=svgNode('path',{class:'bezier-path'});
-  const lines=[0,1].map(()=>svgNode('line',{class:'bezier-tangent'}));
-  const handles=[0,1].map((i)=>svgNode('circle',{r:7,tabindex:0,role:'slider',class:'bezier-handle',
-    'aria-label':`${label} handle ${i+1}`,'aria-valuemin':0,'aria-valuemax':1}));
-  const endpointMode=initial.length===6;
-  if(endpointMode)element.dataset.endpoints='true';
-  const endpointNames=endpointLabels;
-  const ends=[0,1].map((i)=>svgNode('circle',{r:endpointMode?5:3,class:'bezier-end',...(endpointMode?{tabindex:0,role:'slider','aria-label':`${label} ${endpointNames[i]} endpoint`,'aria-valuemin':0,'aria-valuemax':1}:{})}));
-  const controls=endpointMode?[...handles,...ends]:handles;
-  const xLabel=svgNode('text',{x:150,y:168,'text-anchor':'middle'});xLabel.textContent=horizontal;
-  const yLabel=svgNode('text',{x:12,y:84,transform:'rotate(-90 12 84)','text-anchor':'middle'});yLabel.textContent=vertical;
-  graph.append(grid,fill,...lines,path,...ends,...handles,xLabel,yLabel);
-  const fields=document.createElement('div');fields.className='ui-actions';fields.style.display='grid';fields.style.gridTemplateColumns=`repeat(${endpointMode?3:2},minmax(0,1fr))`;
-  const inputs=[];
-  for(let i=0;i<(endpointMode?6:4);i++){
-    const field=document.createElement('label');field.className='ui-field';const caption=document.createElement('span');caption.className='ui-label';caption.textContent=i<4?`${i<2?'1':'2'} ${i%2?'Y':'X'}`:endpointNames[i-4];
-    const input=document.createElement('input');input.type='number';input.min='0';input.max='1';input.step='.01';
-    input.setAttribute('aria-label',i<4?`${label} handle ${Math.floor(i/2)+1} ${i%2?'Y':'X'}`:`${label} ${endpointNames[i-4]} density`);
-    let dirty=false;
-    listen(input,'input',()=>{dirty=true;input.dataset.draft='true';});
-    const apply=()=>{if(!dirty)return;const value=Number(input.value);if(input.value.trim()===''||!Number.isFinite(value)||value<0||value>1){input.setCustomValidity('Enter a number from 0 to 1');input.reportValidity();return;}dirty=false;delete input.dataset.draft;input.setCustomValidity('');points[i]=value;send(true);};
-    listen(input,'change',apply);
-    listen(input,'keydown',event=>{
-      if(event.key==='Enter'){event.preventDefault();apply();}
-      if(event.key==='Escape'){event.preventDefault();dirty=false;delete input.dataset.draft;input.value=String(points[i]);input.setCustomValidity('');}
-    });
-    field.append(caption,input);fields.append(field);inputs.push(input);
-  }
-  const presets=document.createElement('div');presets.className='ui-actions';
-  for(const [name,value]of Object.entries(CURVE_PRESETS)){
-    const button=document.createElement('button');button.type='button';button.textContent=name;
-    button.setAttribute('aria-label',`${label} ${name.toLowerCase()} preset`);
-    listen(button,'click',()=>{points=endpointMode?[value[0],points[4]+(points[5]-points[4])*value[1],value[2],points[4]+(points[5]-points[4])*value[3],points[4],points[5]]:[...value];send(true);});presets.append(button);
-  }
-  const reset=document.createElement('button');reset.type='button';reset.textContent='Reset';reset.setAttribute('aria-label',`Reset ${label} curve`);
-  let defaults=[...initialDefaults];listen(reset,'click',()=>{points=[...defaults];send(true);});presets.append(reset);
-  const hint=document.createElement('span');hint.className='ui-meta';hint.textContent='Drag handles · arrow keys adjust · Esc cancels';
-  const status=document.createElement('output');status.className='ui-meta';status.setAttribute('aria-live','polite');
-  function paint(){
-    const displayY=y=>invert?1-y:y;
-    const p0=plot([0,displayY(points[4]??0)]),p1=plot([points[0],displayY(points[1])]),p2=plot([points[2],displayY(points[3])]),p3=plot([1,displayY(points[5]??1)]);
-    const d=`M${p0} C${p1} ${p2} ${p3}`;
-    path.setAttribute('d',d);fill.setAttribute('d',`${d} L270 144 L30 144 Z`);
-    [p0,p3].forEach((p,i)=>{ends[i].setAttribute('cx',p[0]);ends[i].setAttribute('cy',p[1]);if(endpointMode)ends[i].setAttribute('aria-valuenow',points[i+4]);});
-    [p1,p2].forEach((p,i)=>{
-      lines[i].setAttribute('x1',[p0,p3][i][0]);lines[i].setAttribute('y1',[p0,p3][i][1]);lines[i].setAttribute('x2',p[0]);lines[i].setAttribute('y2',p[1]);
-      handles[i].setAttribute('cx',p[0]);handles[i].setAttribute('cy',p[1]);handles[i].setAttribute('aria-valuenow',points[i*2+1]);
-      handles[i].setAttribute('aria-valuetext',`X ${points[i*2].toFixed(3)}, Y ${points[i*2+1].toFixed(3)}`);
-    });
-    inputs.forEach((input,i)=>{if(document.activeElement!==input&&!input.dataset.draft)input.value=Number(Number(points[i]).toPrecision(6)).toString();});
-  }
-  function send(commit){if(!available)return;paint();try{Promise.resolve(onChange([...points],commit)).catch(onError);}catch(error){onError(error);}}
-  const move=event=>{
-    const rect=graph.getBoundingClientRect(),x=clampUnit(((event.clientX-rect.left)/rect.width*300-30)/240),shownY=clampUnit((144-(event.clientY-rect.top)/rect.height*176)/120);
-    const i=drag.index<2?drag.index*2:drag.index+2;
-    if(drag.index<2)points[i]=Math.round(x*10000)/10000;
-    points[drag.index<2?i+1:i]=Math.round((invert?1-shownY:shownY)*10000)/10000;send(false);
-  };
-  const end=(cancel=false)=>{if(!drag)return;const old=drag;drag=null;if(cancel)points=old.points;send(true);if(controls[old.index].hasPointerCapture(old.pointerId))controls[old.index].releasePointerCapture(old.pointerId);};
-  controls.forEach((handle,index)=>{
-    listen(handle,'pointerdown',event=>{if(event.button!==0||!available)return;event.preventDefault();event.stopPropagation();handle.focus();drag={index,pointerId:event.pointerId,points:[...points]};handle.setPointerCapture(event.pointerId);});
-    listen(handle,'pointermove',event=>{if(drag?.index===index&&event.pointerId===drag.pointerId)move(event);});
-    listen(handle,'pointerup',()=>end());listen(handle,'pointercancel',()=>end(true));listen(handle,'lostpointercapture',()=>end(true));
-    listen(handle,'keydown',event=>{
-      if(event.key==='Escape'){event.preventDefault();end(true);return;}
-      if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
-      event.preventDefault();event.stopPropagation();const horizontal=['ArrowLeft','ArrowRight'].includes(event.key),isX=index<2&&horizontal,i=index<2?index*2+(horizontal?0:1):index+2;
-      const direction=['ArrowUp','ArrowRight'].includes(event.key)?1:-1,step=event.shiftKey?.1:event.altKey?.001:.01;
-      points[i]=Number(clampUnit(points[i]+direction*step*(isX||!invert?1:-1)).toFixed(6));send(true);
-    });
-  });
-  listen(document,'visibilitychange',()=>{if(document.hidden)end(true);});
-  Object.assign(graph.style,{display:'block',inlineSize:'100%',height:'auto',aspectRatio:'300/176',touchAction:'none',border:'1px solid var(--ui-control)',borderRadius:'var(--ui-radius-small)',background:'var(--ui-surface)'});
-  grid.setAttribute('fill','none');grid.setAttribute('stroke','var(--ui-line)');fill.setAttribute('fill','var(--ui-accent-soft)');path.setAttribute('fill','none');path.setAttribute('stroke','var(--ui-accent)');path.setAttribute('stroke-width','2');
-  for(const line of lines){line.setAttribute('stroke','var(--ui-muted)');line.setAttribute('stroke-dasharray','3 3');}
-  for(const handle of [...handles,...ends]){handle.setAttribute('fill','var(--ui-text)');handle.setAttribute('stroke','var(--ui-surface)');handle.setAttribute('stroke-width','2');handle.style.cursor='grab';}
-  for(const text of [xLabel,yLabel]){text.setAttribute('fill','var(--ui-muted)');text.style.font='10px var(--ui-font)';}
-  controls.forEach(handle=>{listen(handle,'focus',()=>handle.setAttribute('stroke','var(--ui-accent)'));listen(handle,'blur',()=>handle.setAttribute('stroke','var(--ui-surface)'));});
-  element.append(graph,fields,presets,hint,status);paint();
-  return {element,sync({points:next,defaults:reset=defaults,available:enabled=true}={}){
-    available=enabled;graph.setAttribute('aria-disabled',String(!available));defaults=[...reset];if(!drag&&next){points=[...next];paint();}
-  },dispose(){if(disposed)return;disposed=true;end(true);for(const remove of removers)remove();}};
-}
 
-UI.createResponseControl=({spec:initial,onSet,model,document=window.document})=>{
-  const {powerCurve,curveExponent,numberStep,steppedNumber}=model;
-  let spec = initial, value = Number(spec.value ?? spec.default ?? 1), dragging = false,original=value,pointerId=null;const removers=[];
-  function listen(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
-  const element = document.createElement('div'); element.className = 'ui-response-control ui-stack';
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('viewBox','0 0 220 76'); svg.setAttribute('tabindex','0'); svg.setAttribute('role','slider');
-  svg.setAttribute('aria-label', `${spec.label} curve`);
-  svg.innerHTML = '<path class="mini-curve-grid" d="M10 8V66H210M10 37H210M110 8V66"/><path class="mini-curve-path"/><circle r="4" class="mini-curve-handle"/>';
-  Object.assign(svg.style,{display:'block',inlineSize:'100%',height:'76px',touchAction:'none',cursor:'crosshair',border:'1px solid var(--ui-control)',borderRadius:'var(--ui-radius-small)',background:'var(--ui-surface)'});
-  const grid=svg.querySelector('.mini-curve-grid'),path=svg.querySelector('.mini-curve-path'),dot=svg.querySelector('circle');grid.setAttribute('fill','none');grid.setAttribute('stroke','var(--ui-line)');path.setAttribute('fill','none');path.setAttribute('stroke','var(--ui-accent)');path.setAttribute('stroke-width','2');dot.setAttribute('fill','var(--ui-text)');
-  const hint = document.createElement('span');hint.className='ui-meta'; hint.textContent = 'Drag to shape · ↑ ↓ adjust · double-click to reset';
-  const paint = () => {
-    const points = Array.from({length:81}, (_,i) => { const x=i/80; return `${10+x*200},${66-58*powerCurve(value,x,spec.curve)}`; });
-    svg.querySelector('.mini-curve-path').setAttribute('d', 'M'+points.join('L'));
-    const handle=svg.querySelector('circle');handle.setAttribute('cx','110');handle.setAttribute('cy',String(66-58*powerCurve(value,.5,spec.curve)));
-    svg.setAttribute('aria-valuenow', String(value));
-    if (spec.inputMin !== undefined) svg.setAttribute('aria-valuemin', String(spec.inputMin));
-    if (spec.inputMax !== undefined) svg.setAttribute('aria-valuemax', String(spec.inputMax));
-  };
-  const send = (raw,commit) => {
-    const limits = { ...spec, inputMin:Math.max(0.0001,spec.inputMin ?? 0.0001) };
-    value = Math.max(limits.inputMin, Math.min(spec.inputMax ?? Infinity, raw)); paint(); onSet(value,commit);
-  };
-  const move = event => {
-    const rect=svg.getBoundingClientRect();
-    const x=((event.clientX-rect.left)/rect.width*220-10)/200, y=(66-(event.clientY-rect.top)/rect.height*76)/58;
-    const raw=curveExponent(x,y,spec.curve), step=numberStep(spec);
-    send(Math.round(raw/step)*step,false);
-  };
-  listen(svg,'pointerdown',event=>{if(event.button!==0)return;event.preventDefault();svg.focus();original=value;pointerId=event.pointerId;dragging=true;svg.setPointerCapture(event.pointerId);move(event);});
-  listen(svg,'pointermove',event=>{if(dragging)move(event);});
-  function finish(cancel=false){if(!dragging)return;dragging=false;send(cancel?original:value,true);if(svg.hasPointerCapture(pointerId))svg.releasePointerCapture(pointerId);}
-  listen(svg,'pointerup',()=>finish());listen(svg,'pointercancel',()=>finish(true));listen(svg,'lostpointercapture',()=>finish(true));listen(document,'visibilitychange',()=>{if(document.hidden)finish(true);});
-  listen(svg,'keydown',event=>{if(event.key==='Escape'){event.preventDefault();finish(true);return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();send(steppedNumber(value,['ArrowUp','ArrowRight'].includes(event.key)?1:-1,spec),true);}});
-  listen(svg,'dblclick',()=>send(spec.default??1,true));
-  element.append(svg,hint);paint();
-  return {element,dispose(){finish(true);for(const remove of removers)remove();},sync(next,nextSpec){spec=nextSpec;if(!dragging){value=next;paint();}}};
-}
 
-UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.document})=>{
-  const {sliderBounds,rangeEndpoint,rangeValue,typedNumber,numberStep,steppedNumber,wireNumberInput}=model;
-  let spec=initial,start=0,other=0,endSpec={},dragging=false,dragBounds=null,original=null,activeHandle=null,activeFinish=null;const removers=[];
-  function listen(node,type,handler){node.addEventListener(type,handler);removers.push(()=>node.removeEventListener(type,handler));}
-  const element=document.createElement('div');element.className='ui-interval-control ui-stack';
-  const track=document.createElement('div');track.className='ui-interval-track';Object.assign(track.style,{position:'relative',blockSize:'4px',margin:'var(--ui-control-height) 10px',background:'var(--ui-line)'});
-  const fill=document.createElement('i');Object.assign(fill.style,{position:'absolute',blockSize:'100%',background:'var(--ui-accent)',pointerEvents:'none'});track.append(fill);
-  const fields=document.createElement('div');fields.className='ui-actions';fields.style.flexWrap='nowrap';
-  const handles=[], inputs=[];
-  const paint=()=>{
-    const end=rangeEndpoint(start,other,spec.rangeControl.mode), bounds=dragBounds ? {...dragBounds} : sliderBounds(spec,start);
-    if (!dragBounds) { bounds.min=Math.min(bounds.min,end);bounds.max=Math.max(bounds.max,end); }
-    const span=bounds.max-bounds.min||1;
-    [start,end].forEach((value,index)=>{handles[index].style.left=`${(value-bounds.min)/span*100}%`;handles[index].setAttribute('aria-valuenow',String(value));if(document.activeElement!==inputs[index]&&!inputs[index].dataset.draft)inputs[index].value=Number(Number(value).toPrecision(6)).toString();});
-    fill.style.left=`${(Math.min(start,end)-bounds.min)/span*100}%`;fill.style.width=`${Math.abs(end-start)/span*100}%`;
-    track.classList.toggle('is-hue',spec.rangeControl.spectrum==='hue');
-    if (spec.rangeControl.spectrum === 'hue') {
-      const stops = Array.from({length:49},(_,i)=>`hsl(${((bounds.min+i/48*span)*360)%360} 70% 65%) ${i/48*100}%`);
-      track.style.background = `linear-gradient(90deg,${stops.join(',')})`;
-    } else track.style.background='var(--ui-line)';
-    return bounds;
-  };
-  const send=(index,raw,commit=true)=>{
-    try {
-      const limits=index?endSpec:spec;
-      const requested=index ? rangeValue(start,Number(raw),spec.rangeControl.mode) : raw;
-      const next=typedNumber(commit ? requested : Math.max(limits.inputMin??-Infinity,Math.min(limits.inputMax??Infinity,Number(requested))),limits);
-      if(index)other=next;else start=next;
-      paint();Promise.resolve(onSet(index?spec.rangeControl.end:spec.key||spec.id,next,commit)).catch(onError);return true;
-    }catch(error){onError(error);return false;}
-  };
-  for(let index=0;index<2;index++){
-    const handle=document.createElement('button');handle.type='button';handle.className='ui-interval-handle';Object.assign(handle.style,{position:'absolute',top:'50%',transform:'translate(-50%,-50%)',inlineSize:'var(--ui-control-height)',minInlineSize:'var(--ui-control-height)',padding:'0',touchAction:'none',cursor:'ew-resize'});const mark=document.createElement('span');mark.textContent='│';mark.setAttribute('aria-hidden','true');handle.append(mark);handle.setAttribute('role','slider');handle.setAttribute('aria-label',`${spec.label} ${index?'end':'start'}`);
-    const field=document.createElement('label');field.className='ui-field';field.style.flex='1 1 0';const caption=document.createElement('span');caption.className='ui-label';caption.textContent=index?'End':'Start';field.append(caption);
-    const input=document.createElement('input');input.type='number';input.step='any';input.setAttribute('aria-label',`${spec.label} range ${index?'end':'start'}`);field.append(input);fields.append(field);
-    handles.push(handle);inputs.push(input);track.append(handle);
-    let dirty = false;
-    listen(input,'input',()=>{dirty=true;input.dataset.draft='true';});
-    const commitInput = () => {if(dirty&&send(index,input.value)){dirty=false;delete input.dataset.draft;}};
-    listen(input,'change',commitInput);
-    listen(input,'keydown',event=>{
-      if(event.key==='Enter'){event.preventDefault();commitInput();input.blur();}
-      if(event.key==='Escape'){event.preventDefault();dirty=false;delete input.dataset.draft;input.value=String(index?rangeEndpoint(start,other,spec.rangeControl.mode):start);input.blur();}
-    });
-    wireNumberInput(input,()=>index?{step:endSpec.step}:spec,value=>{dirty=false;delete input.dataset.draft;send(index,value);});
-    let bounds=null;
-    const move=event=>{const rect=track.getBoundingClientRect(),x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),step=numberStep(index?endSpec:spec);send(index,Number((Math.round((bounds.min+x*(bounds.max-bounds.min))/step)*step).toPrecision(12)),false);};
-    listen(handle,'pointerdown',event=>{if(event.button!==0||dragging)return;event.preventDefault();handle.focus();activeHandle=handle;activeFinish=finish;bounds=paint();dragBounds=bounds;original={start,other,pointerId:event.pointerId};dragging=true;handle.setPointerCapture(event.pointerId);});
-    listen(handle,'pointermove',event=>{if(dragging&&handle.hasPointerCapture(event.pointerId))move(event);});
-    const finish=(cancel=false)=>{if(!dragging||activeHandle!==handle)return;dragging=false;activeHandle=null;activeFinish=null;dragBounds=null;if(cancel){start=original.start;other=original.other;}send(index,index?rangeEndpoint(start,other,spec.rangeControl.mode):start,true);if(handle.hasPointerCapture(original.pointerId))handle.releasePointerCapture(original.pointerId);};
-    listen(handle,'pointerup',()=>finish());listen(handle,'pointercancel',()=>finish(true));listen(handle,'lostpointercapture',()=>finish(true));listen(document,'visibilitychange',()=>{if(document.hidden)finish(true);});
-    listen(handle,'keydown',event=>{if(event.key==='Escape'){event.preventDefault();finish(true);return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();const delta=['ArrowRight','ArrowUp'].includes(event.key)?1:-1;send(index,steppedNumber(index?rangeEndpoint(start,other,spec.rangeControl.mode):start,delta,index?{step:endSpec.step}:spec));}});
-  }
-  element.append(track,fields);
-  return {element,dispose(){activeFinish?.(true);for(const remove of removers)remove();},sync(next,nextSpec,parameters){spec=nextSpec;endSpec=parameters.find(item=>(item.key||item.id)===spec.rangeControl.end);element.hidden=!endSpec;if(!endSpec)return;if(!dragging){start=next;other=Number(endSpec.value??endSpec.default??0);paint();}}};
-}
 
 })();
 
@@ -1993,6 +1872,32 @@ UI.createCurveControl=({label='Response',points:initial=[1/3,0,2/3,1],defaults:i
   },dispose(){if(disposed)return;disposed=true;end(true);for(const remove of removers)remove();}};
 }
 
+
+// A response curve is one property value until deliberately opened. The full
+// editor is the same native control in a bounded, keyboard-accessible popover.
+UI.createCurveValue=(options={})=>{
+  const doc=options.document||window.document,label=options.label||'Response';
+  let points=[...(options.points||[1/3,0,2/3,1])],disposed=false;
+  const element=doc.createElement('button');element.type='button';element.className='ui-curve-value ui-action';
+  element.setAttribute('aria-label','Edit '+label+' curve');element.title='Edit '+label+' curve';
+  const preview=doc.createElementNS('http://www.w3.org/2000/svg','svg');preview.setAttribute('viewBox','0 0 50 22');preview.setAttribute('aria-hidden','true');
+  Object.assign(preview.style,{inlineSize:'50px',blockSize:'22px',flex:'none',overflow:'visible'});
+  const path=doc.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('fill','none');path.setAttribute('stroke','var(--ui-accent)');path.setAttribute('stroke-width','1.5');preview.append(path);
+  const caption=doc.createElement('span');caption.className='ui-label';caption.textContent='Edit curve';
+  Object.assign(element.style,{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'var(--ui-gap)',minInlineSize:'0'});element.append(preview,caption);
+  const panel=doc.createElement('article');panel.className='ui-popout';panel.setAttribute('role','dialog');panel.setAttribute('aria-label',label+' curve');panel.style.setProperty('--ui-popout-width','23rem');
+  const header=doc.createElement('header'),title=doc.createElement('h5'),close=doc.createElement('button');title.textContent=label;close.type='button';
+  UI.adoptAction(close,{label:'Close curve editor',icon:'close',iconOnly:true,sprite:options.sprite});header.append(title,close);
+  const body=doc.createElement('div');body.dataset.uiPopoutBody='';
+  const editor=UI.createCurveControl({...options,document:doc,onChange(next,commit){points=[...next];paint();return options.onChange?.(next,commit);}});
+  const exact=doc.createElement('details');exact.className='ui-section';const summary=doc.createElement('summary'),heading=doc.createElement('h5');heading.textContent='Exact handles';summary.append(heading);exact.append(summary,editor.element.children[1]);editor.element.append(exact);
+  body.append(editor.element);panel.append(header,body);
+  const popover=UI.createAnchoredPopover(element,{element:panel});close.addEventListener('click',popover.close);
+  function paint(){const y=value=>options.invert?1-value:value;path.setAttribute('d','M 1 '+(21-20*y(points[4]??0))+' C '+(1+48*points[0])+' '+(21-20*y(points[1]))+' '+(1+48*points[2])+' '+(21-20*y(points[3]))+' 49 '+(21-20*y(points[5]??1)));}
+  paint();
+  return {element,editor:editor.element,open:popover.open,close:popover.close,sync(next={}){editor.sync(next);if(next.points){points=[...next.points];paint();}element.disabled=next.available===false;},dispose(){if(disposed)return;disposed=true;popover.dispose();editor.dispose();close.removeEventListener('click',popover.close);}};
+};
+
 UI.createResponseControl=({spec:initial,onSet,model,document=window.document})=>{
   const {powerCurve,curveExponent,numberStep,steppedNumber}=model;
   let spec = initial, value = Number(spec.value ?? spec.default ?? 1), dragging = false,original=value,pointerId=null;const removers=[];
@@ -2092,63 +1997,113 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
 
 })();
 
-/* Compact, application-neutral component hierarchy. Apps supply their navigation model and
-   render only the currently selected controls; Shared UI owns rows, focus and keyboard grammar. */
+/* Compact, application-neutral component hierarchy. Apps supply navigation and optionally
+   stable inline content hosts; Shared UI owns rows, visibility, focus and keyboard grammar. */
 (() => {
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI;
-  UI.createCompactControlTree=function({navigation,onSelect,onChange=()=>{},onSearch=()=>{},onContextMenu=()=>{},sprite='./shared-ui/icons.svg'}={}){
+  // A native disclosure or property label can share the hierarchy's compact row grammar.
+  UI.adoptControlTreeRow=function(target,{kind,enabled=true,sprite='./shared-ui/icons.svg'}={}){
+    if(!target?.ownerDocument||!['group','control'].includes(kind))throw new TypeError('A tree group summary or control label is required');
+    let icon=[...target.children].find(child=>child.dataset.uiTreeIcon);
+    if(!enabled){delete target.dataset.uiTreeRow;icon?.remove();return target;}
+    target.dataset.uiTreeRow=kind;
+    if(!icon){const doc=target.ownerDocument;icon=doc.createElementNS('http://www.w3.org/2000/svg','svg');icon.classList.add('ui-icon');icon.setAttribute('aria-hidden','true');icon.setAttribute('viewBox','0 0 24 24');icon.append(doc.createElementNS('http://www.w3.org/2000/svg','use'));target.insertBefore(icon,target.firstChild);}
+    icon.dataset.uiTreeIcon=kind;icon.firstElementChild.setAttribute('href',sprite+'#ui-'+(kind==='group'?'layers':'sliders'));return target;
+  };
+  UI.createCompactControlTree=function({navigation,onSelect,onChange=()=>{},onSearch=()=>{},onContextMenu=null,sprite='./shared-ui/icons.svg'}={}){
     if(!navigation||typeof navigation.rows!=='function'||typeof navigation.key!=='function')throw new TypeError('A control-tree navigation model is required');
     const doc=document,root=doc.createElement('div');
     root.className='ui-control-tree';root.setAttribute('role','tree');root.setAttribute('aria-label','Components');
-    let signature='',focused='',query='',typed='',typedAt=0;
-    const items=()=>[...root.querySelectorAll('[role=treeitem]')];
-    const rowFor=id=>items().find(n=>n.dataset.component===id);
+    let signature='',focused='',query='',typed='',typedAt=0,inlineContent=null,visible=[];
+    const entries=new Map(),empty=doc.createElement('p'),parked=doc.createElement('div');empty.className='ui-meta';empty.textContent='No matching component.';parked.hidden=true;
+    const items=()=>visible.map(id=>entries.get(id)?.item).filter(Boolean);
+    const rowFor=id=>visible.includes(id)?entries.get(id)?.item:null;
     const focus=id=>{focused=id;for(const item of items())item.tabIndex=item.dataset.component===id?0:-1;rowFor(id)?.focus({preventScroll:true});rowFor(id)?.scrollIntoView({block:'nearest'});};
+    const syncChildren=(parent,children)=>{
+      let cursor=parent.firstElementChild;
+      for(const child of children){if(child!==cursor)parent.insertBefore(child,cursor);cursor=child.nextElementSibling;}
+      for(const child of [...parent.children])if(!children.includes(child))child.remove();
+    };
+    function entryFor(n){
+      let entry=entries.get(n.id);if(entry)return entry;
+      const item=doc.createElement('div');item.className='ui-control-tree-item';item.dataset.component=n.id;item.setAttribute('role','treeitem');
+      const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';
+      const expander=doc.createElement('span');expander.className='ui-control-tree-expander';expander.dataset.expand='';expander.setAttribute('aria-hidden','true');
+      const symbol=doc.createElementNS('http://www.w3.org/2000/svg','svg');symbol.classList.add('ui-icon');symbol.setAttribute('aria-hidden','true');
+      const use=doc.createElementNS('http://www.w3.org/2000/svg','use');symbol.append(use);
+      const label=doc.createElement('span');label.className='ui-control-tree-label';
+      const options=doc.createElement('button');options.type='button';options.className='ui-control-tree-options';options.hidden=true;
+      UI.adoptAction(options,{label:'Component choices',icon:'more',iconOnly:true,sprite});
+      options.onclick=event=>{event.preventDefault();event.stopPropagation();onContextMenu?.(entry.node,event);};
+      line.append(expander,symbol,label,options);item.append(line);
+      const group=doc.createElement('div');group.className='ui-control-tree-children';group.setAttribute('role','group');
+      entry={item,line,expander,use,label,options,group,content:null,node:n};entries.set(n.id,entry);
+      line.onclick=event=>{const node=entry.node;if(event.target.closest('[data-expand]')&&(node.expandable??node.children)){navigation.toggle(node.id);render();focus(node.id);onChange();}else{focused=node.id;onSelect(node.id);render();focus(node.id);}};
+      item.oncontextmenu=event=>{const target=event.target||item;if(target.closest?.('[role=treeitem]')!==item||entry.content?.contains(target))return;onContextMenu?.(entry.node,event);};
+      item.onfocus=event=>{if(event.target===item){focused=entry.node.id;for(const other of items())other.tabIndex=other===item?0:-1;}};
+      return entry;
+    }
     function render(){
       const rows=navigation.rows(query);
-      const next=JSON.stringify([rows.map(n=>[n.id,n.parent,n.label,n.description,n.depth,n.children,n.expanded,n.available,n.protected,n.selectors?.length||0]),navigation.selected]);
-      if(signature===next)return;signature=next;
-      const hadFocus=root.contains(doc.activeElement),oldFocus=hadFocus?doc.activeElement.closest('[data-component]')?.dataset.component:focused,scroll=root.scrollTop;
+      const next=JSON.stringify([rows.map(n=>[n.id,n.parent,n.label,n.description,n.depth,n.children,n.expandable,n.expanded,n.available,n.protected,n.selectors?.length||0]),navigation.selected]);
+      if(signature===next)return;
+      const active=doc.activeElement,hadFocus=root.contains(active),oldFocus=hadFocus?active.closest('[data-component]')?.dataset.component:focused,treeFocus=hadFocus&&active===entries.get(oldFocus)?.item,scroll=root.scrollTop;
       if(!rows.some(n=>n.id===focused))focused=rows.some(n=>n.id===navigation.selected)?navigation.selected:rows[0]?.id??'';
-      root.replaceChildren();const groups=new Map([[null,root]]);
+      visible=rows.map(n=>n.id);
+      const groups=new Map([[null,root]]),desired=new Map([[root,[]]]),siblings=new Map();
+      for(const n of rows){if(!siblings.has(n.parent))siblings.set(n.parent,[]);siblings.get(n.parent).push(n.id);}
       for(const n of rows){
-        const item=doc.createElement('div');item.className='ui-control-tree-item';item.dataset.component=n.id;item.setAttribute('role','treeitem');item.setAttribute('aria-label',n.label);
+        const entry=entryFor(n),{item,line,expander,use,label,group}=entry;entry.node=n;item.hidden=false;item.setAttribute('aria-label',n.label);
         item.setAttribute('aria-selected',String(n.id===navigation.selected));item.setAttribute('aria-level',String(n.depth+1));item.tabIndex=n.id===focused?0:-1;
-        const siblings=rows.filter(r=>r.parent===n.parent);item.setAttribute('aria-setsize',String(siblings.length));item.setAttribute('aria-posinset',String(siblings.findIndex(r=>r.id===n.id)+1));
-        const line=doc.createElement('div');line.className='ui-control-tree-line ui-item';line.dataset.uiVariant='quiet';line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--control-tree-depth',String(n.depth));
-        const expander=doc.createElement('span');expander.className='ui-control-tree-expander';expander.textContent=n.children?(n.expanded?'▾':'▸'):'';expander.dataset.expand='';expander.setAttribute('aria-hidden','true');
-        const symbol=doc.createElementNS('http://www.w3.org/2000/svg','svg');symbol.classList.add('ui-icon');symbol.setAttribute('aria-hidden','true');
-        const use=doc.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',sprite+'#'+(n.protected?'ui-lock':n.children?'ui-folder':'ui-sliders'));symbol.append(use);
-        const label=doc.createElement('span');label.className='ui-control-tree-label';label.textContent=n.label;line.append(expander,symbol,label);item.append(line);
-        const variants=Boolean(n.selectors?.length&&!n.protected);if(variants){item.dataset.uiVariation='true';item.setAttribute('aria-description','Switchable appearance variations');}
-        if(n.protected)item.dataset.uiProtected='true';if(n.available===false)item.dataset.uiUnavailable='true';
-        item.title=(n.description||n.label)+(variants?' · Variations available':'');
-        line.onclick=event=>{if(event.target.closest('[data-expand]')&&n.children){navigation.toggle(n.id);onChange();render();focus(n.id);}else{focused=n.id;onSelect(n.id);render();focus(n.id);}};
-        item.oncontextmenu=event=>onContextMenu(n,event);
-        item.onfocus=event=>{if(event.target===item){focused=n.id;for(const entry of items())entry.tabIndex=entry===item?0:-1;}};
-        (groups.get(n.parent)||root).append(item);
-        if(n.children){item.setAttribute('aria-expanded',String(n.expanded));const group=doc.createElement('div');group.className='ui-control-tree-children';group.setAttribute('role','group');item.append(group);groups.set(n.id,group);}
+        const peers=siblings.get(n.parent);item.setAttribute('aria-setsize',String(peers.length));item.setAttribute('aria-posinset',String(peers.indexOf(n.id)+1));
+        line.dataset.uiSelected=String(n.id===navigation.selected);line.style.setProperty('--control-tree-depth',String(n.depth));
+        const expandable=Boolean(n.expandable??n.children);expander.textContent=expandable?(n.expanded?'▾':'▸'):'';
+        if(expandable)item.setAttribute('aria-expanded',String(Boolean(n.expanded)));else item.removeAttribute('aria-expanded');
+        use.setAttribute('href',sprite+'#'+(n.protected?'ui-lock':n.children?'ui-folder':'ui-sliders'));label.textContent=n.label;
+        const variants=Boolean(n.selectors?.length&&!n.protected);if(variants)item.dataset.uiVariation='true';else delete item.dataset.uiVariation;
+        entry.options.hidden=!variants||!onContextMenu;entry.options.setAttribute('aria-label','Variations for '+n.label);entry.options.title='Choose a variation or saved look';
+        const variationHint=variants?'Switchable appearance variations'+(onContextMenu?'. Use the choices button or Shift+F10.':''):'';
+        if(variationHint)item.setAttribute('aria-description',variationHint);else item.removeAttribute('aria-description');
+        if(n.protected)item.dataset.uiProtected='true';else delete item.dataset.uiProtected;if(n.available===false)item.dataset.uiUnavailable='true';else delete item.dataset.uiUnavailable;
+        item.title=(n.description||n.label)+(variationHint?' · '+variationHint:'');
+        const content=inlineContent?.(n)||null;
+        if(content&&(content.ownerDocument!==doc||content===root||content.contains(root)))throw new TypeError('Inline tree content must be a separate node in the same document');
+        entry.content=content;if(content){content.dataset.uiTreeContent=n.id;content.style.setProperty('--control-tree-depth',String(n.depth+1));content.hidden=!n.expanded;}
+        syncChildren(item,[line,...(content?[content]:[]),...(n.children?[group]:[])]);
+        const parent=groups.get(n.parent)||root;desired.get(parent).push(item);
+        if(n.children){group.hidden=!n.expanded;groups.set(n.id,group);desired.set(group,[]);}
       }
-      if(!rows.length){const empty=doc.createElement('p');empty.className='ui-meta';empty.textContent='No matching component.';root.append(empty);}
-      root.scrollTop=scroll;if(hadFocus&&rowFor(oldFocus))focus(oldFocus);
+      if(!rows.length)desired.set(root,[empty]);
+      // Keep editors reachable by their host while a branch or filter hides its row.
+      // Visible navigation excludes these parked items from focus and keyboard traversal.
+      const hidden=[];for(const [id,entry]of entries)if(!visible.includes(id)){entry.item.hidden=true;entry.item.tabIndex=-1;hidden.push(entry.item);}
+      if(hidden.length){desired.get(root).push(parked);desired.set(parked,hidden);}
+      for(const [parent,children]of desired)syncChildren(parent,children);
+      signature=next;root.scrollTop=scroll;
+      if(hadFocus&&rowFor(oldFocus)){
+        if(treeFocus||!root.contains(active)||active.closest('[hidden]'))focus(oldFocus);
+        else if(doc.activeElement!==active)active.focus({preventScroll:true});
+      }
     }
-    root.addEventListener('keydown',event=>{
+    const keydown=event=>{
       const item=event.target.closest('[role=treeitem]');if(!item||event.target!==item)return;
-      const id=item.dataset.component;
+      const id=item.dataset.component;if(entries.get(id)?.item!==item)return;
+      if(onContextMenu&&(event.key==='ContextMenu'||event.key==='F10'&&event.shiftKey)){event.preventDefault();event.stopPropagation();onContextMenu(entries.get(id).node,event);return;}
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(event.key)&&!event.altKey){
-        event.preventDefault();event.stopPropagation();const next=navigation.key(id,event.key,query);onChange();render();focus(next);return;
+        event.preventDefault();event.stopPropagation();const next=navigation.key(id,event.key,query);render();focus(next);onChange();return;
       }
-      if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();onSelect(id);return;}
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();onSelect(id);render();focus(id);return;}
       if(event.key.length===1&&!event.metaKey&&!event.ctrlKey&&!event.altKey){
         const now=performance.now();typed=now-typedAt<650?typed+event.key.toLowerCase():event.key.toLowerCase();typedAt=now;
         const rows=navigation.rows(query),index=rows.findIndex(n=>n.id===id),ordered=[...rows.slice(index+1),...rows.slice(0,index+1)],next=ordered.find(n=>n.label.toLowerCase().startsWith(typed));
         if(next){event.preventDefault();event.stopPropagation();focus(next.id);}
       }
-    });
-    root.addEventListener('keyup',event=>{if([' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))event.stopPropagation();});
-    return {element:root,render,focus,setQuery(value){query=value;signature='';render();onSearch(query);},get query(){return query;},reveal(){navigation.select(navigation.selected,{record:false});render();rowFor(navigation.selected)?.scrollIntoView({block:'nearest'});}};
+    };
+    const keyup=event=>{if(event.target===entries.get(event.target?.dataset?.component)?.item&&[' ','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))event.stopPropagation();};
+    root.addEventListener('keydown',keydown);root.addEventListener('keyup',keyup);
+    return {element:root,render,focus,setInlineContent(provider){if(provider!==null&&typeof provider!=='function')throw new TypeError('Inline tree content needs a provider or null');inlineContent=provider;signature='';render();},setQuery(value){query=value;signature='';render();onSearch(query);},get query(){return query;},reveal(){navigation.select(navigation.selected,{record:false});render();rowFor(navigation.selected)?.scrollIntoView({block:'nearest'});},dispose(){root.removeEventListener('keydown',keydown);root.removeEventListener('keyup',keyup);for(const entry of entries.values()){entry.line.onclick=null;entry.item.oncontextmenu=null;entry.item.onfocus=null;}entries.clear();visible=[];}};
   };
 })();
 
