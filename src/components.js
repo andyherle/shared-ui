@@ -195,7 +195,7 @@
     let label=row.querySelector(':scope > [data-ui-property-label]');
     if(!label){label=doc.createElement('label');label.dataset.uiPropertyLabel='';label.className='ui-label';row.prepend(label);}
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
-    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto minmax(0,clamp(45%,calc(100% - 2 * var(--ui-control-height) - 10ch),60%))',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
+    row.classList.add('ui-property-row');Object.assign(row.style,{font:'var(--ui-control-font)',display:'grid',gridTemplateColumns:'minmax(0,min(var(--ui-property-label-width,18ch),35%)) minmax(var(--ui-property-actions-width,calc(2 * var(--ui-control-height) + var(--ui-gap))),max-content) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(label.style,{gridColumn:'1',gridRow:'1',minInlineSize:'0',overflowWrap:'anywhere'});
     actions.dataset.uiPropertyActions='';
     Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'max-content',inlineSize:'max-content',maxInlineSize:'none',flexWrap:'nowrap',containerType:'normal',justifyContent:'flex-end'});
@@ -217,7 +217,7 @@
     row.append(actions,control);return {element:row,label,control,actions};
   };
   UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
-    UI.adoptAction(action,{icon,label,iconOnly:true,sprite});
+    UI.adoptAction(action,{icon,label,iconOnly:false,sprite});action.dataset.uiLabel='always';
     const control=UI.adoptPropertyRow(row,{name,control:action});row.classList.add('ui-property-action');row.dataset.uiComponent='property-action';return control;
   };
   const propertyActions=new WeakMap();

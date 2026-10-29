@@ -216,6 +216,8 @@
     if(labelStates)reserveText(text,labelStates);
     if(label!==undefined&&text.textContent!==String(label)){setText(text,label);changed=true;}
     add(element,'ui-action');
+    // Decisions keep their words; callers can still explicitly request a symbol.
+    if(element.dataset.uiVariant==='primary'&&iconOnly!==true&&!element.dataset.uiLabel){element.dataset.uiLabel='always';changed=true;}
     if(element.matches?.('.ui-item,.ui-graphic-action')||element.closest?.('.ui-header,.ui-menu-panel,.ui-field'))setActionLayout(element,'beside');
     if(ariaLabel!==undefined)attr(element,'aria-label',ariaLabel);else if(!element.hasAttribute('aria-label'))attr(element,'aria-label',name);
     if(title!==undefined)attr(element,'title',title);else if(!element.hasAttribute('title'))attr(element,'title',name);

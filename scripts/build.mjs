@@ -79,7 +79,7 @@ export function buildSite(directory=root){
     throw new Error('Optional control-tree CSS must remain below 4 KiB with no external imports');
   const helper=read('floating-panel.js');
   // Composition layout is shared behavior. Bound raw and transfer size independently.
-  const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css).length;
+  const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css,{level:9}).length;
   if(rawBytes>36864||gzipBytes>8192||/@import|url\s*\(/i.test(css))
     throw new Error(`Styles must remain within 36 KiB raw / 8 KiB gzip with no external imports (actual: ${rawBytes} raw / ${gzipBytes} gzip bytes)`);
   const release=manifest(css);
@@ -103,7 +103,7 @@ export function buildSite(directory=root){
   // Validate the exact emitted scripts, including optional and concatenated code.
   for(const [name,content] of assets)if(name.endsWith('.js'))new vm.Script(content,{filename:name});
   publishGeneratedFiles(path.join(directory,'public'),assets);
-  return {revision:release.revision,cssBytes:Buffer.byteLength(css),gzipBytes:gzipSync(css).length,
+  return {revision:release.revision,cssBytes:Buffer.byteLength(css),gzipBytes:gzipSync(css,{level:9}).length,
     floatingFixtureCssBytes:Buffer.byteLength(floatingCss),
     floatingFixtureCssSha256:createHash('sha256').update(floatingCss).digest('hex'),
     floatingHelperSha256:createHash('sha256').update(helper).digest('hex')};

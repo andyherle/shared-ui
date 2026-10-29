@@ -1,5 +1,7 @@
 # Shared UI
 
+**Consistency is the first design priority.** The same component uses the same padding, text sizing, spacing and positional order everywhere. Each semantic role has one shared definition at a given density. Improve the shared owner and catalogue before adopting it in an app; do not create local exceptions for visual novelty or convenience.
+
 One native HTML control language for Aura, StaticRef and Portal. Personal mirrors Postvisual, with explicit overrides available through Studio. Theme, control density and application layout are separate choices.
 
 The package has no runtime dependencies. Shared CSS is bounded to 36 KiB raw and 8 KiB gzip, including the shared floating review panel. Build and source validation use Node's standard library:
@@ -1190,3 +1192,22 @@ Use `createCurveValue(options)` in a property row for a cubic response curve. It
 
 
 Switchable rows in the compact control tree expose a native choices action when `onContextMenu` is supplied. Pointer, touch and keyboard users can open the same application-owned choices; right-click and Shift+F10 remain available. The action never selects a variation by itself, and rows without choices gain no action. Native child controls keep their normal editing keys.
+
+
+### Clear decisions, feedback and removable filters (1.21)
+
+Explicitly visible action labels wrap within narrow buttons instead of overflowing. Primary actions retain their visible caption by default when adopted, including narrow containers and icon appearance. An explicit `iconOnly:true` or `data-ui-label="hidden"` still requests a symbol. Property actions keep the action verb beside the glyph. Existing nodes, native submission and saved appearance remain intact.
+
+Use `.ui-info`, `.ui-success`, `.ui-warning` or `.ui-error` on `.ui-status` or `.ui-tag` for contextual, successful, attention-needed or failed states. Always include meaningful text: colour never replaces the state name. Do not use success to imply that a local override is wrong, or error to mean merely different. Foundations demonstrates this contract in both packs.
+
+Composed fields show one focus ring on the field shell. Explicit `aria-invalid="true"` or native `:user-invalid` marks that same outer border; describe the correction with associated text. Field values, native validation and keyboard behavior stay native.
+
+Pass `summary: host` to `createFilterMenu` with an authored `<div class="ui-actions ui-tags" data-ui-filter-summary aria-label="Active filters"></div>` outside the native details. Active criteria become labelled removable chips; removing one restores just that criterion's configured default. Other filters, disabled controls, drafts and menu state survive. `clear(name)` provides the same operation programmatically; `clear()` clears all enabled criteria. The native form `reset` event refreshes state after the browser restores defaults; a cancelled reset does nothing. Chips retain their nodes through refresh, focus moves to another chip or the filter summary on removal, and disposal removes only owned chips/listeners. The Collection filters catalogue demonstrates this pattern.
+
+Standard property rows bound their label column to 18 characters (or 35% in a narrow panel), reserve two action slots so values stay aligned, and leave the rest for the value. `--ui-property-actions-width` can declare a different shared action gutter. Set `--ui-property-label-width` to tune a domain's label width. This removes wide empty label gutters without compressing native value fields. Compact, leading-actions and trailing layouts retain their existing contracts.
+
+Static responses are cached with gzip level 9. The builder, Studio validator and local host measure/use the same compression; source and generated CSS remain bounded to 36 KiB raw / 8 KiB gzip.
+
+Coarse pointers reset composed-field padding with their 44px density. A comfortable desktop profile no longer leaves oversized internal padding when the same container is used on touch.
+
+Status messages use the reading font; numeric outputs and read-only values retain monospace. Repeatable action completion is announced in the existing polite live region while the action keeps its stable accessible name.

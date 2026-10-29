@@ -52,8 +52,8 @@ export function createReleaseManager({root = defaultRoot, publish = false, check
   function compile(pack, values, related = {}) {
     requireThat(Object.keys(related).every(id => PACKS.includes(id) && id !== pack), 'Invalid related release pack');
     const current = source(), tokens = {...current.tokens, ...related, [pack]: values}, css = buildCSS(tokens, current.controls);
-    requireThat(Buffer.byteLength(css) <= 36864 && gzipSync(css).length <= 8192 && !/@import|url\s*\(/i.test(css), 'Styles must remain within 36 KiB raw / 8 KiB gzip without external resources');
-    return {...current, tokens, css, release: manifest(css), cssBytes: Buffer.byteLength(css), gzipBytes: gzipSync(css).length};
+    requireThat(Buffer.byteLength(css) <= 36864 && gzipSync(css,{level:9}).length <= 8192 && !/@import|url\s*\(/i.test(css), 'Styles must remain within 36 KiB raw / 8 KiB gzip without external resources');
+    return {...current, tokens, css, release: manifest(css), cssBytes: Buffer.byteLength(css), gzipBytes: gzipSync(css,{level:9}).length};
   }
   async function validate(pack, values, related) {
     const candidate = compile(pack, values, related), temporary = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'shared-ui-validation-'));

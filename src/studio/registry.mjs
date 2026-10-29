@@ -191,7 +191,7 @@ export const ROLE_OWNERS = freeze({content:'content-width','visual-card':'visual
   menu: 'menu', 'menu-panel': 'menu', 'form-panel':'form-menu', 'toolbar-secondary':'adaptive-slot', 'secondary-slot':'adaptive-slot', meta: 'text', mono: 'prose', muted: 'text', notice: 'notice', number: 'table',
   option: 'combobox', overflow: 'overflow', pad: 'panel', panel: 'panel', popout: 'popout', primary: 'action', prose: 'prose',
   range: 'range', 'resize-handle': 'table', search: 'text-input', section: 'section', 'section-title': 'text', selectable: 'selection',
-  skeleton: 'skeleton', split: 'split', 'sr-only': 'text', stack: 'stack', status: 'status', success: 'notice', swatch: 'swatch',
+  skeleton: 'skeleton', split: 'split', 'sr-only': 'text', stack: 'stack', status: 'status', info: 'status', success: 'notice', swatch: 'swatch',
   switch: 'switch', table: 'table', 'table-scroll': 'table', tabs: 'tabs', tag: 'tags', tags: 'tags', 'tag-suggestions': 'tags', 'review-dock': 'review-dock', toggle: 'toggle',
   'section-heading':'section-heading', toolbar: 'toolbar', truncate: 'text', value: 'text', 'controller-toggle':'controller-toggle', 'effects-inspector':'effects-inspector', 'property-action':'property-action', 'property-row':'property-row', playhead:'playhead', 'function-value':'function-control', 'value-control': 'value-control', warning: 'notice', color: 'text'
 });

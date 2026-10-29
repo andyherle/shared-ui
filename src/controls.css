@@ -17,7 +17,7 @@
     [data-ui-density=micro] { --ui-gap:2px; --ui-control-height:12px; --ui-field-height:12px; --ui-tag-height:12px; --ui-control-size:10px; --ui-control-leading:1; --ui-control-inset:2px; --ui-control-padding:0 var(--ui-control-inset); --ui-action-icon:10px; --ui-range-thumb:6px; --ui-switch-height:10px; --ui-switch-width:18px; --ui-switch-thumb:6px; --ui-switch-inset:1px; }
   }
   @media(pointer:coarse) {
-    [data-ui], [data-ui-density] { --ui-tag-height:44px; --ui-gap:6px; --ui-control-height:44px; --ui-field-height:44px; --ui-control-size:16px; --ui-control-inset:10px; --ui-control-padding:6px var(--ui-control-inset); }
+    [data-ui], [data-ui-density] { --ui-tag-height:44px; --ui-gap:6px; --ui-control-height:44px; --ui-field-height:44px; --ui-control-size:16px; --ui-control-inset:10px; --ui-control-padding:6px var(--ui-control-inset); --ui-field-padding:var(--ui-control-padding); }
   }
 }
 @layer ui.prose {
@@ -167,7 +167,6 @@
     }
     .ui-toggle {
        --ui-switch-width:22px; --ui-switch-height:14px; --ui-switch-thumb:10px; --ui-switch-inset:1px; 
-      > input { margin:0; }
       &:has(input:disabled) { opacity:.45; cursor:default; }
       & input:focus-visible { outline:0; }
     }
@@ -261,7 +260,6 @@
     .ui-header > :first-child:not(.ui-actions,.ui-action,.ui-field,button,details) { margin-inline-end:auto; }
     .ui-search { inline-size:100%; min-inline-size:min(100%,8rem); }
 :where(.ui-actions,.ui-toolbar,.ui-tags) {
-  &[data-ui-layout=bar] { overflow-x:auto; }
   &[data-ui-layout=bar] > * { flex-shrink:0; }
   > :where(details.ui-disclosure) { inline-size:auto; flex:0 1 auto; }
   > .ui-search { inline-size:12rem; }
@@ -270,7 +268,7 @@
   &[data-ui-align=end] { justify-content:flex-end; }
   &[data-ui-layout=vertical] { flex-direction:column; align-items:stretch; }
   &:where(.ui-inline,[data-ui-layout=inline]) { inline-size:auto; flex:0 1 auto; flex-wrap:wrap; align-items:center; container-type:normal; }
-  &[data-ui-layout=bar] { flex-wrap:nowrap; }
+  &[data-ui-layout=bar] { overflow-x:auto; flex-wrap:nowrap; }
   &[data-ui-layout=wrap] { inline-size:fit-content; container-type:normal; flex-wrap:wrap; }
   &[data-ui-layout=vertical] > * { flex:none; }
   &[data-ui-layout=vertical] > .ui-search { inline-size:100%; }
@@ -279,7 +277,7 @@
     .ui-action {
       &:not(.ui-item,.ui-graphic-action,.ui-app-tile) { flex-direction:var(--ui-action-flow,row); min-inline-size:max(var(--ui-control-height),var(--ui-action-size,0px)); min-block-size:max(var(--ui-control-height),var(--ui-action-size,0px)); }
       &:not(.ui-item,.ui-app-tile,[data-ui-label]) > .ui-label { display:var(--ui-action-caption,inline); }
-      &:has(>svg.ui-icon) > .ui-label { white-space:nowrap; }
+      &:not([data-ui-label=always]):has(>svg.ui-icon) > .ui-label { white-space:nowrap; }
       &[data-ui-label=hidden]:has(>svg.ui-icon) > .ui-label { display:none; }
       &[aria-busy=true]::before { content:""; border:2px solid currentColor; border-inline-end-color:#0000; border-radius:50%; animation:ui-spin .8s linear infinite; }
       &[aria-busy=true] > .ui-icon { display:none; }
@@ -325,7 +323,6 @@
     .ui-choice, .ui-choice > input { margin:0; }
     .ui-pad { padding:calc(var(--ui-gap)*2); }
     .ui-tags { align-items:center; }
-    .ui-tags:empty { display:none; }
     .ui-tag { display:inline-flex; flex:none; white-space:nowrap; align-items:center; gap:var(--ui-gap); min-block-size:var(--ui-tag-height); max-inline-size:100%; padding:var(--ui-tag-padding,var(--ui-control-padding)); border:1px solid var(--ui-line); border-radius:var(--ui-tag-radius,var(--ui-radius-small)); background:var(--ui-surface-soft); color:var(--ui-text); font:500 var(--ui-tag-size,var(--ui-control-size))/var(--ui-control-leading,1.4) var(--ui-tag-font,var(--ui-font)); }
     .ui-tag:is([aria-selected=true],[aria-pressed=true]) { background:var(--ui-accent-soft); border-color:var(--ui-accent); }
     .ui-review-dock { position:absolute; inset:auto 0 0; margin:auto; max-inline-size:var(--ui-dock-width,64rem); }
@@ -363,7 +360,7 @@
     .ui-column-resize::after { clip-path:none; transform:none; inline-size:1px; block-size:100%; border:0; background:var(--ui-line-strong); margin-inline-start:auto; }
     .ui-icon-choice input { position:absolute; inline-size:1px; block-size:1px; opacity:0; }
     :where(input,select,textarea):disabled { opacity:.5; cursor:default; }
-    [readonly],output { font-family:var(--ui-font-mono); }
+    [readonly],output:not(.ui-status) { font-family:var(--ui-font-mono); }
     :where(input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week],[type=file])) { inline-size:100%; min-inline-size:0; max-inline-size:100%; }
     /* WebKit 301648: iOS date/time width includes input padding. Keep the native picker,
        move that padding to its displayed value instead. */
@@ -380,9 +377,10 @@
       > .ui-prose { inline-size:fit-content; max-inline-size:100%; min-inline-size:0; margin:0; padding:3px; cursor:text; user-select:text; -webkit-user-select:text; }
       > .ui-inline-field { inline-size:100%; min-inline-size:0; max-inline-size:100%; padding:3px; text-align:inherit; }
     }
-    [aria-invalid=true] { border-color:var(--ui-bad); }
-    .ui-status:empty { display:none; }
-    .ui-status { display:flex; align-items:center; gap:6px; min-inline-size:0; overflow-wrap:anywhere; color:var(--ui-muted); }
+    [aria-invalid=true],.ui-field:has([aria-invalid=true],:user-invalid) { border-color:var(--ui-bad); }
+
+    .ui-tags:empty,.ui-status:empty { display:none; }
+    .ui-status { display:flex; align-items:center; gap:6px; min-inline-size:0; overflow-wrap:anywhere; }
     .ui-card-container.ui-inline>.ui-item { flex:1; border:0; background:#0000; min-inline-size:0; }
     .ui-notice { padding:12px 14px; overflow-wrap:anywhere; }
     .ui-panel-resize { background:var(--ui-line-strong); background-clip:content-box; }
@@ -391,6 +389,7 @@
     .ui-success { color:var(--ui-good); }
     .ui-error { color:var(--ui-bad); }
     .ui-warning { color:var(--ui-warning); }
+    .ui-info { color:var(--ui-accent); }
     .ui-color { color:var(--ui-color,var(--ui-text)); }
     @media(prefers-reduced-motion:reduce) { :where(button,.ui-button,.ui-card) { transition:none; animation:none!important; } .ui-action::before { animation:none; } }
     @media(forced-colors:active) { :where(button,input,select,textarea,.ui-button) { border-color:ButtonText; } }

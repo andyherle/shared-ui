@@ -1,5 +1,11 @@
 # Shared UI
 
+## First design priority: consistency
+
+Consistency comes before visual novelty or local convenience. The same semantic component must use the same padding, text sizing, spacing and positional order everywhere: catalogue, applications, panels, pop-outs and narrow containers. Compare like roles at the same density; headings, metadata and controls may have different roles, but each role has one shared definition.
+
+Use the shared component and its semantic tokens as the source of truth. Fix inconsistencies at their shared owner, remove superseded overrides, and demonstrate the corrected pattern in the catalogue before consumer adoption. Do not accept a one-off improvement that creates a second version of a common pattern. Responsive reflow may change the layout only through the documented shared behavior; preserve action order, alignment, native state, focus and text. Check padding, type, gaps and placement together in both packs, at narrow and desktop widths.
+
 One repository, two packs: Postvisual and Personal. The shared runtime, build, and local editor have no dependencies outside Node's standard library. Optional MCP development tooling isolates the official SDK in tools/studio-mcp; never add it to the consumer bundle or root build. Keep shared CSS at or below 36 KiB raw / 8 KiB gzip; report both measured values when changing it. The 32 KiB legacy limit was revised for centrally reused composition layout, not to permit unconstrained duplicated app CSS. Validate native rendering, performance and independent app browser fixtures before adoption. This includes common selection, playhead, composed-field and scaled-action roles replacing duplicated app CSS. Delete superseded app paint and shared rules rather than adding compatibility overrides; mark only the bundled UI sheet for replacement.
 
 Edit src, then run npm run check. The build validates inputs before replacing working assets and writes the update manifest last. public is generated deployment output, including synthetic catalogue media. Never copy private application source, client media, credentials, or data into this public repository.

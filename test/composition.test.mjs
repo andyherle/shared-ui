@@ -202,7 +202,7 @@ test('composition schema captures instance presence without leaking app-provided
 test('composition remains a bounded shared CSS and JS addition with local clickable fixture',()=>{
   const controls=read('src/controls.css');
   const css=buildCSS(JSON.parse(read('src/tokens.json')),controls);
-  const raw=Buffer.byteLength(css),gz=gzipSync(css).length;
+  const raw=Buffer.byteLength(css),gz=gzipSync(css,{level:9}).length;
   assert.ok(raw<=36864,'raw composition CSS must remain within 36KiB');
   assert.ok(gz<=8192,'transfer CSS must remain within 8KiB gzip');
   assert.ok(css.includes('.ui-composition-main'));

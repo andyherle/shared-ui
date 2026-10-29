@@ -216,6 +216,8 @@
     if(labelStates)reserveText(text,labelStates);
     if(label!==undefined&&text.textContent!==String(label)){setText(text,label);changed=true;}
     add(element,'ui-action');
+    // Decisions keep their words; callers can still explicitly request a symbol.
+    if(element.dataset.uiVariant==='primary'&&iconOnly!==true&&!element.dataset.uiLabel){element.dataset.uiLabel='always';changed=true;}
     if(element.matches?.('.ui-item,.ui-graphic-action')||element.closest?.('.ui-header,.ui-menu-panel,.ui-field'))setActionLayout(element,'beside');
     if(ariaLabel!==undefined)attr(element,'aria-label',ariaLabel);else if(!element.hasAttribute('aria-label'))attr(element,'aria-label',name);
     if(title!==undefined)attr(element,'title',title);else if(!element.hasAttribute('title'))attr(element,'title',name);
@@ -1030,7 +1032,7 @@
     let label=row.querySelector(':scope > [data-ui-property-label]');
     if(!label){label=doc.createElement('label');label.dataset.uiPropertyLabel='';label.className='ui-label';row.prepend(label);}
     label.textContent=String(name);label.title=String(name);if(input){if(!input.id)input.id='ui-property-'+doc.defaultView.crypto.randomUUID();label.htmlFor=input.id;}
-    row.classList.add('ui-property-row');Object.assign(row.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto minmax(0,clamp(45%,calc(100% - 2 * var(--ui-control-height) - 10ch),60%))',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
+    row.classList.add('ui-property-row');Object.assign(row.style,{font:'var(--ui-control-font)',display:'grid',gridTemplateColumns:'minmax(0,min(var(--ui-property-label-width,18ch),35%)) minmax(var(--ui-property-actions-width,calc(2 * var(--ui-control-height) + var(--ui-gap))),max-content) minmax(0,1fr)',alignItems:'center',gap:'var(--ui-gap)',marginBlock:'0',minInlineSize:'0',inlineSize:'100%'});
     Object.assign(label.style,{gridColumn:'1',gridRow:'1',minInlineSize:'0',overflowWrap:'anywhere'});
     actions.dataset.uiPropertyActions='';
     Object.assign(actions.style,{gridColumn:'2',gridRow:'1',minInlineSize:'max-content',inlineSize:'max-content',maxInlineSize:'none',flexWrap:'nowrap',containerType:'normal',justifyContent:'flex-end'});
@@ -1052,7 +1054,7 @@
     row.append(actions,control);return {element:row,label,control,actions};
   };
   UI.adoptPropertyAction=(row,{name,action,icon,label=name,sprite}={})=>{
-    UI.adoptAction(action,{icon,label,iconOnly:true,sprite});
+    UI.adoptAction(action,{icon,label,iconOnly:false,sprite});action.dataset.uiLabel='always';
     const control=UI.adoptPropertyRow(row,{name,control:action});row.classList.add('ui-property-action');row.dataset.uiComponent='property-action';return control;
   };
   const propertyActions=new WeakMap();
@@ -2137,10 +2139,12 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
   'use strict';
   if(typeof window==='undefined'||!window.SharedUI)return;
   const UI=window.SharedUI;
-  UI.createFilterMenu=(form,{label='Filters',sprite,defaults={},onChange=()=>{}}={})=>{
+  UI.createFilterMenu=(form,{label='Filters',sprite,defaults={},summary:summaryHost=null,onChange=()=>{}}={})=>{
     const element=form?.querySelector('details[data-ui-filter]'),summary=element?.querySelector('summary');
     if(form?.tagName!=='FORM'||!summary)throw new TypeError('Use a native form with details[data-ui-filter] and summary');
-    const doc=form.ownerDocument,view=doc.defaultView,off=[];let disposed=false,active=0;
+    const doc=form.ownerDocument,view=doc.defaultView,off=[];let disposed=false,active=0,resetTimer;
+    const chips=new Map(),host=summaryHost,wasHidden=host?.hidden;
+    if(host&&host.ownerDocument!==doc)throw new TypeError('Filter summary must share the form document');
     const fields=()=>[...(form.elements||form.querySelectorAll('[data-ui-filter-field]'))].filter(f=>f.name&&['INPUT','SELECT','TEXTAREA'].includes(f.tagName)&&f.matches('[data-ui-filter-field]'));
     const baseline=f=>defaults[f.name]??f.dataset.uiFilterDefault??(f.multiple?[]:'');
     const normalize=value=>(Array.isArray(value)?value:[value]).filter(v=>v!==''&&v!=null).map(String).sort();
@@ -2154,11 +2158,28 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
       for(const f of fields()){if(f.disabled||seen.has(f.name))continue;seen.add(f.name);if(JSON.stringify(normalize(state[f.name]))!==JSON.stringify(normalize(baseline(f))))active++;}
       UI.adoptAction(summary,{label:active?`${label} · ${active}`:label,ariaLabel:active?`${label}, ${active} active`:label,icon:'filter',sprite});
       summary.dataset.uiFilterActive=String(active);
+      summary.classList?.toggle('ui-info',active>0);
       for(const clear of form.querySelectorAll('[data-ui-filter-clear]')){if(clear.tagName==='BUTTON')clear.disabled=!active;else clear.setAttribute('aria-disabled',String(!active));}
+      if(host){
+        const names=new Set();
+        for(const f of fields()){
+          if(f.disabled||names.has(f.name)||JSON.stringify(normalize(state[f.name]))===JSON.stringify(normalize(baseline(f))))continue;
+          names.add(f.name);
+          let chip=chips.get(f.name);
+          if(!chip){chip=doc.createElement('button');chip.type='button';chip.className='ui-tag ui-info';chip.dataset.uiLabel='always';chip.dataset.uiFilterName=f.name;host.append(chip);chips.set(f.name,chip);}
+          const caption=f.dataset.uiFilterLabel||f.getAttribute('aria-label')||f.labels?.[0]?.querySelector('.ui-label')?.textContent||f.name;
+          const value=f.tagName==='SELECT'?[...f.selectedOptions].map(o=>o.label||o.textContent).join(', '):normalize(state[f.name]).join(', ');
+          UI.adoptAction(chip,{label:caption+': '+value,ariaLabel:'Clear '+caption+' filter: '+value,icon:'close',sprite});
+          chip.querySelector('.ui-label').classList.add('ui-truncate');
+        }
+        for(const [name,chip] of chips)if(!names.has(name)){const focused=doc.activeElement===chip;chip.remove();chips.delete(name);if(focused)([...chips.values()].find(n=>names.has(n.dataset.uiFilterName))||summary).focus({preventScroll:true});}
+        host.hidden=!active;
+      }
       return state;
     }
     function emit(reason){const state=refresh();if(!disposed)onChange(state,{reason,active});}
-    function clear(){if(disposed)return;for(const f of fields()){
+    function clear(name){if(disposed)return;for(const f of fields()){
+      if(f.disabled||name!==undefined&&f.name!==name)continue;
       const wanted=normalize(baseline(f));
       if(f.type==='radio'||f.type==='checkbox')f.checked=wanted.includes(f.value);
       else if(f.multiple){for(const o of f.options)o.selected=wanted.includes(o.value);}
@@ -2168,9 +2189,11 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     function click(event){if(event.target.closest('[data-ui-filter-clear]')?.closest('form')!==form)return;event.preventDefault();clear();}
     function key(event){if(event.key==='Escape'&&element.open&&!event.defaultPrevented){event.preventDefault();element.open=false;summary.focus({preventScroll:true});}}
     function listen(node,type,fn){node.addEventListener(type,fn);off.push(()=>node.removeEventListener(type,fn));}
+    if(host)listen(host,'click',event=>{const chip=event.target.closest('[data-ui-filter-name]');if(chip&&chips.get(chip.dataset.uiFilterName)===chip){event.preventDefault();clear(chip.dataset.uiFilterName);}});
+    listen(form,'reset',event=>{view.clearTimeout(resetTimer);resetTimer=view.setTimeout(()=>{if(!event.defaultPrevented&&!disposed)emit('reset');},0);});
     listen(form,'input',changed);listen(form,'change',changed);listen(doc,'input',externalChanged);listen(doc,'change',externalChanged);listen(form,'click',click);listen(element,'keydown',key);
     listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
-    function dispose(){if(disposed)return;disposed=true;for(const remove of off)remove();}
+    function dispose(){if(disposed)return;disposed=true;view.clearTimeout(resetTimer);for(const remove of off)remove();for(const chip of chips.values())chip.remove();chips.clear();if(host)host.hidden=wasHidden;}
     refresh();return {element,get values(){return values();},get active(){return active;},refresh,clear,dispose};
   };
 })();
