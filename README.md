@@ -813,7 +813,15 @@ Use `data-ui-header-nav` for optional Home/Back/Exit navigation on the left and
 `data-ui-header-actions` for commands on the right. Mark the native application
 `details.ui-menu` with `data-ui-header-menu`; it stays last, with a `menu` icon
 and a named, hidden `.ui-label`. A launcher link is navigation, never a menu trigger.
-The header can wrap into available container space. Controls use native density;
+The default header can wrap into available container space. For an output workspace
+that must keep one row, use `header.ui-header.ui-toolbar[data-ui-layout="workspace"]`.
+Its direct native navigation and command groups use `data-ui-header-nav` and
+`data-ui-header-actions`. Put a long identity in `.ui-truncate` beside its status
+inside `.ui-actions.ui-inline`. Move secondary controls through `createAdaptiveSlot`
+with a dedicated empty `.ui-secondary-slot` in the menu; never pass an occupied
+command group as the slot. Menus remain visible beyond the header and keyboard
+focus/native fields stay intact. The Control fixture demonstrates this at narrow
+and desktop widths in both packs. Controls use native density;
 content zoom never scales application chrome.
 
 Command panels use `.ui-menu-panel`, independently sized from their trigger and

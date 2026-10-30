@@ -243,6 +243,11 @@
     .ui-floating-handle { flex:1; min-inline-size:0; text-align:start; touch-action:none; cursor:grab; }
     /* shared-floating-panel:end */
 
+    /* Output workspaces keep navigation and decisions on one row. Secondary
+       controls use createAdaptiveSlot; long identity text uses ui-truncate. */
+    .ui-header[data-ui-layout=workspace] {
+      &,.ui-inline { flex-wrap:nowrap; }
+    }
     [data-ui-header-nav] { order:-1; margin-inline-end:auto; }
     [data-ui-header-nav]:empty { display:none; }
     [data-ui-header-menu] { order:1; }
