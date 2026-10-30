@@ -1,0 +1,103 @@
+name: Verify composition resilience
+on:
+  push:
+    branches: [fix/composition-resilience-20261030]
+    paths:
+      - .github/resilience.patch
+      - .github/workflows/resilience-verify.yml
+permissions:
+  contents: read
+concurrency:
+  group: shared-ui-resilience-assembly
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'andyherle/shared-ui' && github.ref == 'refs/heads/fix/composition-resilience-20261030'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply exact tested source
+        shell: bash
+        run: |
+          echo '401fec7bf87b6605396002d58f3d1720581348699af6380c9ed7ba79aca2024e  .github/resilience.patch' | sha256sum -c -
+          git apply --check .github/resilience.patch
+          git apply .github/resilience.patch
+          python3 - <<'PY'
+          import pathlib, hashlib
+          expected = {
+            'docs/COMPOSITION_POLICIES.md': '5daf631910cafd750a9565aa3d964a724e5810c20531cf15cf2d7de32aaaa2d5',
+            'package.json': '21f23af2bd4dd30407b5f72f542b758f684e45dd377d99c7650b8674da8bbf78',
+            'src/runtime.js': 'a6d9184c3c72e97fac90688f18b451b006a461c335dfccf2fd24c1e8dc839bad',
+            'src/studio/editor.mjs': '1feed487a4c91a4d9badad2c1f1b6104a0659eb1e707f5aa0ed4969bb70c086c',
+            'test/composition-policy.browser.mjs': '04362520878fa2c6712622dd18b4baaa4e730e67a407cbfa7711c70ed2e565cf',
+            'test/composition.test.mjs': 'c138f17d59b33a3dba1f202149423e60f67ce38b544586ff741b28a7397ee20d',
+            'src/compositions.js': 'eeb6af09523eb91848837bae40f27567fe854a85ffa1633a4a0ba34fe4669eda',
+            'test/composition-resilience.test.mjs': '280c7a56ecbcd3b1cf574a8b48e7261f41cafe03d7a72dae1f70f7e550d9faae',
+            'test/composition-resilience-browser.html': 'bd319a05e596e671618c434fe957e4886af4920ec394e70afceffcc09d182feb',
+            'docs/COMPOSITION_RESILIENCE.md': 'c726a12859e303f4f9969fd3876c4f0e96ec4e63ee67cd4df83893f113e6a224'
+          }
+          for name, digest in expected.items():
+              assert hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() == digest, 'Source mismatch: ' + name
+          print('All ten changed source files match the tested candidate.')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/resilience.patch .github/workflows/resilience-verify.yml
+          git add docs/COMPOSITION_POLICIES.md package.json src/runtime.js src/studio/editor.mjs test/composition-policy.browser.mjs test/composition.test.mjs
+          git commit -m 'fix: complete layout recovery integration and clearer Studio controls'
+      - name: Source and generated build checks
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check 2>&1 | tee source-validation.log
+          npm ci --prefix tools/studio-mcp --ignore-scripts
+          npm run studio:mcp:check 2>&1 | tee sdk-validation.log
+      - name: Install isolated browser tools
+        run: |
+          npm ci --prefix tools/browser --ignore-scripts
+          ./tools/browser/node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Chromium recovery and Studio checks
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run composition:browser 2>&1 | tee chromium-validation.log
+      - name: WebKit recovery and Studio checks
+        shell: bash
+        run: |
+          set -o pipefail
+          UI_TEST_BROWSER=webkit npm run composition:browser 2>&1 | tee webkit-validation.log
+      - name: Commit generated assets and update only this branch
+        shell: bash
+        run: |
+          git add public
+          if ! git diff --cached --quiet; then git commit -m 'build: generate tested Shared UI 1.20.1 assets'; fi
+          npm run build
+          git diff --exit-code -- public
+          remote_sha="$(git ls-remote origin refs/heads/fix/composition-resilience-20261030 | cut -f1)"
+          test "$remote_sha" = "$GITHUB_SHA" || { echo 'Branch moved; refusing to overwrite concurrent work'; exit 1; }
+          git push origin HEAD:refs/heads/fix/composition-resilience-20261030
+      - name: Preserve exact source and results
+        if: always()
+        shell: bash
+        run: |
+          git rev-parse HEAD > validation-source-sha.txt
+          git archive --format=zip --output=validation-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: composition-resilience-${{ github.run_id }}
+          path: |
+            *validation.log
+            validation-source-sha.txt
+            validation-source.zip
+            test-results/composition-*.json
+          retention-days: 7
+          if-no-files-found: error
