@@ -1,0 +1,65 @@
+<!doctype html><html lang="en" data-ui="personal" data-theme="dark"><meta charset="utf-8">
+<title>Native composition recovery checks</title><link rel="stylesheet" href="/v1/styles.css">
+<script src="/v1/runtime.js"></script><body>
+<output id="result">Running recovery checks…</output><main class="ui-stack ui-pad" id="fixture"></main>
+<script type="module">
+const UI=window.SharedUI, fixture=document.querySelector('#fixture'), results=[];
+UI.instance?.dispose();
+const assert=(condition,message)=>{if(!condition)throw new Error(message);};
+const throws=(action,pattern)=>{try{action();}catch(error){assert(pattern.test(error.message),'Unexpected rejection: '+error.message);return;}throw new Error('Expected rejection');};
+const make=(tag,text)=>{const el=document.createElement(tag);if(text)el.textContent=text;return el;};
+try {
+ for(const pack of ['personal','postvisual'])for(const theme of ['dark','light']){
+  document.documentElement.dataset.ui=pack;document.documentElement.dataset.theme=theme;
+  const scope=UI.createCompositionScope(), form=make('form');fixture.append(form);
+  const field=make('input');field.name='draft';field.setAttribute('aria-label','Recovery draft');field.value='Keep this exact draft';
+  const a=UI.createComposition('control-group',{header:make('h3','First group'),body:field},{scope});
+  const b=UI.createComposition('control-group',{header:make('h3','Second group'),body:make('textarea')},{scope});
+  form.append(a.element,b.element);field.focus();field.setSelectionRange(2,7);
+  const before=form.innerHTML;
+  let records=[];const observer=new MutationObserver(changes=>records.push(...changes));observer.observe(form,{attributes:true,childList:true,subtree:true});
+  scope.setDefaults({},{expectedRevision:0});a.setLayout({});await Promise.resolve();
+  assert(records.length===0,'A no-op update must not change any DOM attribute or child');
+  const nativeClass=Object.getOwnPropertyDescriptor(Element.prototype,'className');let injected=false;
+  Object.defineProperty(b.slots.body,'className',{configurable:true,get(){return nativeClass.get.call(this);},set(value){
+   nativeClass.set.call(this,value);if(!injected&&value==='ui-grid'){injected=true;throw Error('Injected browser write failure');}
+  }});
+  throws(()=>scope.setDefaults({'control-group':{variant:'grid'}},{expectedRevision:1}),/Injected/);
+  delete b.slots.body.className;
+  assert(form.innerHTML===before,'A failed batch must restore exact owned presentation');
+  assert(scope.getState().revision===1&&!scope.getState().recoveryRequired,'A recoverable failure keeps its revision and allows retry');
+  assert(document.activeElement===field&&field.value==='Keep this exact draft'&&field.selectionStart===2&&field.selectionEnd===7,'Rollback must retain active native editing');
+  scope.setDefaults({'control-group':{variant:'grid'}},{expectedRevision:1});
+  assert(a.getConfiguration().variant==='grid'&&b.getConfiguration().variant==='grid','Exact retry completes both instances');
+  assert(field.form===form&&new FormData(form).get('draft')==='Keep this exact draft','Original form still owns the field');
+  observer.disconnect();a.dispose();b.dispose();scope.dispose();form.remove();
+  results.push({pack,theme,test:'zero-write no-op, exact rollback, retry, focus, selection and form ownership'});
+ }
+ // Exercise the workspace structure as well as the simpler control-group structure.
+ const form=make('form');fixture.append(form);const field=make('input');field.name='workspace';field.value='Workspace draft';
+ const workspace=UI.createComposition('review-workspace',{header:make('h3','Review'),body:field});
+ workspace.setLayout({overrides:{gap:'8px',aside:'22rem',reason:'Synthetic existing workspace'}});
+ const root=workspace.element;workspace.dispose();form.append(root);field.focus();field.setSelectionRange(1,5);
+ const snapshot=root.outerHTML;
+ throws(()=>UI.adoptComposition(root,{overrides:{}}),/typed overrides/);
+ assert(root.outerHTML===snapshot,'Rejected adoption must leave overrides intact');
+ let handle=UI.adoptComposition(root,{overrides:{gap:'8px',aside:'22rem',reason:'Synthetic existing workspace'}});
+ assert(document.activeElement===field&&field.selectionStart===1,'Workspace adoption preserves live field selection');
+ handle.setLayout({overrides:{}});assert(root.style.getPropertyValue('--ui-composition-gap')==='','Explicit reset removes the override');
+ handle.dispose();
+ for(let n=0;n<50;n++){
+  handle=UI.adoptComposition(root);handle.setLayout({variant:n%2?'stack':'split'});handle.dispose();
+  assert(root.querySelector('input')===field&&field.form===form,'Repeated adoption retains the original field and form');
+ }
+ assert(field.value==='Workspace draft','Repeated adoption retains unsaved text');
+ form.remove();results.push({test:'workspace adoption, declared overrides, explicit reset and 50 mount/dispose cycles'});
+ // Cross-realm plain records must work; rejected accessors must not execute.
+ const iframe=make('iframe');fixture.append(iframe);let reads=0;
+ const candidate=new iframe.contentWindow.Object();candidate['control-group']={variant:'grid'};
+ const scope=UI.createCompositionScope(candidate);assert(scope.getState().defaults['control-group'].variant==='grid','Accept an ordinary record from another window');scope.dispose();iframe.remove();
+ throws(()=>UI.createCompositionScope({get ['control-group'](){reads++;return {variant:'grid'};}}),/defaults/);
+ assert(reads===0,'Reject getters without execution');
+ document.querySelector('#result').textContent='PASS: '+JSON.stringify(results);
+ document.documentElement.dataset.testResult='pass';
+}catch(error){document.querySelector('#result').textContent=error.stack;document.documentElement.dataset.testResult='fail';}
+</script></body></html>
