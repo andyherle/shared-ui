@@ -58,6 +58,8 @@ export interface DebugPanel {
   destroy(): void;
 }
 export interface DebugOptions {
+  /** Existing dock header for the same native controls, outside the scrolling body. */
+  controlsHost?: HTMLElement | null;
   document?: Document;
   adapter?: DebugAdapter | null;
   title?: string;

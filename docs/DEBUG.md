@@ -113,3 +113,5 @@ The base CSS remains 36,272 bytes raw / 8,179 gzip. The optional component has i
 ## Verification
 
 `npm test` includes packet normalization, missing data, range semantics, spike/gap preservation, real-record machine formatting and atomic integrity installation. `node test/debug.browser.mjs` is an optional Playwright acceptance script (Playwright belongs to the testing environment, not the package/runtime dependency list). It checks both packs and themes at three widths, seven views, independent freeze and filtering, keyboard sample inspection, async ordering, extension disposal and multiple hosts. The public fixtures are deliberately synthetic.
+
+Pass `controlsHost` as an existing same-document header to keep view selection, filters, Freeze and Copy above a separately scrolling dock body. The component retains those native nodes and owns their visibility and disposal. Other host content remains untouched. The second catalogue example demonstrates this placement.

@@ -904,13 +904,13 @@ Content-oriented inline editing retains its explicit role.
 
 ## Optional debug console
 
-The reusable [debug console](docs/DEBUG.md) provides evaluated-state tables, sampled all-channel plots, lane views and machine-style diagnostic traces. It is a separate reviewed add-on, with a portable packet/adapter API and no application state or transport. Open `public/debug.html` for the interactive synthetic fixtures.
+The reusable [debug console](docs/DEBUG.md) provides evaluated-state tables, sampled all-channel plots, lane views and machine-style diagnostic traces. It is a separate reviewed add-on, with a portable packet/adapter API and no application state or transport. Pass `controlsHost: header` to keep the same view, filter, Freeze and Copy controls in a dock header above its scrolling body. The host must share the panel document; visibility and disposal cover both surfaces and leave other host content intact. Open `public/debug.html` for the interactive synthetic fixtures, including an external tools header.
 
 ### Independent workspace panels and timeline scrubber
 
 `SharedUI.createPanelToggles({items, selected, maxSelected:2, onChange})` connects native buttons and existing panel elements. Each item is `{id,button,panel}`. Buttons retain independent `aria-pressed` states; a second press closes a panel. At most two panels are visible, replacing the oldest selection when a third opens. `show(id)` reveals a panel without toggling it closed; `dispose()` releases listeners. Host layout owns panel placement.
 
-For native line playheads, load the optional, separately validated `v1/timeline.css` with `scripts/install-timeline.mjs`, then add `data-ui-timeline` to `.ui-range`. `.ui-timeline-ticks` shares tick typography and line paint; hosts position ticks using actual frame bounds. The base CSS budget is unchanged.
+For native line playheads, load the optional, separately validated `v1/timeline.css` with `scripts/install-timeline.mjs`, then add `data-ui-timeline` to `.ui-range`. `.ui-timeline-ticks` shares tick typography and line paint; hosts position ticks using actual frame bounds. Keep a native Loop toggle and loop-range field in the transport `.ui-toolbar`, outside timing disclosures. The app owns playback and In/Out; paused scrubbing uses the complete timeline and never clips to loop marks. Put each independent panel’s `.ui-toolbar` immediately before its scrolling body, retaining the same controls when switching or splitting panels. The catalogue demonstrates the exposed native loop control. The base CSS budget is unchanged.
 
 ### Section actions and preview inspection
 

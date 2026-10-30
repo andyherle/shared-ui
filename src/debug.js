@@ -66,8 +66,9 @@
   }
   UI.debugModel=Object.freeze({normalize,extent,range,decimate,nearest,format,programLine,limits:LIMITS});
 
-  UI.createDebugPanel=function createDebugPanel({document:doc=globalThis.document,adapter=null,title='Debug',view='overview',onError=()=>{},sprite}={}) {
+  UI.createDebugPanel=function createDebugPanel({document:doc=globalThis.document,adapter=null,title='Debug',view='overview',onError=()=>{},sprite,controlsHost=null}={}) {
     if(!doc?.createElement)throw new Error('A DOM document is required');
+    if(controlsHost&&controlsHost.ownerDocument!==doc)throw new Error('Debug controls must share their panel document');
     const win=doc.defaultView,off=[],custom=new Map();
     let packet=normalize({version:1,title}),pending=null,frozen=false,disposed=false,visible=true,intersecting=true,request=0,page=0,hover=null,unsubscribe=null,connection=0,plugin=null;
     const selected=new Set();let selectAll=true;
@@ -99,7 +100,9 @@
     body.append(metrics,graphs,trace,raw);
     const foot=make('footer','ui-debug-foot'),status=make('output','ui-debug-status'),prev=action('Previous page','chevron-left'),next=action('Next page','chevron-right'),pagination=make('div','ui-actions');pagination.append(prev,next);
     foot.append(status,pagination);
-    root.append(head,filters,body,foot,colorProbe);
+    const externalControls=controlsHost?make('div','ui-debug ui-chrome'):null;
+    if(externalControls){externalControls.setAttribute('aria-label',title+' tools');externalControls.append(head,filters);controlsHost.append(externalControls);root.append(body,foot,colorProbe);}
+    else root.append(head,filters,body,foot,colorProbe);
     const nodes=new Map();let channelSignature='',groupSignature='',dirty=true;
     function report(error){status.textContent=String(error?.message||error);onError(error);}
     function shownChannels(){const term=search.value.toLowerCase();return packet.channels.filter(channel=>(selectAll||selected.has(channel.id))&&(!group.value||channel.group===group.value)&&(!term||[channel.id,channel.label,channel.group].some(value=>value.toLowerCase().includes(term))));}
@@ -177,7 +180,7 @@
     function setView(id){if(!modeLabels[id]&&!custom.has(id))throw new Error('Unknown debug view: '+id);plugin?.destroy?.();plugin=null;body.querySelector('.ui-debug-custom')?.remove();modes.value=id;page=0;hover=null;if(custom.has(id)){const container=make('section','ui-debug-custom');body.append(container);plugin=custom.get(id).mount(container,{document:doc,format});}mark();}
     function update(input){if(disposed)return;const nextPacket=normalize(input);if(frozen){pending=nextPacket;return;}if(nextPacket.epoch!==packet.epoch){page=0;hover=null;selected.clear();selectAll=true;}packet=nextPacket;mark();}
     function setFrozen(value){frozen=Boolean(value);freeze.setAttribute('aria-pressed',String(frozen));UI.setActionLabel?.(freeze,frozen?'Resume':'Freeze',{icon:frozen?'play':'pause',ariaLabel:frozen?'Resume':'Freeze',title:frozen?'Resume debug updates':'Freeze this debug snapshot',labelStates:['Freeze','Resume'],sprite});if(!frozen&&pending){const p=pending;pending=null;update(p);}mark();}
-    function setVisible(value){visible=Boolean(value);root.hidden=!visible;if(!visible&&request){win.cancelAnimationFrame(request);request=0;}if(visible)mark();}
+    function setVisible(value){visible=Boolean(value);root.hidden=!visible;if(externalControls)externalControls.hidden=!visible;if(!visible&&request){win.cancelAnimationFrame(request);request=0;}if(visible)mark();}
     function connect(source){unsubscribe?.();unsubscribe=null;const id=++connection;let received=false;if(!source)return;const receive=value=>{if(!disposed&&id===connection)try{update(value);}catch(error){report(error);}};const fail=error=>{if(!disposed&&id===connection)report(error);};try{if(source.subscribe)unsubscribe=source.subscribe(value=>{received=true;receive(value);})||null;Promise.resolve(source.snapshot?.()).then(value=>{if(value&&!received)receive(value);},fail);}catch(error){fail(error);}}
     listen(modes,'change',()=>setView(modes.value));listen(search,'input',()=>{page=0;mark();});listen(group,'change',()=>{page=0;mark();});listen(scale,'change',mark);
     listen(freeze,'click',()=>setFrozen(!frozen));listen(prev,'click',()=>{page--;mark();});listen(next,'click',()=>{page++;mark();});
@@ -192,7 +195,7 @@
     const api={element:root,update,connect,setView,setFrozen,setVisible,refresh:mark,
       getState:()=>({view:modes.value,frozen,visible,epoch:packet.epoch,channels:packet.channels.length,cursor:packet.cursor}),
       registerView(spec){if(!spec?.id||typeof spec.mount!=='function'||modeLabels[spec.id]||custom.has(spec.id))throw new Error('A debug view needs a unique ID and mount callback');custom.set(spec.id,spec);const option=make('option','',text(spec.label||spec.id));option.value=spec.id;modes.append(option);return()=>{if(modes.value===spec.id)setView('overview');custom.delete(spec.id);option.remove();};},
-      destroy(){if(disposed)return;disposed=true;connection++;unsubscribe?.();plugin?.destroy?.();resize?.disconnect();intersection?.disconnect();if(request)win.cancelAnimationFrame(request);for(const remove of off)remove();root.remove();pending=null;nodes.clear();custom.clear();}
+      destroy(){if(disposed)return;disposed=true;connection++;unsubscribe?.();plugin?.destroy?.();resize?.disconnect();intersection?.disconnect();if(request)win.cancelAnimationFrame(request);for(const remove of off)remove();root.remove();externalControls?.remove();pending=null;nodes.clear();custom.clear();}
     };
     if(adapter)connect(adapter);mark();return api;
   };
