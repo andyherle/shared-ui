@@ -253,3 +253,48 @@ test('compositions with required slots insert atomically and nodes move between 
   assert.deepEqual(h.read().document.nodes.save.bindings, {activate: 'save'});
   assert.deepEqual(h.read().document.nodes.decisions.slots.children, ['cancel']);
 });
+
+
+test('shared layout commands use the normal revision, replay, snapshots and undo service',t=>{
+  const h=harness(t),document=fixture();
+  document.nodes.review.componentId='review-workspace';delete document.nodes.review.layout;
+  document.nodes.review.props={variant:'split'};document.nodes.review.slots={header:['title'],body:['decisions']};
+  h.create(document);
+  const command={type:'set-composition-defaults',defaults:{'review-workspace':{variant:'stack'},'control-group':{variant:'grid'}}};
+  const changed=h.send(command,1,'review','shared-layout-once');
+  assert.equal(h.read().document.compositionDefaults['review-workspace'].variant,'stack');
+  assert.equal(h.read().document.nodes.review.props.variant,'split');
+  assert.deepEqual(h.read().document.nodes.save.bindings,{activate:'save'});
+  assert.throws(()=>h.send(command,1),errorCode('REVISION_CONFLICT'));
+  const replay=h.open().dispatch(message('document.command',{documentId:'review',expectedRevision:1,operationId:'shared-layout-once',command}));
+  assert.equal(replay.replayed,true);assert.equal(replay.revision,changed.revision);
+  h.send({type:'save-version',versionId:'layout-policy',name:'Shared layouts'},2);
+  const reset=h.send({type:'reset-composition-layout',nodeId:'review'},3);
+  assert.equal(h.read().document.nodes.review.props.variant,undefined);
+  h.send({type:'undo',operationId:reset.operationId},4);assert.equal(h.read().document.nodes.review.props.variant,'split');
+  h.send({type:'set-composition-defaults',defaults:{}},5);assert.equal(h.read().document.compositionDefaults,undefined);
+  h.send({type:'restore-version',versionId:'layout-policy'},6);
+  assert.equal(h.read().document.compositionDefaults['control-group'].variant,'grid');
+  assert.equal(h.open().dispatch(message('document.read',{documentId:'review'})).revision,7);
+});
+
+test('invalid layout policy and unsuitable reset preserve the complete original document',t=>{
+  const h=harness(t);h.create();const before=fs.readFileSync(path.join(h.directory,'studio.json'));
+  for(const command of [
+    {type:'set-composition-defaults',defaults:{'review-workspace':{variant:'absolute'}}},
+    {type:'set-composition-defaults',defaults:{'control-group':{onClick:'run()'}}},
+    {type:'set-composition-defaults',defaults:{'invented':{variant:'stack'}}},
+    {type:'reset-composition-layout',nodeId:'save'}
+  ])assert.throws(()=>h.send(command,1),errorCode('INVALID_INPUT'));
+  assert.deepEqual(fs.readFileSync(path.join(h.directory,'studio.json')),before);
+});
+
+test('native control group authors only valid content slots through the existing commands',t=>{
+  const h=harness(t),document=fixture();
+  document.nodes.review.componentId='control-group';delete document.nodes.review.layout;
+  document.nodes.review.props={variant:'inherit',open:false};document.nodes.review.slots={header:['title'],body:['decisions']};
+  h.create(document);h.send({type:'set-composition-defaults',defaults:{'control-group':{variant:'grid'}}},1);
+  assert.equal(h.read().document.nodes.review.props.open,false);
+  assert.throws(()=>h.send({type:'move-node',nodeId:'save',parentId:'review',slot:'header',index:1},2));
+  assert.deepEqual(h.read().document.nodes.decisions.slots.children,['save','cancel']);
+});

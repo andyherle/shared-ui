@@ -1,6 +1,11 @@
-import {getComponent} from './registry.mjs';
+import {getComponent, validateCompositionDefaults as validateRegistryDefaults} from './registry.mjs';
 import {resolveScopedTokens, resolveTokenGraph} from './tokens.mjs';
 import {SCHEMA_VERSION, ID_PATTERN, identifier, integer, json, object, requireThat, string, validateValue} from './validation.mjs';
+
+function validateCompositionDefaults(value) {
+  try { return validateRegistryDefaults(value); }
+  catch (error) { requireThat(false, error.message); }
+}
 
 export function validateViews(views) {
   requireThat(Array.isArray(views) && views.length <= 1000, 'Invalid view registrations');
@@ -19,7 +24,8 @@ export function validateViews(views) {
 }
 export function validateDocument(input, {views, catalogue, icons}) {
   const document = json(input);
-  object(document, 'document', ['schemaVersion', 'kind', 'name', 'target', 'pack', 'mode', 'density', 'root', 'nodes', 'tokens']);
+  object(document, 'document', ['schemaVersion', 'kind', 'name', 'target', 'pack', 'mode', 'density', 'root', 'nodes', 'tokens', 'compositionDefaults']);
+  validateCompositionDefaults(document.compositionDefaults ?? {});
   requireThat(document.schemaVersion === SCHEMA_VERSION, 'Unsupported document schema');
   requireThat(['composition', 'variation', 'tokens'].includes(document.kind), 'Unsupported document kind');
   string(document.name, 'document name');
@@ -53,10 +59,10 @@ export function validateDocument(input, {views, catalogue, icons}) {
       requireThat(Object.hasOwn(view.bindings, ref) && view.bindings[ref] === component.bindings[slot], `Incompatible binding: ${slot} → ${ref}`, 'INCOMPATIBLE_BINDING');
     }
     for (const token of Object.keys(node.tokens)) requireThat(component.tokens.includes(token), `Token is not declared by ${component.id}: ${token}`);
-    if (component.id === 'review-workspace') {
+    if (component.composition) {
       const overridden = Object.keys(node.tokens).length > 0;
       requireThat(!overridden || typeof node.props.overrideReason === 'string' && node.props.overrideReason.trim().length >= 4,
-        'Review workspace custom tokens need a visible overrideReason');
+        'Composition custom tokens need a visible overrideReason');
       // A reason may be staged first so Studio's separate set-props/set-token commands remain usable.
     }
     resolveScopedTokens(catalogue, document.tokens, node.tokens, id);
@@ -100,6 +106,8 @@ export const COMMANDS = {
   rename: command('Rename this working document.', {name: stringSchema}),
   'set-context': command('Choose one of the two packs, theme and density for this draft.', {pack: {enum: ['postvisual', 'personal']}, mode: {enum: ['light', 'dark']}, density: {enum: ['default', 'compact', 'dense', 'micro', 'comfortable']}}),
   'remove-node': command('Remove a node and its descendants; required slots remain validated.', {nodeId: idSchema}),
+  'set-composition-defaults': command('Replace shared layout defaults in this draft. Empty settings inherit registry defaults. Does not publish or edit a live application.', {defaults: recordSchema}),
+  'reset-composition-layout': command('Remove this instance layout pins and resume shared inheritance. Values, bindings, and tokens remain unchanged.', {nodeId:idSchema}),
   'set-props': command('Update declared props without changing bindings or node identity.', {nodeId: idSchema, props: recordSchema}),
   'set-bindings': command('Explicitly choose typed binding references from the registered view.', {nodeId: idSchema, bindings: recordSchema}),
   'set-token': command('Override one typed token at document scope or on one node.', {nodeId: idSchema, token: {type: 'string'}, value: {oneOf: [{type: 'string'}, {type: 'number'}, {type: 'object', properties: {ref: {type: 'string'}}, required: ['ref'], additionalProperties: false}]}}, ['token', 'value']),
@@ -154,6 +162,16 @@ export function applyCommand(state, command) {
       for (const parent of Object.values(document.nodes)) for (const children of Object.values(parent.slots)) {
         const index = children.indexOf(command.nodeId); if (index !== -1) children.splice(index, 1);
       }
+      break;
+    }
+    case 'set-composition-defaults':
+      validateCompositionDefaults(command.defaults);
+      if (Object.keys(command.defaults).length) document.compositionDefaults = json(command.defaults); else delete document.compositionDefaults;
+      break;
+    case 'reset-composition-layout': {
+      const target = node(document, command.nodeId), contract = getComponent(target.componentId)?.composition;
+      requireThat(contract, 'Node is not a shared composition');
+      for (const key of Object.keys(contract.settings)) delete target.props[key];
       break;
     }
     case 'set-props': Object.assign(node(document, command.nodeId).props, command.props); break;

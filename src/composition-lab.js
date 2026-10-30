@@ -148,5 +148,34 @@
     const value=query.get(parameter);
     if(value&&[...target.options].some(item=>item.value===value))target.value=value;
   }
+
+  // A linked policy is shared by both synthetic views. The fields remain app-owned.
+  const policyDemo=mk('section','ui-stack');policyDemo.id='composition-policy-demo';
+  policyDemo.append(mk('h3','ui-section-title','Change one shared layout'));
+  policyDemo.append(mk('p','ui-meta','Both groups follow one setting. Local choices remain explicit. These are synthetic views.'));
+  const policyActions=mk('div','ui-actions'),layoutLabel=mk('label','ui-field'),layoutCaption=mk('span','ui-label','Group layout');
+  const layout=mk('select');layout.setAttribute('aria-label','Shared control group layout');
+  for(const [value,label]of [['stack','Stack'],['grid','Grid']]){const option=mk('option',null,label);option.value=value;layout.append(option);}
+  layoutLabel.append(layoutCaption,layout);policyActions.append(layoutLabel);
+  const output=mk('output','ui-meta');output.setAttribute('aria-live','polite');
+  const scope=UI.createCompositionScope(),groups=[];
+  const views=mk('div','ui-grid');
+  for(const [index,label]of ['First view','Second view'].entries()){
+    const fields=[];
+    for(const name of ['Name','Description']){
+      const fieldLabel=mk('label','ui-field'),caption=mk('span','ui-label',name),input=mk('input');
+      input.setAttribute('aria-label',label+' '+name.toLowerCase());input.value='Synthetic '+name.toLowerCase();
+      fieldLabel.append(caption,input);fields.push(fieldLabel);
+    }
+    const group=UI.createComposition('control-group',{header:mk('h4','ui-section-title',label),body:fields},{scope,instanceId:'policy-view-'+index});
+    groups.push(group);views.append(group.element);
+  }
+  const pinLabel=mk('label','ui-check'),pin=mk('input');pin.type='checkbox';pinLabel.append(pin,mk('span',null,'Keep second view stacked'));
+  function showPolicy(){const state=scope.getState();output.textContent=state.registered+' linked groups · second view '+groups[1].getConfiguration().layoutSources.variant;}
+  layout.addEventListener('change',()=>{scope.setDefaults({'control-group':{variant:layout.value}},{expectedRevision:scope.getState().revision});showPolicy();});
+  pin.addEventListener('change',()=>{groups[1].setLayout({variant:pin.checked?'stack':null});showPolicy();});
+  policyActions.append(action('Use source defaults','refresh',()=>{scope.setDefaults({},{expectedRevision:scope.getState().revision});layout.value='stack';showPolicy();}));
+  policyDemo.append(policyActions,pinLabel,views,output);host.parentElement.append(policyDemo);showPolicy();
+
   showState();updateLayout();
 })();

@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import vm from 'node:vm';
 import {gzipSync} from 'node:zlib';
+import {COMPOSITION_CONTRACTS} from '../src/studio/registry.mjs';
 import {resolvePacks} from '../src/packs.mjs';
 import {publishGeneratedFiles} from './generated-files.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -78,6 +79,7 @@ export function buildSite(directory=root){
   if(Buffer.byteLength(controlTreeCss)>4096||gzipSync(controlTreeCss).length>1536||/@import|url\s*\(/i.test(controlTreeCss))
     throw new Error('Optional control-tree CSS must remain below 4 KiB with no external imports');
   const helper=read('floating-panel.js');
+  const compositions='if(typeof window!=="undefined"&&window.SharedUI)window.SharedUI.compositionContracts='+JSON.stringify(COMPOSITION_CONTRACTS)+';\n'+read('compositions.js');
   // Composition layout is shared behavior. Bound raw and transfer size independently.
   const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css).length;
   if(rawBytes>36864||gzipBytes>8192||/@import|url\s*\(/i.test(css))
@@ -93,7 +95,8 @@ export function buildSite(directory=root){
     ...debugAssets(directory,compactCSS),...timelineAssets(directory,compactCSS),
     ['debug.html',read('debug-lab.html').replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],['debug-lab.js',read('debug-lab.js')],
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],['v1/control-tree.css',controlTreeCss],
-    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('filters.js')+'\n'+read('compositions.js')+'\n'+helper+'\n'+read('diagnostics.js')],
+    ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('filters.js')+'\n'+compositions+'\n'+helper+'\n'+read('diagnostics.js')],
+    ['v1/compositions.js',compositions],
     ['v1/floating-panel.fixture.css',floatingCss],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],

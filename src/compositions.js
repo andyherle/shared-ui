@@ -1,122 +1,256 @@
-/* Native canonical compositions: shells only, no app state, transport or listeners. */
+/* Canonical native compositions. The build projects contracts from Studio's registry.
+ * Scope state is presentation only: no transport, storage, app values or callbacks. */
 (() => {
   'use strict';
   if (typeof window === 'undefined' || !window.SharedUI) return;
-  const UI = window.SharedUI;
-  const ID = 'review-workspace', REVISION = '1';
-  const SLOTS = ['header', 'toolbar', 'filters', 'body', 'aside', 'footer'];
-  const VARIANTS = ['standard', 'split', 'stack'];
-  const CROWDING = ['wrap', 'scroll', 'priority'];
-  const OVERRIDES = Object.freeze({
-    gap: {property: '--ui-composition-gap', min: 0, max: 64, units: ['px', 'rem', 'em']},
-    aside: {property: '--ui-composition-aside', min: 0, max: 640, units: ['px', 'rem', 'em', '%']}
-  });
-  const plain = value => value && typeof value === 'object' && !Array.isArray(value);
+  const UI = window.SharedUI, contracts = UI.compositionContracts;
+  if (!contracts) throw new Error('Composition registry is missing; install the complete shared bundle');
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+  const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const copy = value => JSON.parse(JSON.stringify(value));
+  const freeze = value => { if (value && typeof value === 'object') {Object.values(value).forEach(freeze); Object.freeze(value);} return value; };
+  freeze(contracts);
+  const scopes = new WeakMap(), owners = new WeakMap();
+  const getContract = id => {
+    if (!own(contracts, id)) throw new TypeError('Unknown canonical composition: ' + id);
+    return contracts[id];
+  };
+  function keys(value, allowed, message) {
+    if (!plain(value) || Object.keys(value).some(key => !allowed.includes(key))) throw new TypeError(message);
+  }
   function length(value, spec, name) {
     const match = typeof value === 'string' && /^(\d+(?:\.\d+)?|\.\d+)(px|rem|em|%)$/.exec(value);
     if (!match || !spec.units.includes(match[2])) throw new TypeError('Invalid ' + name + ' length');
-    const amount = Number(match[1]), unit = match[2], max = unit === '%' ? (name === 'aside' ? 60 : 100) : unit === 'rem' || unit === 'em' ? (name === 'aside' ? 40 : 4) : spec.max;
-    const min = name === 'aside' ? unit === 'px' ? 128 : unit === '%' ? 15 : 8 : 0;
+    const amount = Number(match[1]), unit = match[2];
+    const min = unit === '%' ? spec.percentMin : unit === 'px' ? spec.min : spec.relativeMin ?? spec.min;
+    const max = unit === '%' ? spec.percentMax : unit === 'px' ? spec.max : spec.relativeMax;
     if (!Number.isFinite(amount) || amount < min || amount > max) throw new RangeError('Out-of-range ' + name);
     return value;
   }
-  function configuration(options = {}) {
-    if (!plain(options) || Object.keys(options).some(key => !['variant', 'crowding', 'overrides', 'instanceId', 'document'].includes(key)))
-      throw new TypeError('Unknown composition option');
-    const variant = options.variant ?? 'standard', crowding = options.crowding ?? 'wrap';
-    if (!VARIANTS.includes(variant) || !CROWDING.includes(crowding)) throw new TypeError('Unknown composition variant or crowding');
-    const raw = options.overrides ?? {}, overrides = {};
-    if (!plain(raw) || Object.keys(raw).some(key => !['gap', 'aside', 'reason'].includes(key))) throw new TypeError('Unknown composition override');
-    for (const [key, spec] of Object.entries(OVERRIDES)) {
-      if (raw[key] !== undefined) overrides[key] = length(raw[key], spec, key);
+  function validateDefaults(value) {
+    keys(value, Object.keys(contracts), 'Unknown composition defaults');
+    const result = {};
+    for (const [id, settings] of Object.entries(value)) {
+      const contract = getContract(id); keys(settings, Object.keys(contract.settings), 'Unknown composition setting');
+      const values = {};
+      for (const [key, setting] of Object.entries(settings)) {
+        if (!contract.settings[key].values.includes(setting)) throw new TypeError('Invalid ' + id + '.' + key);
+        values[key] = setting;
+      }
+      if (Object.keys(values).length) result[id] = values;
     }
-    const count = Object.keys(overrides).length;
-    if (count) {
-      if (typeof raw.reason !== 'string' || raw.reason.trim().length < 4 || raw.reason.length > 200 ||
-          /[\u0000-\u001f\u007f]/.test(raw.reason)) throw new TypeError('Layout overrides need a concise reason');
+    return result;
+  }
+  function configuration(contract, options = {}, previous = {local:{}, overrides:{}}) {
+    keys(options, [...Object.keys(contract.settings), 'overrides'], 'Unknown composition option');
+    const local = {...previous.local};
+    for (const [key, value] of Object.entries(options)) if (own(contract.settings, key)) {
+      if (value === null || value === 'inherit') delete local[key];
+      else {
+        if (!contract.settings[key].values.includes(value)) throw new TypeError('Unknown composition ' + key);
+        local[key] = value;
+      }
+    }
+    const raw = options.overrides === undefined ? previous.overrides : options.overrides, overrides = {};
+    keys(raw, [...Object.keys(contract.overrides), 'reason'], 'Unknown composition override');
+    for (const [key, spec] of Object.entries(contract.overrides)) if (raw[key] !== undefined) overrides[key] = length(raw[key], spec, key);
+    if (Object.keys(overrides).length) {
+      if (typeof raw.reason !== 'string' || raw.reason.trim().length < 4 || raw.reason.length > 200 || /[\u0000-\u001f\u007f]/.test(raw.reason))
+        throw new TypeError('Layout overrides need a concise reason');
       overrides.reason = raw.reason.trim();
     } else if (raw.reason !== undefined) throw new TypeError('Reason without a layout override');
-    return {variant, crowding, overrides};
+    return {local, overrides};
+  }
+  function resolve(contract, config, defaults) {
+    const values = {}, sources = {};
+    for (const [key, rule] of Object.entries(contract.settings)) {
+      values[key] = own(config.local, key) ? config.local[key] : defaults[contract.id]?.[key] ?? rule.default;
+      sources[key] = own(config.local, key) ? 'instance' : own(defaults[contract.id] ?? {}, key) ? 'scope' : 'shared';
+    }
+    return {values, sources};
+  }
+  function instance(value) {
+    if (value !== undefined && (typeof value !== 'string' || !/^[a-z][a-z0-9.-]{0,79}$/.test(value))) throw new TypeError('Invalid stable instance identity');
+  }
+  function scopeFor(scope, doc) {
+    if (scope === undefined) return null;
+    const state = scopes.get(scope);
+    if (!state || state.disposed) throw new TypeError('Unknown or disposed composition scope');
+    if (state.document && state.document !== doc) throw new TypeError('Composition scope cannot span DOM documents');
+    if (state.members.size >= 1000) throw new RangeError('Composition scope instance limit exceeded');
+    return state;
+  }
+  function controller(contract, root, hosts, options, created) {
+    const doc = root.ownerDocument, state = scopeFor(options.scope, doc);
+    if (owners.has(root)) throw new Error('Composition already has a controller');
+    const {scope, instanceId, document, open, ...settings} = options;
+    let config = configuration(contract, settings), disposed = false;
+    const identity = instanceId ?? root.dataset.uiCompositionInstance;
+    instance(identity);
+    const write = (resolved, next) => {
+      for (const [key, rule] of Object.entries(contract.settings)) {
+        root.dataset[rule.attribute] = resolved.values[key];
+        if (rule.slotClasses && hosts.has(rule.slotClasses.slot)) {
+          const host = hosts.get(rule.slotClasses.slot), managed = Object.values(rule.slotClasses.values);
+          host.className = host.className.split(/\s+/).filter(name => name && !managed.includes(name)).concat(rule.slotClasses.values[resolved.values[key]]).join(' ');
+        }
+      }
+      for (const [key, rule] of Object.entries(contract.overrides)) {
+        if (config.overrides[key] !== undefined && next.overrides[key] === undefined) root.style.removeProperty(rule.property);
+        if (next.overrides[key] !== undefined) root.style.setProperty(rule.property, next.overrides[key]);
+      }
+      const overridden = Object.keys(next.overrides).filter(key => key !== 'reason');
+      root.dataset.uiCompositionOrigin = overridden.length ? 'instance' : 'canonical';
+      if (overridden.length) root.dataset.uiCompositionOverrides = overridden.join(','); else delete root.dataset.uiCompositionOverrides;
+      const pinned = Object.keys(contract.settings).filter(key => own(next.local, key));
+      if (pinned.length) root.dataset.uiLayoutOverrides = pinned.join(','); else delete root.dataset.uiLayoutOverrides;
+    };
+    const member = {
+      plan(defaults) {
+        const before = resolve(contract, config, state?.defaults ?? {}), after = resolve(contract, config, defaults);
+        return {contract:contract.id, changed:Object.keys(contract.settings).filter(key => before.values[key] !== after.values[key]),
+          pinned:Object.keys(config.local), after};
+      },
+      apply(defaults) {write(resolve(contract, config, defaults), config);}
+    };
+    root.dataset.uiComposition = contract.id; root.dataset.uiCompositionRevision = contract.revision;
+    if (identity !== undefined) root.dataset.uiCompositionInstance = identity;
+    if (created && contract.root.tag === 'details') root.open = open ?? true;
+    member.apply(state?.defaults ?? {});
+    if (state) {state.document ??= doc; state.members.add(member);}
+    const handle = Object.freeze({
+      element:root, slots:Object.freeze(Object.fromEntries(hosts)),
+      getConfiguration() {
+        const resolved = resolve(contract, config, state?.defaults ?? {});
+        return freeze({id:contract.id, revision:contract.revision, instanceId:identity ?? null,
+          ...resolved.values, layoutSources:resolved.sources, policyRevision:state?.revision ?? null,
+          origin:root.dataset.uiCompositionOrigin, overrides:{...config.overrides}});
+      },
+      setLayout(next = {}) {
+        if (disposed) throw new Error('Composition disposed');
+        const updated = configuration(contract, next, config);
+        write(resolve(contract, updated, state?.defaults ?? {}), updated); config = updated;
+        return this.getConfiguration();
+      },
+      dispose() {
+        if (disposed) return; disposed = true; state?.members.delete(member); owners.delete(root);
+        // An adopted app-owned root is never removed. No listener/timer was created.
+        if (created) root.remove();
+      }
+    });
+    owners.set(root, handle); return handle;
+  }
+  function optionsFor(contract, options) {
+    keys(options, [...Object.keys(contract.settings), 'overrides', 'instanceId', 'document', 'scope', ...(contract.root.tag === 'details' ? ['open'] : [])], 'Unknown composition option');
+    instance(options.instanceId);
+    if (options.open !== undefined && typeof options.open !== 'boolean') throw new TypeError('Open must be a boolean');
+    const {scope, instanceId, document, open, ...settings} = options;
+    configuration(contract, settings);
   }
   UI.createComposition = (componentId, slots, options = {}) => {
-    if (componentId !== ID) throw new TypeError('Unknown canonical composition: ' + componentId);
-    if (!plain(slots) || Object.keys(slots).some(key => !SLOTS.includes(key))) throw new TypeError('Unknown composition slot');
-    const doc = options.document || SLOTS.flatMap(key => slots[key] == null ? [] : Array.isArray(slots[key]) ? slots[key] : [slots[key]])[0]?.ownerDocument || window.document;
+    const contract = getContract(componentId); optionsFor(contract, options);
+    const names = Object.keys(contract.slots); keys(slots, names, 'Unknown composition slot');
+    const supplied = names.flatMap(key => slots[key] == null ? [] : Array.isArray(slots[key]) ? slots[key] : [slots[key]]);
+    const doc = options.document || supplied[0]?.ownerDocument || window.document;
     if (!doc || typeof doc.createElement !== 'function') throw new TypeError('DOM document required');
-    const instanceId = options.instanceId;
-    if (instanceId !== undefined && (typeof instanceId !== 'string' || !/^[a-z][a-z0-9.-]{1,79}$/.test(instanceId))) throw new TypeError('Invalid stable instance identity');
-    let config = configuration(options);
+    scopeFor(options.scope, doc);
     const nodes = new Map(), seen = new Set();
-    for (const key of SLOTS) {
+    // Validate the full request before moving even one detached node.
+    for (const key of names) {
       const value = slots[key], group = value == null ? [] : Array.isArray(value) ? value : [value];
-      if ((key === 'header' || key === 'body') && group.length === 0) throw new TypeError('Missing required composition slot: ' + key);
-      if (group.length > 100) throw new RangeError('Too many slot elements');
+      const rule = contract.slots[key];
+      if (group.length < rule.min) throw new TypeError('Missing required composition slot: ' + key);
+      if (group.length > rule.max) throw new RangeError('Too many slot elements: ' + key);
       for (const item of group) {
-        if (item?.nodeType !== 1 || item.ownerDocument !== doc || item.isConnected || seen.has(item))
-          throw new TypeError('Slot elements must be unique, detached native DOM nodes');
-        for (const prior of seen) if (item.contains?.(prior) || prior.contains?.(item))
-          throw new TypeError('Nested slot elements must be passed through one parent');
+        if (item?.nodeType !== 1 || item.ownerDocument !== doc || item.isConnected || seen.has(item)) throw new TypeError('Slot elements must be unique, detached native DOM nodes');
+        for (const prior of seen) if (item.contains?.(prior) || prior.contains?.(item)) throw new TypeError('Nested slot elements must be passed through one parent');
         seen.add(item);
       }
       nodes.set(key, group);
     }
-    const make = (tag, cls, slot) => {
-      const el = doc.createElement(tag);
-      if (cls) el.className = cls;
-      if (slot) el.dataset.uiCompositionSlot = slot;
+    const make = spec => {
+      const el = doc.createElement(spec.tag); if (spec.className) el.className = spec.className;
+      if (spec.slot) el.dataset.uiCompositionSlot = spec.slot;
       return el;
     };
-    const root = make('article', 'ui-composition ui-card');
-    root.dataset.uiComposition = ID; root.dataset.uiCompositionRevision = REVISION;
-    if (instanceId) root.dataset.uiCompositionInstance = instanceId;
-    const frame = make('div', 'ui-composition-layout');
+    const root = make(contract.root), hosts = new Map();
+    const build = (tree, into) => {for (const spec of tree) {
+      if (spec.slot && !nodes.get(spec.slot).length) continue;
+      const el = make(spec); into.append(el);
+      if (spec.slot) {el.append(...nodes.get(spec.slot)); hosts.set(spec.slot, el);}
+      if (spec.children) build(spec.children, el);
+    }};
+    build(contract.tree, root);
+    return controller(contract, root, hosts, options, true);
+  };
+  UI.adoptComposition = (root, options = {}) => {
+    if (!root || root.nodeType !== 1) throw new TypeError('Native composition root required');
+    const contract = getContract(root.dataset.uiComposition); optionsFor(contract, options);
+    if (owners.has(root)) throw new Error('Composition already has a controller');
+    if (root.localName !== contract.root.tag || root.dataset.uiCompositionRevision !== contract.revision) throw new TypeError('Incompatible native composition');
+    for (const name of contract.root.className.split(' ')) if (!root.classList.contains(name)) throw new TypeError('Missing native composition role');
+    if (options.document && options.document !== root.ownerDocument) throw new TypeError('DOM document mismatch');
+    if (options.open !== undefined) throw new TypeError('Adoption preserves the existing open state');
     const hosts = new Map();
-    function insert(key, tag, cls, into) {
-      if (!nodes.get(key).length) return;
-      const host = make(tag, cls, key);
-      host.append(...nodes.get(key)); into.append(host); hosts.set(key, host);
-    }
-    insert('header', 'header', 'ui-composition-header ui-stack', frame);
-    insert('toolbar', 'div', 'ui-composition-toolbar ui-toolbar', frame);
-    insert('filters', 'div', 'ui-composition-filters', frame);
-    const main = make('div', 'ui-composition-main');
-    insert('body', 'section', 'ui-composition-body ui-stack', main);
-    insert('aside', 'aside', 'ui-composition-aside ui-stack', main);
-    frame.append(main);
-    insert('footer', 'footer', 'ui-composition-footer ui-actions', frame);
-    root.append(frame);
-    let disposed = false;
-    function apply(next) {
-      const previous = config.overrides;
-      for (const key of Object.keys(OVERRIDES)) if (previous[key] !== undefined) root.style.removeProperty(OVERRIDES[key].property);
-      for (const key of Object.keys(OVERRIDES)) if (next.overrides[key] !== undefined) root.style.setProperty(OVERRIDES[key].property, next.overrides[key]);
-      root.dataset.uiVariant = next.variant; root.dataset.uiCrowding = next.crowding;
-      root.dataset.uiCompositionOrigin = Object.keys(next.overrides).some(key => key !== 'reason') ? 'instance' : 'canonical';
-      const keys = Object.keys(next.overrides).filter(key => key !== 'reason');
-      if (keys.length) root.dataset.uiCompositionOverrides = keys.join(',');
-      else delete root.dataset.uiCompositionOverrides;
-      config = next;
-    }
-    apply(config);
-    return Object.freeze({
-      element: root,
-      slots: Object.freeze(Object.fromEntries(hosts)),
-      getConfiguration() {
-        return Object.freeze({id: ID, revision: REVISION, instanceId: instanceId ?? null, variant: config.variant,
-          crowding: config.crowding, origin: root.dataset.uiCompositionOrigin, overrides: Object.freeze({...config.overrides})});
-      },
-      setLayout(next = {}) {
-        if (disposed) throw new Error('Composition disposed');
-        if (!plain(next) || Object.keys(next).some(key => !['variant', 'crowding', 'overrides'].includes(key))) throw new TypeError('Invalid layout update');
-        const updated = configuration({variant: next.variant ?? config.variant, crowding: next.crowding ?? config.crowding,
-          overrides: next.overrides === undefined ? config.overrides : next.overrides});
-        apply(updated); // Existing DOM and callbacks remain unchanged; container CSS handles reflow.
-        return this.getConfiguration();
-      },
-      dispose() {
-        if (disposed) return; disposed = true; root.remove();
-        // No listeners, timers, observers or global coordination were created.
+    const matchesRole = (el, spec) => {
+      const dynamic = Object.values(contract.settings).filter(rule => rule.slotClasses?.slot === spec.slot);
+      const managed = dynamic.flatMap(rule => Object.values(rule.slotClasses.values));
+      const fixed = (spec.className || '').split(' ').filter(name => name && !managed.includes(name));
+      return fixed.every(name => el.classList.contains(name)) && dynamic.every(rule => {
+        const value = root.dataset[rule.attribute] ?? rule.default;
+        return rule.values.includes(value) && el.classList.contains(rule.slotClasses.values[value]);
+      });
+    };
+    const inspect = (tree, parent) => {
+      const found = new Set(); let previous = -1;
+      for (const spec of tree) {
+        const matches = [...parent.children].filter(el => spec.slot ? el.dataset.uiCompositionSlot === spec.slot :
+          el.localName === spec.tag && spec.className.split(' ').every(name => el.classList.contains(name)));
+        const required = !spec.slot || contract.slots[spec.slot].min > 0;
+        if (matches.length > 1 || (required && matches.length !== 1)) throw new TypeError('Invalid composition structure: ' + (spec.slot || spec.className));
+        if (!matches.length) continue;
+        const el = matches[0], index = [...parent.children].indexOf(el);
+        if (el.localName !== spec.tag || !matchesRole(el, spec) || index <= previous)
+          throw new TypeError('Invalid composition slot role or order');
+        previous = index; found.add(el);
+        if (spec.slot) hosts.set(spec.slot, el); else inspect(spec.children || [], el);
       }
+      if ([...parent.children].some(el => !found.has(el))) throw new TypeError('Unexpected composition structural child');
+    };
+    inspect(contract.tree, root); // No reparenting, wrapping or cloning of live fields.
+    const inferred = {};
+    for (const [key, rule] of Object.entries(contract.settings)) {
+      const value = root.dataset[rule.attribute]; if (value !== undefined) inferred[key] = value;
+    }
+    if (root.dataset.uiCompositionOverrides && options.overrides === undefined)
+      throw new TypeError('Adoption needs the declared typed overrides and reason');
+    return controller(contract, root, hosts, {...inferred,...options}, false);
+  };
+  UI.createCompositionScope = (defaults = {}) => {
+    const state = {defaults:validateDefaults(defaults), revision:0, members:new Set(), document:null, disposed:false};
+    function prepare(next, expectedRevision) {
+      if (state.disposed) throw new Error('Composition scope disposed');
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== state.revision) throw new Error('Composition scope revision conflict');
+      const validated = validateDefaults(next), plans = [...state.members].map(member => member.plan(validated));
+      return {validated, plans};
+    }
+    const report = plans => ({registered:plans.length, changed:plans.filter(plan => plan.changed.length).length,
+      pinned:plans.filter(plan => plan.pinned.length).length,
+      components:Object.fromEntries(Object.keys(contracts).map(id => [id, {registered:plans.filter(plan => plan.contract===id).length,
+        changed:plans.filter(plan => plan.contract===id && plan.changed.length).length}]))});
+    const api = Object.freeze({
+      getState() {return freeze({revision:state.revision, defaults:copy(state.defaults), registered:state.members.size, disposed:state.disposed});},
+      preview(next, {expectedRevision} = {}) {const {plans} = prepare(next, expectedRevision); return freeze({revision:state.revision,...report(plans)});},
+      setDefaults(next, {expectedRevision} = {}) {
+        const {validated,plans} = prepare(next, expectedRevision), result = report(plans);
+        if (state.revision === Number.MAX_SAFE_INTEGER) throw new RangeError('Composition scope revision limit');
+        // All values and affected instances are validated before applying the presentation update.
+        for (const member of state.members) member.apply(validated);
+        state.defaults = validated; state.revision++;
+        return freeze({revision:state.revision,...result});
+      },
+      dispose() {if (state.members.size) throw new Error('Dispose composition handles before their scope'); state.disposed = true;}
     });
+    scopes.set(api,state); return api;
   };
 })();

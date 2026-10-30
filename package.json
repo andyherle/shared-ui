@@ -1,6 +1,6 @@
 {
   "name": "@andyherle/shared-ui",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "type": "module",
   "license": "UNLICENSED",
   "description": "Shared native UI controls with Postvisual and Personal style packs.",
@@ -18,7 +18,8 @@
     "start": "node scripts/serve.mjs",
     "review:managed": "node scripts/review-launcher.mjs",
     "review:owners": "node scripts/review-owners.mjs",
-    "previews": "node scripts/dev.mjs"
+    "previews": "node scripts/dev.mjs",
+    "composition:browser": "node test/composition-policy.browser.mjs"
   },
   "files": [
     "public/v1",

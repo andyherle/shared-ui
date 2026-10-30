@@ -98,7 +98,7 @@ async function execute(request) {
 }
 async function command(operation, documentId = record?.documentId, expectedRevision = record?.revision) {
   available();
-  const forms = {'set-props': 'props-form', 'set-bindings': 'bindings-form', 'set-token': 'token-form', 'reset-token': 'token-form', 'set-context': 'context-form', rename: 'rename-form', 'save-version': 'save-form', 'rename-version': 'rename-' + operation.versionId};
+  const forms = {'set-props': 'props-form', 'set-bindings': 'bindings-form', 'set-token': 'token-form', 'reset-token': 'token-form', 'set-context': 'context-form', 'set-composition-defaults':'composition-defaults-form', rename: 'rename-form', 'save-version': 'save-form', 'rename-version': 'rename-' + operation.versionId};
   if ([...dirty].some(form => form !== forms[operation.type])) throw new Error('Apply or discard the other form changes first.');
   await execute({args: {documentId, expectedRevision, operationId: uid('op'), command: operation}});
 }
@@ -124,7 +124,7 @@ function defaultNode(component, id = uid('node')) {
   for (const [key, schema] of Object.entries(component.props)) {
     if (key === 'icon') props[key] = 'check';
     else if (schema.type === 'string') props[key] = key === 'label' ? component.name : '';
-    else if (schema.type === 'boolean') props[key] = false;
+    else if (schema.type === 'boolean') props[key] = component.id === 'control-group' && key === 'open';
     else if (schema.type === 'enum') props[key] = schema.values[0];
     else props[key] = schema.min ?? 1;
   }
@@ -134,7 +134,9 @@ function defaultNode(component, id = uid('node')) {
 function newNodeTree(component) {
   const node = defaultNode(component), descendants = {};
   for (const [slot, contract] of Object.entries(component.slots)) for (let i = 0; i < contract.min; i++) {
-    const child = defaultNode(descriptor('stack')); node.slots[slot].push(child.id); descendants[child.id] = child;
+    const child = defaultNode(descriptor(contract.families.includes('layout') ? 'stack' : 'text'));
+    if (slot === 'header' && child.componentId === 'text') {child.props.role = 'heading'; child.props.label = 'Section';}
+    node.slots[slot].push(child.id); descendants[child.id] = child;
   }
   return {node, descendants};
 }
@@ -248,6 +250,43 @@ async function renderImpact() {
   for (const branch of [current, library]) {const li = el('li'); li.append(branch); consumers.append(li);}
   target.append(source, consumers); SharedUI.refreshActions(document);
 }
+function readCompositionDefaults() {
+  const defaults = {};
+  for (const control of $('#composition-defaults-fields').querySelectorAll('select')) {
+    if (control.value !== 'inherit') (defaults[control.dataset.composition] ??= {})[control.dataset.setting] = control.value;
+  }
+  return defaults;
+}
+function updateLayoutImpact() {
+  if (!record) return;
+  const defaults = readCompositionDefaults(); let affected = 0, pinned = 0, total = 0;
+  for (const node of Object.values(record.document.nodes)) {
+    const contract = descriptor(node.componentId)?.composition; if (!contract) continue;
+    total++; let changes = false, fixed = false;
+    for (const [key,rule] of Object.entries(contract.settings)) {
+      if (node.props[key] && node.props[key] !== 'inherit') {fixed = true; continue;}
+      const before = record.document.compositionDefaults?.[node.componentId]?.[key] ?? rule.default;
+      const after = defaults[node.componentId]?.[key] ?? rule.default;
+      changes ||= before !== after;
+    }
+    if (changes) affected++; if (fixed) pinned++;
+  }
+  $('#composition-defaults-impact').textContent = `${affected} of ${total} groups change. ${pinned} groups have local layout choices. This draft only.`;
+}
+function renderCompositionDefaults() {
+  const target = $('#composition-defaults-fields'); target.replaceChildren();
+  if (!record) return;
+  for (const component of components.filter(item => item.composition)) {
+    const group = el('fieldset','ui-group'), legend = el('legend','',component.name); group.append(legend);
+    for (const [key,rule] of Object.entries(component.composition.settings)) {
+      const control = select([['inherit',`Source default · ${rule.default}`],...rule.values],component.id+'.'+key,record.document.compositionDefaults?.[component.id]?.[key] ?? 'inherit');
+      control.dataset.composition = component.id; control.dataset.setting = key; control.onchange = updateLayoutImpact;
+      group.append(field(key,control));
+    }
+    target.append(group);
+  }
+  updateLayoutImpact();
+}
 function renderTree() {
   const target = $('#tree'); target.replaceChildren();
   if (!record?.document.root) return;
@@ -304,6 +343,11 @@ async function renderInspector() {
   if (!record) return;
   if (node) {
     for (const [name, schema] of Object.entries(component.props)) $('#props').append(propControl(name, schema, node.props[name]));
+    if (component.composition) {
+      const inherited = Object.keys(component.composition.settings).filter(key => !node.props[key] || node.props[key] === 'inherit');
+      $('#node-actions').append(el('p','ui-meta', 'Following shared settings: '+(inherited.join(', ') || 'none')),
+        action('Follow shared layout','refresh', () => command({type:'reset-composition-layout',nodeId:node.id})));
+    }
     const discard = action('Discard form changes', 'close', async () => {dirty.clear(); await loadRecord(record);});
     $('#node-actions').append(discard);
     if (component.layouts?.length > 1) {
@@ -428,7 +472,7 @@ async function loadRecord(next) {
   $('#live-status').textContent = `Revision ${record.revision} · watching for agent changes`;
   $('#rename-form').elements.name.value = record.document.name;
   for (const key of ['pack', 'mode', 'density']) $('#context-form').elements[key].value = record.document[key];
-  await listDocuments(); renderTree(); renderVersions(); await renderInspector(); sendPreview($('#preview'), record.document, selected); updateButtons();
+  await listDocuments(); renderCompositionDefaults(); renderTree(); renderVersions(); await renderInspector(); sendPreview($('#preview'), record.document, selected); updateButtons();
   if (previousId !== record.documentId || !baseline) {
     baseline = pinnedBaseline = {documentId: record.documentId, document: structuredClone(record.document), catalogue, name: `Opened at revision ${record.revision}`, versionId: '', key: `before:${record.documentId}:${record.revision}`};
     sendPreview($('#before-preview'), baseline.document, null, catalogue, `before:${record.documentId}:${record.revision}`);
@@ -483,6 +527,8 @@ divider.addEventListener('keydown', event => {
 });
 $('#search').oninput = renderLibrary; $('#family').onchange = renderLibrary;
 document.addEventListener('input', event => {const form = event.target.closest('form'); if (form?.id && event.target.name !== 'Token' && event.target.id !== 'preview-width') dirty.add(form.id);});
+$('#composition-defaults-form').onsubmit = event => {event.preventDefault(); run(() => command({type:'set-composition-defaults',defaults:readCompositionDefaults()}));};
+$('#reset-composition-defaults').onclick = () => run(() => command({type:'set-composition-defaults',defaults:{}}));
 $('#context-form').onsubmit = event => {event.preventDefault(); run(() => command({type: 'set-context', ...Object.fromEntries(new FormData(event.currentTarget))}));};
 $('#rename-form').onsubmit = event => {event.preventDefault(); run(() => command({type: 'rename', name: event.currentTarget.elements.name.value}));};
 $('#save-form').onsubmit = event => {event.preventDefault(); run(() => command({type: 'save-version', versionId: uid('version'), name: event.currentTarget.elements.name.value}));};
