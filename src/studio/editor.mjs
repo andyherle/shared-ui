@@ -67,6 +67,7 @@ function updateButtons() {
   // These controls are presentation only, and stay usable in read-only sessions.
   $('#preview-width').disabled = false;
   $('#quick-snapshot').disabled = !record || !writable || busy || loading || !!pending;
+  updateLayoutImpact();
 }
 function conflict(text, retry = false) {
   $('#conflict').hidden = false; $('#conflict-message').textContent = text; $('#retry').hidden = !retry;
@@ -271,7 +272,15 @@ function updateLayoutImpact() {
     }
     if (changes) affected++; if (fixed) pinned++;
   }
-  $('#composition-defaults-impact').textContent = `${affected} of ${total} groups change. ${pinned} groups have local layout choices. This draft only.`;
+  const stored = record.document.compositionDefaults ?? {};
+  const changed = components.filter(item => item.composition).some(component =>
+    Object.keys(component.composition.settings).some(key => stored[component.id]?.[key] !== defaults[component.id]?.[key]));
+  const locked = !writable || busy || loading || !!pending;
+  $('#composition-defaults-form button[type=submit]').disabled = locked || !changed;
+  $('#reset-composition-defaults').disabled = locked || !Object.keys(stored).length && !Object.keys(defaults).length;
+  $('#composition-defaults-impact').textContent = total
+    ? `${affected} of ${total} groups change. ${pinned} groups keep local choices. This draft only.`
+    : 'No matching groups in this draft. These defaults apply when you add a group.';
 }
 function renderCompositionDefaults() {
   const target = $('#composition-defaults-fields'); target.replaceChildren();
@@ -279,9 +288,10 @@ function renderCompositionDefaults() {
   for (const component of components.filter(item => item.composition)) {
     const group = el('fieldset','ui-group'), legend = el('legend','',component.name); group.append(legend);
     for (const [key,rule] of Object.entries(component.composition.settings)) {
-      const control = select([['inherit',`Source default · ${rule.default}`],...rule.values],component.id+'.'+key,record.document.compositionDefaults?.[component.id]?.[key] ?? 'inherit');
+      const labels = {standard:'Automatic',split:'Side by side',stack:'Stacked',grid:'Grid',wrap:'Wrap',scroll:'Scroll',priority:'Priority actions'};
+      const control = select([['inherit',`Shared default · ${labels[rule.default] ?? rule.default}`],...rule.values.map(value => [value,labels[value] ?? value])],component.id+'.'+key,record.document.compositionDefaults?.[component.id]?.[key] ?? 'inherit');
       control.dataset.composition = component.id; control.dataset.setting = key; control.onchange = updateLayoutImpact;
-      group.append(field(key,control));
+      group.append(field(key === 'variant' ? 'Layout' : key === 'crowding' ? 'When space is limited' : key,control));
     }
     target.append(group);
   }

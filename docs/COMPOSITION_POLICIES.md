@@ -1,6 +1,6 @@
 # Shared control groups and layout defaults
 
-Source release: 1.20.0. This is a bundled behavior update, not a remote CSS feature.
+Source release: 1.20.1. This is a bundled behavior update, not a remote CSS feature.
 
 ## One definition
 
@@ -110,3 +110,11 @@ The library catalogue is not proof that every application has adopted this relea
 Each applicable consumer still needs a verified source/bundle migration. Keep the
 old input and save contracts in those apps. Never close the disclosure defect only
 because the new shared component exists.
+
+## Failure recovery
+
+Layout writes are transactional within one scope. Failed writes restore prior
+presentation before returning an error. Revision changes occur only on success.
+An incomplete restoration is marked `recoveryRequired` and blocks further edits.
+See [resilience and test coverage](COMPOSITION_RESILIENCE.md) for the exact limits,
+existing-override checks, and recovery procedure.

@@ -16,7 +16,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));buildSite();
 const routes=new Map([
  ['/renderer.mjs','src/studio/renderer.mjs'],['/editor.css','src/studio/editor.css'],
  ...['registry','validation'].map(name=>['/src/studio/'+name+'.mjs','src/studio/'+name+'.mjs']),
- ...['composition-policy-browser','studio-renderer-browser','studio-render-frame'].map(name=>['/test/'+name+'.html','test/'+name+'.html'])
+ ...['composition-policy-browser','composition-resilience-browser','studio-renderer-browser','studio-render-frame'].map(name=>['/test/'+name+'.html','test/'+name+'.html'])
 ]);
 const server=http.createServer((req,res)=>{
  const name=new URL(req.url,'http://localhost').pathname;
@@ -26,15 +26,16 @@ const server=http.createServer((req,res)=>{
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
-const browser=await engines[engine].launch({headless:true}),results=[],errors=[];
-let studio;
+const results=[],errors=[];
+let browser,studio;
 const store=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'composition-browser-'));
 try{
+ browser=await engines[engine].launch({headless:true,timeout:15000,...(process.env.UI_TEST_EXECUTABLE_PATH ? {executablePath:process.env.UI_TEST_EXECUTABLE_PATH} : {})});
  for(const width of [390,1280]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===390});
   await context.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
-  for(const name of ['composition-policy-browser','studio-renderer-browser']){
+  for(const name of ['composition-policy-browser','composition-resilience-browser','studio-renderer-browser']){
    await page.goto(origin+'/test/'+name+'.html');
    await page.waitForFunction(()=>document.documentElement.dataset.testResult,null,{timeout:15000});
    const result=await page.locator('#result').textContent();
@@ -65,10 +66,14 @@ try{
  const page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',error=>errors.push(error.message));
  await page.goto(studio.url+'#'+studio.token);
  const layout=page.locator('#composition-defaults-fields select[data-composition="control-group"]');await layout.waitFor();
+ const apply=page.getByRole('button',{name:'Apply shared layouts',exact:true});
+ await page.waitForFunction(()=>document.querySelector('#composition-defaults-form button[type=submit]')?.disabled===true);
+ assert.equal(await apply.isDisabled(),true,'No unchanged layout can be submitted');
  const preview=page.frameLocator('#preview');await preview.getByRole('textbox',{name:'Editable field'}).fill('Keep this Studio input');
- await layout.selectOption('grid');await page.getByRole('button',{name:'Apply shared layouts',exact:true}).click();
+ await layout.selectOption('grid');assert.equal(await apply.isEnabled(),true,'Changed layouts can be applied');await apply.click();
  await page.waitForFunction(()=>document.querySelector('#composition-defaults-fields select[data-composition="control-group"]')?.value==='grid'&&!document.querySelector('#undo').disabled);
  assert.equal(service.dispatch({method:'document.read',args:{documentId:'layout'}}).document.compositionDefaults['control-group'].variant,'grid');
+ assert.equal(await apply.isDisabled(),true,'Apply is disabled after the saved choice matches');
  assert.equal(await preview.getByRole('textbox',{name:'Editable field'}).inputValue(),'Keep this Studio input');
  await page.getByRole('button',{name:'Use source defaults',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#composition-defaults-fields select[data-composition="control-group"]')?.value==='inherit');
@@ -81,4 +86,11 @@ try{
  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
  fs.writeFileSync(path.join(root,'test-results','composition-'+engine+'.json'),JSON.stringify({browser:browser.version(),results},null,2)+'\n');
  console.log(JSON.stringify({browser:browser.version(),results},null,2));
-}finally{await browser.close();if(studio)await studio.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(store,{recursive:true,force:true});}
+}catch(error){
+ fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+ fs.writeFileSync(path.join(root,'test-results','composition-'+engine+'.json'),JSON.stringify({browser:browser?.version()??null,results,errors,failure:{name:error.name,message:error.message,stack:error.stack}},null,2)+'\n');
+ throw error;
+}finally{
+ await Promise.allSettled([browser?.close(),studio?.close()]);
+ server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(store,{recursive:true,force:true});
+}
