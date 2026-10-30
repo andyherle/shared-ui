@@ -37,6 +37,15 @@
       <p id="preview-caption" class="ui-meta">Agent edits appear here automatically. Click a component to inspect it.</p>
       <div class="ui-actions"><button id="quick-snapshot" data-icon="save" data-ui-label="always">Keep a snapshot</button><span id="live-status" class="ui-meta" role="status"></span></div>
     </section>
+    <section class="ui-card ui-stack ui-pad" aria-labelledby="layout-title">
+      <h2 id="layout-title" class="ui-section-title">Shared layouts</h2>
+      <p class="ui-meta">Change all following groups in this draft. Local layout choices remain unchanged. Publishing to applications is separate.</p>
+      <form id="composition-defaults-form" class="ui-stack">
+        <div id="composition-defaults-fields" class="ui-stack"></div>
+        <p id="composition-defaults-impact" class="ui-meta" role="status"></p>
+        <div class="ui-actions"><button type="submit" data-icon="controls" data-ui-variant="primary" data-ui-label="always">Apply shared layouts</button><button type="button" id="reset-composition-defaults" data-icon="refresh">Use source defaults</button></div>
+      </form>
+    </section>
     <section class="ui-card ui-stack ui-pad" aria-labelledby="impact-title">
       <h2 id="impact-title" class="ui-section-title">What this affects</h2>
       <div class="ui-actions"><label class="ui-field"><span class="ui-label">Value</span><select id="impact-token" aria-label="Trace a value"></select></label><button id="edit-impact-token" data-icon="edit">Edit this value</button></div>

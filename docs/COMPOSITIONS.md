@@ -1,5 +1,9 @@
 # Canonical native compositions — review-workspace@1
 
+See [shared layout policies](COMPOSITION_POLICIES.md) for the 1.20.0 registry-driven
+control group, shared defaults, native adoption and Studio editing APIs.
+The source implementation exists. Live-consumer adoption still requires evidence.
+
 **Status:** Source-only contract proposed in coordinator PR; **not** an
 installed consumer release, local Studio publication or fleet acceptance.
 Previous shared-ui PRs for one-time page width and the offline fixture index

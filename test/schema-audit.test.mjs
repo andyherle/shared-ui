@@ -46,7 +46,7 @@ test('an explicit empty covered scope is distinct from complete catalogue covera
   const input = snapshot(); input.elements = []; input.coverage = { matched: 0, captured: 0, truncated: false };
   const result = auditSchemaSnapshot(input);
   assert.equal(result.findings.length, 0); assert.ok(result.coverage.notChecked.includes('unregistered controls'));
-  assert.deepEqual(result.coverage.contracts, ['action', 'field', 'review-workspace', 'popout', 'action-feedback']);
+  assert.deepEqual(result.coverage.contracts, ['action', 'field', 'review-workspace', 'control-group', 'popout', 'action-feedback']);
 });
 test('malformed snapshots are rejected rather than reported clean', () => {
   const invalid = [null, {}, { ...snapshot(), schemaVersion: 2 }];

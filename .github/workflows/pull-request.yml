@@ -11,16 +11,61 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm run check
+      - name: Validate source and build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check 2>&1 | tee validation.log
+      - name: Package reproducible validation source
+        if: always()
+        shell: bash
+        run: |
+          git rev-parse HEAD > validation-source-sha.txt
+          git archive --format=zip --output=validation-source.zip HEAD
+      - name: Retain validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-ui-validation-${{ github.run_id }}
+          path: |
+            validation.log
+            validation-source-sha.txt
+            validation-source.zip
+          retention-days: 7
+          if-no-files-found: error
   studio-mcp:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm ci --prefix tools/studio-mcp --ignore-scripts
       - run: npm run studio:mcp:check
+  composition-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tools/browser --ignore-scripts
+      - run: ./tools/browser/node_modules/.bin/playwright install --with-deps chromium webkit
+      - run: npm run composition:browser
+      - run: UI_TEST_BROWSER=webkit npm run composition:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: composition-browser-${{ github.run_id }}
+          path: test-results/composition-*.json
+          retention-days: 7

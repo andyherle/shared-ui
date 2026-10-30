@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {COMPONENTS, getComponent, ROLE_OWNERS} from '../src/studio/registry.mjs';
+import {COMPONENTS, getComponent, ROLE_OWNERS, COMPOSITION_CONTRACTS} from '../src/studio/registry.mjs';
 import {loadTokenCatalogue} from '../src/studio/tokens.mjs';
 import {validateDocument} from '../src/studio/document.mjs';
 import {auditSchemaSnapshot,collectSchemaSnapshot} from '../src/schema-audit.mjs';
@@ -15,6 +15,7 @@ class Element {
   constructor(doc,tag){
     this.nodeType=1;this.ownerDocument=doc;this.tagName=tag.toUpperCase();this.children=[];
     this.className='';this.dataset={};this.parentNode=null;this.isConnected=false;this.properties=new Map();
+    this.localName=tag;this.classList={contains:name=>this.className.split(/\s+/).includes(name)};
     this.style={setProperty:(key,value)=>this.properties.set(key,value),removeProperty:key=>this.properties.delete(key)};
     this.value='';
   }
@@ -34,7 +35,7 @@ class Document {
   createElement(tag){return new Element(this,tag);}
 }
 function mountFactory(){
-  const doc=new Document(), SharedUI={}, win={SharedUI,document:doc};
+  const doc=new Document(), SharedUI={compositionContracts:COMPOSITION_CONTRACTS}, win={SharedUI,document:doc};
   vm.runInNewContext(read('src/compositions.js'),{window:win});
   return {doc,UI:SharedUI};
 }
@@ -215,4 +216,111 @@ test('composition remains a bounded shared CSS and JS addition with local clicka
   assert.ok(read('scripts/build.mjs').includes("read('compositions.js')"));
   assert.ok(!read('scripts/build.mjs').includes("read('schema-audit.mjs')"));
   assert.ok(raw>0 && gz>0);
+});
+
+
+// Policies never carry form data or command callbacks. One scope updates native shells only.
+test('scope defaults reach multiple native compositions, with explicit pins and reset',()=>{
+  const {doc,UI}=mountFactory(), scope=UI.createCompositionScope();
+  const make=options=>UI.createComposition('review-workspace',{header:doc.createElement('h3'),body:doc.createElement('input')},{scope,...options});
+  const first=make({instanceId:'first'}),second=make({instanceId:'second'}),pinned=make({instanceId:'pinned',variant:'split'});
+  const field=first.slots.body.children[0];field.value='Original draft';
+  const candidate={'review-workspace':{variant:'stack',crowding:'scroll'}};
+  const report=scope.preview(candidate,{expectedRevision:0});
+  assert.equal(report.registered,3);assert.equal(report.changed,3);assert.equal(report.pinned,1);
+  assert.equal(first.getConfiguration().variant,'standard');
+  scope.setDefaults(candidate,{expectedRevision:0});
+  assert.equal(first.getConfiguration().variant,'stack');assert.equal(second.getConfiguration().variant,'stack');
+  assert.equal(pinned.getConfiguration().variant,'split');assert.equal(pinned.getConfiguration().crowding,'scroll');
+  assert.equal(pinned.getConfiguration().layoutSources.variant,'instance');
+  pinned.setLayout({variant:null});assert.equal(pinned.getConfiguration().variant,'stack');
+  assert.equal(pinned.getConfiguration().layoutSources.variant,'scope');
+  scope.setDefaults({},{expectedRevision:1});assert.equal(first.getConfiguration().variant,'standard');
+  assert.equal(field,first.slots.body.children[0]);assert.equal(field.value,'Original draft');
+  assert.throws(()=>scope.dispose(),/handles/);
+  for(const panel of [first,second,pinned])panel.dispose();scope.dispose();assert.equal(scope.getState().registered,0);
+});
+
+test('invalid and stale policy changes leave every shell and revision unchanged',()=>{
+  const {doc,UI}=mountFactory(),scope=UI.createCompositionScope();
+  const panel=UI.createComposition('review-workspace',{header:doc.createElement('h3'),body:doc.createElement('input')},{scope});
+  const before=JSON.stringify(panel.getConfiguration());
+  for(const defaults of [null,[],{'unknown':{variant:'stack'}},{'review-workspace':{variant:'absolute'}},{'review-workspace':{script:'run()'}},JSON.parse('{"__proto__": {}}')])
+    assert.throws(()=>scope.setDefaults(defaults,{expectedRevision:0}));
+  assert.throws(()=>scope.setDefaults({'review-workspace':{variant:'stack'}},{expectedRevision:1}),/revision/);
+  assert.equal(scope.getState().revision,0);assert.equal(JSON.stringify(panel.getConfiguration()),before);
+  scope.setDefaults({'review-workspace':{variant:'stack'}},{expectedRevision:0});
+  assert.throws(()=>scope.setDefaults({},{expectedRevision:0}),/revision/);
+  assert.equal(panel.getConfiguration().variant,'stack');panel.dispose();scope.dispose();
+  assert.throws(()=>scope.preview({},{expectedRevision:1}),/disposed/);
+});
+
+test('control group uses the native section heading and changes only its body layout',()=>{
+  const {doc,UI}=mountFactory(),scope=UI.createCompositionScope();
+  const heading=doc.createElement('h3'),field=doc.createElement('textarea');field.value='keep';
+  const group=UI.createComposition('control-group',{header:heading,body:field},{scope,instanceId:'controls',open:false});
+  assert.equal(group.element.localName,'details');assert.equal(group.slots.header.localName,'summary');
+  assert.equal(group.slots.header.className,'');assert.ok(group.element.classList.contains('ui-section'));
+  assert.equal(group.element.open,false);assert.equal(group.slots.body.className,'ui-stack');
+  scope.setDefaults({'control-group':{variant:'grid'}},{expectedRevision:0});
+  assert.equal(group.slots.body.className,'ui-grid');assert.equal(group.element.open,false);
+  assert.equal(field,group.slots.body.children[0]);assert.equal(field.value,'keep');
+  group.setLayout({variant:'stack'});assert.equal(group.slots.body.className,'ui-stack');
+  group.setLayout({variant:'inherit'});assert.equal(group.slots.body.className,'ui-grid');
+  assert.throws(()=>group.setLayout({overrides:{gap:'2px',reason:'No group gap override'}}));
+  group.dispose();scope.dispose();
+});
+
+test('server-rendered adoption keeps original elements, parent, open state and existing layout pins',()=>{
+  const {doc,UI}=mountFactory();
+  // Clone server-rendered structure without a factory/controller registration.
+  const root=doc.createElement('details');root.className='ui-section ui-composition';root.open=false;
+  Object.assign(root.dataset,{uiComposition:'control-group',uiCompositionRevision:'1',uiCompositionInstance:'server-group',uiVariant:'grid'});
+  const summary=doc.createElement('summary');summary.dataset.uiCompositionSlot='header';summary.append(doc.createElement('h3'));
+  const body=doc.createElement('div');body.className='ui-grid';body.dataset.uiCompositionSlot='body';
+  const input=doc.createElement('input');input.value='Live unsaved value';body.append(input);root.append(summary,body);
+  const parent=doc.createElement('form');parent.append(root);const scope=UI.createCompositionScope({'control-group':{variant:'stack'}});
+  const handle=UI.adoptComposition(root,{scope});
+  assert.equal(handle.element,root);assert.equal(root.parentNode,parent);assert.equal(root.open,false);
+  assert.equal(handle.getConfiguration().variant,'grid');assert.equal(handle.getConfiguration().layoutSources.variant,'instance');
+  assert.throws(()=>UI.adoptComposition(root),/already/);
+  handle.setLayout({variant:null});assert.equal(body.className,'ui-stack');assert.equal(input,body.children[0]);
+  handle.dispose();scope.dispose();assert.equal(parent.children[0],root);assert.equal(input.value,'Live unsaved value');
+});
+
+test('adoption rejects wrong versions, slot order and unexpected structure before mutation',()=>{
+  const {doc,UI}=mountFactory();
+  const root=doc.createElement('details');root.className='ui-section ui-composition';
+  Object.assign(root.dataset,{uiComposition:'control-group',uiCompositionRevision:'9'});
+  assert.throws(()=>UI.adoptComposition(root),/Incompatible/);
+  root.dataset.uiCompositionRevision='1';
+  const summary=doc.createElement('summary');summary.dataset.uiCompositionSlot='header';
+  const body=doc.createElement('div');body.dataset.uiCompositionSlot='body';body.className='ui-stack';root.append(body,summary);
+  assert.throws(()=>UI.adoptComposition(root),/order/);assert.equal(root.children[0],body);
+  root.append(body);const extra=doc.createElement('input');root.append(extra);
+  assert.throws(()=>UI.adoptComposition(root),/Unexpected/);assert.equal(root.children[2],extra);
+  extra.remove();root.dataset.uiCompositionOverrides='gap';
+  assert.throws(()=>UI.adoptComposition(root),/typed overrides/);
+  assert.equal(root.dataset.uiCompositionOrigin,undefined);
+});
+
+test('scopes are isolated, bounded to one document, and snapshots cannot mutate defaults',()=>{
+  const {doc,UI}=mountFactory(),scope=UI.createCompositionScope({'control-group':{variant:'grid'}});
+  const group=UI.createComposition('control-group',{header:doc.createElement('h3'),body:doc.createElement('input')},{scope});
+  const detached=UI.createComposition('control-group',{header:doc.createElement('h3'),body:doc.createElement('input')});
+  assert.equal(group.getConfiguration().variant,'grid');assert.equal(detached.getConfiguration().variant,'stack');
+  assert.throws(()=>{scope.getState().defaults['control-group'].variant='stack';});
+  const other=new Document(),h=other.createElement('h3'),b=other.createElement('input');
+  assert.throws(()=>UI.createComposition('control-group',{header:h,body:b},{scope}),/documents/);
+  assert.equal(h.parentNode,null);assert.equal(b.parentNode,null);
+  group.dispose();detached.dispose();scope.dispose();
+});
+
+test('registry and runtime expose one identical serializable composition contract',()=>{
+  const {UI}=mountFactory();
+  for(const [id,contract]of Object.entries(COMPOSITION_CONTRACTS)){
+    const registered=getComponent(id);assert.equal(contract.root.tag,registered.semantics.tags[0]);
+    assert.deepEqual(contract.slots,registered.slots);assert.ok(registered.composition);
+    assert.equal(UI.compositionContracts[id],contract);assert.ok(Object.isFrozen(contract));
+  }
 });

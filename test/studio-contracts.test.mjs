@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {COMPONENTS, REGISTRY, ROLE_OWNERS, AUDIT_CONTRACTS, listComponents} from '../src/studio/registry.mjs';
+import {COMPONENTS, REGISTRY, ROLE_OWNERS, AUDIT_CONTRACTS, COMPOSITION_CONTRACTS, listComponents} from '../src/studio/registry.mjs';
 import {AUDIT_CONTRACTS as auditContracts, auditSchemaSnapshot} from '../src/schema-audit.mjs';
 import {TOKEN_TYPES, createTokenCatalogue, loadTokenCatalogue, inventoryCSS, resolveTokenGraph, resolveScopedTokens} from '../src/studio/tokens.mjs';
 import {resolvePacks} from '../src/packs.mjs';
@@ -43,7 +43,7 @@ test('schema auditing projects the exact registry objects and accepts quiet acti
     {id: 'save', tag: 'button', roles: ['action'], attributes: {'data-ui-variant': 'quiet'}, counts: {'action-label': 1, 'action-icon': 0}},
     {id: 'form', tag: 'form', roles: ['popout'], attributes: {}, counts: {'popout-header': 1, 'popout-body': 1, 'popout-footer': 1}}
   ], coverage: {matched: 2, captured: 2, truncated: false}});
-  assert.deepEqual(report.findings, []); assert.deepEqual(report.coverage.contracts, ['action', 'field', 'review-workspace', 'popout', 'action-feedback']);
+  assert.deepEqual(report.findings, []); assert.deepEqual(report.coverage.contracts, ['action', 'field', 'review-workspace', 'control-group', 'popout', 'action-feedback']);
 });
 test('all JSON/CSS tokens have descriptors, source locations and declared consumer projections', () => {
   const catalogue = loadTokenCatalogue();
@@ -105,9 +105,15 @@ test('token inventory retains nested contexts and fails on unknown tokens instea
   assert.throws(() => inventoryCSS('[data-ui] { --ui-gap: 6px;'));
   assert.throws(() => createTokenCatalogue({tokens, controls: controls + '\n[data-ui]{--ui-unknown:1px}'}), /Unregistered shared token/);
 });
-test('studio modules and contracts never enter the consumer bundle or automatic style channel', () => {
+test('only static composition contracts enter the runtime, never the Studio engine or private authoring state', () => {
   const build = read('scripts/build.mjs');
-  assert.doesNotMatch(build, /studio|schema-audit/);
+  assert.match(build, /JSON.stringify\(COMPOSITION_CONTRACTS\)/);
+  const projected = JSON.stringify(COMPOSITION_CONTRACTS);
+  assert.doesNotMatch(projected, /document-only|bindings|fixtures|studio|catalogue|operationId/);
+  // Native shells need this data. No authoring service, store, transport or audit code is bundled.
+  const bundleInputs = [...build.matchAll(/read\('([^']+)'\)/g)].map(match => match[1]);
+  assert.ok(bundleInputs.every(file => !file.startsWith('studio/') && !file.includes('schema-audit')));
+  assert.doesNotMatch(projected, /createAuthoringService|document\.command|studio\.json/);
   assert.doesNotMatch(read('src/runtime.js') + read('src/components.js') + read('src/diagnostics.js'), /studio\/|schema-audit|authoring/i);
 });
 

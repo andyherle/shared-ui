@@ -8,6 +8,10 @@ The package has no runtime dependencies. Shared CSS is bounded to 36 KiB raw and
 npm run check
 ```
 
+## Shared control groups and layouts
+
+Use maintained compositions, not copies of group markup. The [layout policy guide](docs/COMPOSITION_POLICIES.md) covers shared defaults, explicit local choices, native server-rendered adoption, and Studio editing. Layout edits preserve existing controls. Application values, saving, and authorization remain app-owned.
+
 ## Integration
 
 Serve `public/v1/styles.css` and `runtime.js` with the application's own assets. Mark the human-facing document `<html data-ui="postvisual">` or `<html data-ui="personal">`. Put application styles in `@layer app`. Use `data-ui-density="compact"`, `dense`, or `comfortable` on the document root or a control group. Compact desktop controls use 30 px buttons and fields with 6 px gaps. Dense controls use 24 px buttons, 26 px fields and 4 px gaps. Coarse pointers retain 44 px targets and 16 px native field text. Effects, images, video and output-only renderer documents keep their own rendering.

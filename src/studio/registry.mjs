@@ -95,7 +95,22 @@ export const COMPONENTS = freeze([
   component('dialog', 'Native dialog', 'overlay', 'dialog', ['dialog'], 'sample-dialog', {variants: ['default', 'drawer', 'confirmation'], tokens: surfaceTokens, accessibility: {name: 'Name the dialog from its heading.', keyboard: 'Native modal focus, Escape dismissal, restore trigger focus.'}}),
   component('review-workspace', 'Canonical review workspace', 'composition', '[data-ui-composition="review-workspace"]', ['article'], 'compositions', {
     ...editable,
-    props: {variant: choice('standard','split','stack'), crowding: choice('wrap','scroll','priority'), overrideReason: text},
+    props: {variant: choice('inherit','standard','split','stack'), crowding: choice('inherit','wrap','scroll','priority'), overrideReason: text},
+    composition: {
+      revision: '1', root: {tag: 'article', className: 'ui-composition ui-card'},
+      settings: {variant: {values: ['standard','split','stack'], default: 'standard', attribute: 'uiVariant'},
+        crowding: {values: ['wrap','scroll','priority'], default: 'wrap', attribute: 'uiCrowding'}},
+      overrides: {gap: {property: '--ui-composition-gap', units: ['px','rem','em'], min: 0, max: 64, relativeMax: 4},
+        aside: {property: '--ui-composition-aside', units: ['px','rem','em','%'], min: 128, max: 640, relativeMin: 8, relativeMax: 40, percentMin: 15, percentMax: 60}},
+      tree: [{tag:'div', className:'ui-composition-layout', children:[
+        {tag:'header', className:'ui-composition-header ui-stack', slot:'header'},
+        {tag:'div', className:'ui-composition-toolbar ui-toolbar', slot:'toolbar'},
+        {tag:'div', className:'ui-composition-filters', slot:'filters'},
+        {tag:'div', className:'ui-composition-main', children:[
+          {tag:'section', className:'ui-composition-body ui-stack', slot:'body'},
+          {tag:'aside', className:'ui-composition-aside ui-stack', slot:'aside'}]},
+        {tag:'footer', className:'ui-composition-footer ui-actions', slot:'footer'}]}]
+    },
     variants: ['standard','split','stack'], states: ['editing','busy','error','conflict'],
     tokens: [...surfaceTokens, '--ui-composition-gap', '--ui-composition-aside'],
     slots: {
@@ -118,6 +133,28 @@ export const COMPONENTS = freeze([
         ...['toolbar','filters','footer'].map(slot => ({id:'composition-'+slot,selector:':scope > .ui-composition-layout > [data-ui-composition-slot='+slot+']',min:0,max:1,expected:'At most one '+slot+' slot.'})),
         {id:'composition-aside',selector:':scope > .ui-composition-layout > .ui-composition-main > [data-ui-composition-slot=aside]',min:0,max:1,expected:'At most one inspector region.'}
       ]}
+  }),
+  component('control-group', 'Shared control group', 'composition', '[data-ui-composition="control-group"]', ['details'], 'compositions', {
+    ...editable,
+    props: {variant: choice('inherit','stack','grid'), open: flag, overrideReason: text},
+    variants: ['stack','grid'], states: ['open','closed'],
+    tokens: [...surfaceTokens, '--ui-grid-min', '--ui-grid-gap'],
+    slots: {header: {families:['content'], min:1, max:4},
+      toolbar: {families:['layout','action','field','disclosure'], min:0, max:20},
+      body: {families:['layout','content','data','composition','disclosure','feedback','field'], min:1, max:100}},
+    composition: {revision:'1', root:{tag:'details',className:'ui-section ui-composition'},
+      settings:{variant:{values:['stack','grid'],default:'stack',attribute:'uiVariant',slotClasses:{slot:'body',values:{stack:'ui-stack',grid:'ui-grid'}}}},
+      overrides:{},
+      tree:[{tag:'summary',slot:'header'},{tag:'div',className:'ui-actions',slot:'toolbar'},
+        {tag:'div',className:'ui-stack',slot:'body'}]},
+    accessibility:{name:'A native section heading opens its own related controls. Never a standalone boxed reveal action.',
+      keyboard:'Native summary Enter/Space. Body layout changes preserve fields, focus, form ownership and open state.'},
+    audit:{selector:'[data-ui-composition="control-group"]',tags:['details'],
+      requiredAttributes:['data-ui-composition-instance','data-ui-composition-revision','data-ui-variant'],
+      attributes:{'data-ui-composition-revision':['1'],'data-ui-variant':['stack','grid']},
+      checks:[{id:'control-group-header',selector:':scope > summary[data-ui-composition-slot=header]',min:1,max:1,expected:'One native heading, not a standalone button.'},
+        {id:'control-group-body',selector:':scope > [data-ui-composition-slot=body]',min:1,max:1,expected:'One stable body for the original controls.'},
+        {id:'control-group-toolbar',selector:':scope > [data-ui-composition-slot=toolbar]',min:0,max:1,expected:'At most one related-action row.'}]}
   }),
   component('popout', 'Bounded review shell', 'overlay', '.ui-popout', ['dialog', 'article', 'form', 'aside'], 'control-fixture', {tokens: [...surfaceTokens, '--ui-popout-block', '--ui-popout-width', '--ui-popout-height', '--ui-popout-space'], slots: {header: flow.children, body: flow.children, footer: flow.children}, audit: {selector: '.ui-popout', tags: ['dialog', 'article', 'form', 'aside'], checks: checks.popout}}),
   component('floating-panel', 'Viewport floating review panel', 'overlay', '.ui-floating-panel', ['aside', 'section', 'div'], 'floating-review', {
@@ -162,6 +199,21 @@ export const COMPONENTS = freeze([
   component('timeline', 'Timeline composition', 'composition', '#timeline', ['section'], 'timeline', {tokens: ['--ui-playhead-color', '--ui-playhead-outline', '--ui-playhead-width']}),
   component('embedded-form', 'Embedded native form', 'composition', '#embedded-form', ['template'], 'embedded', {tokens: surfaceTokens})
 ]);
+// The runtime and Studio consume this projection of the same component registry.
+// Only static structure and presentation contracts are emitted; no app bindings or values.
+export const COMPOSITION_CONTRACTS = freeze(Object.fromEntries(COMPONENTS.filter(item => item.composition).map(item => [item.id, {
+  id:item.id, slots:item.slots, ...item.composition
+}])));
+export function validateCompositionDefaults(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Composition defaults must be an object');
+  for (const [id, settings] of Object.entries(input)) {
+    const contract = Object.hasOwn(COMPOSITION_CONTRACTS,id) && COMPOSITION_CONTRACTS[id];
+    if (!contract || !settings || typeof settings !== 'object' || Array.isArray(settings)) throw new TypeError('Unknown composition defaults: '+id);
+    for (const [key,value] of Object.entries(settings)) if (!Object.hasOwn(contract.settings,key) || !contract.settings[key].values.includes(value))
+      throw new TypeError('Invalid composition default: '+id+'.'+key);
+  }
+  return input;
+}
 export const REGISTRY = freeze({schemaVersion: SCHEMA_VERSION, packs: ['postvisual', 'personal'], components: COMPONENTS});
 export const AUDIT_CONTRACTS = freeze(COMPONENTS.filter(item => item.audit).map(item => ({id: item.id, description: item.name, ...item.audit})));
 export function getComponent(id) { return COMPONENTS.find(item => item.id === id); }

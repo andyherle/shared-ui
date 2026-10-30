@@ -9,9 +9,9 @@
   },
   "sizes": {
     "css": 4071,
-    "cssGzip": 1228,
+    "cssGzip": 1221,
     "js": 23876,
-    "jsGzip": 8165
+    "jsGzip": 8204
   },
   "budget": {
     "css": 6144,

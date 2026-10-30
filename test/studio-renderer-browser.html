@@ -20,7 +20,7 @@ try {
       if (id === 'action') props.variant = 'primary';
       const value = node('fixture-' + id, id, props, Object.fromEntries(Object.keys(component.slots).map(slot => [slot, []])));
       for (const [slot, spec] of Object.entries(component.slots)) if (spec.min) {
-        const child = node(value.id + '-child', 'text', {label: 'Required slot content'}); documentModel.nodes[child.id] = child; value.slots[slot].push(child.id);
+        const child = node(value.id + '-' + slot + '-child', 'text', {label: 'Required slot content'}); documentModel.nodes[child.id] = child; value.slots[slot].push(child.id);
       }
       documentModel.nodes[value.id] = value; documentModel.nodes.root.slots.children.push(value.id);
     }

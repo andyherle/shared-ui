@@ -7,6 +7,7 @@ buildSite();
 const server = createStyleLabServer({watch: false}), catalogue = server.listeners('request')[0];
 const files = new Set(['/test/studio-browser.html', '/test/schema-audit-browser.html', '/src/schema-audit.mjs', '/src/studio/registry.mjs', '/src/studio/validation.mjs']);
 const rendererFiles = new Map([
+  ['/test/composition-policy-browser.html', '../test/composition-policy-browser.html'],
   ['/test/studio-renderer-browser.html', '../test/studio-renderer-browser.html'],
   ['/test/studio-render-frame.html', '../test/studio-render-frame.html'],
   ['/renderer.mjs', '../src/studio/renderer.mjs'],
