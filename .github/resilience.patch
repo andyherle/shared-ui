@@ -1,0 +1,166 @@
+diff --git a/docs/COMPOSITION_POLICIES.md b/docs/COMPOSITION_POLICIES.md
+index 57a2819..499c0af 100644
+--- a/docs/COMPOSITION_POLICIES.md
++++ b/docs/COMPOSITION_POLICIES.md
+@@ -1,6 +1,6 @@
+ # Shared control groups and layout defaults
+ 
+-Source release: 1.20.0. This is a bundled behavior update, not a remote CSS feature.
++Source release: 1.20.1. This is a bundled behavior update, not a remote CSS feature.
+ 
+ ## One definition
+ 
+@@ -110,3 +110,11 @@ The library catalogue is not proof that every application has adopted this relea
+ Each applicable consumer still needs a verified source/bundle migration. Keep the
+ old input and save contracts in those apps. Never close the disclosure defect only
+ because the new shared component exists.
++
++## Failure recovery
++
++Layout writes are transactional within one scope. Failed writes restore prior
++presentation before returning an error. Revision changes occur only on success.
++An incomplete restoration is marked `recoveryRequired` and blocks further edits.
++See [resilience and test coverage](COMPOSITION_RESILIENCE.md) for the exact limits,
++existing-override checks, and recovery procedure.
+diff --git a/package.json b/package.json
+index 157199c..8d35203 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "@andyherle/shared-ui",
+-  "version": "1.20.0",
++  "version": "1.20.1",
+   "type": "module",
+   "license": "UNLICENSED",
+   "description": "Shared native UI controls with Postvisual and Personal style packs.",
+diff --git a/src/runtime.js b/src/runtime.js
+index 17b865a..e754a27 100644
+--- a/src/runtime.js
++++ b/src/runtime.js
+@@ -824,7 +824,7 @@
+     return {element:panel,open,update,close,dispose,refresh:queue};
+   }
+ 
+-  const api={version:'1.20.0',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
++  const api={version:'1.20.1',createSubmitGuard,setActionLayout,createAdaptiveDensity,createControlScale,animatePanel,createAnchoredPopover,createResponsiveSlot,mount,release,adoptAction,adoptNumberedAction,setActionState,runAction,reserveText,setText,setCardColor,resolveCardColor,createCardColorResolver,setSelection,setSortDirection,setAppColor,createBackToTop,createZoom,installZoomShortcuts,createZoomFeedback,createReviewControls,createContextToolbar,createResizablePanel,createValueTransition,createZoomSteps,createTableSort,createTableToolbar,createColumnDrag,createColumnManager,createColumnResize,createLightbox,createGuide,setActionLabel:(element,label,options={})=>adoptAction(element,{...options,label}),source:DEFAULT_SOURCE};
+   if(typeof module==='object'&&module.exports)module.exports=api;
+   if(typeof window!=='undefined'&&typeof document!=='undefined'){
+     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
+diff --git a/src/studio/editor.mjs b/src/studio/editor.mjs
+index 42decf0..76d9bc7 100644
+--- a/src/studio/editor.mjs
++++ b/src/studio/editor.mjs
+@@ -67,6 +67,7 @@ function updateButtons() {
+   // These controls are presentation only, and stay usable in read-only sessions.
+   $('#preview-width').disabled = false;
+   $('#quick-snapshot').disabled = !record || !writable || busy || loading || !!pending;
++  updateLayoutImpact();
+ }
+ function conflict(text, retry = false) {
+   $('#conflict').hidden = false; $('#conflict-message').textContent = text; $('#retry').hidden = !retry;
+@@ -271,7 +272,15 @@ function updateLayoutImpact() {
+     }
+     if (changes) affected++; if (fixed) pinned++;
+   }
+-  $('#composition-defaults-impact').textContent = `${affected} of ${total} groups change. ${pinned} groups have local layout choices. This draft only.`;
++  const stored = record.document.compositionDefaults ?? {};
++  const changed = components.filter(item => item.composition).some(component =>
++    Object.keys(component.composition.settings).some(key => stored[component.id]?.[key] !== defaults[component.id]?.[key]));
++  const locked = !writable || busy || loading || !!pending;
++  $('#composition-defaults-form button[type=submit]').disabled = locked || !changed;
++  $('#reset-composition-defaults').disabled = locked || !Object.keys(stored).length && !Object.keys(defaults).length;
++  $('#composition-defaults-impact').textContent = total
++    ? `${affected} of ${total} groups change. ${pinned} groups keep local choices. This draft only.`
++    : 'No matching groups in this draft. These defaults apply when you add a group.';
+ }
+ function renderCompositionDefaults() {
+   const target = $('#composition-defaults-fields'); target.replaceChildren();
+@@ -279,9 +288,10 @@ function renderCompositionDefaults() {
+   for (const component of components.filter(item => item.composition)) {
+     const group = el('fieldset','ui-group'), legend = el('legend','',component.name); group.append(legend);
+     for (const [key,rule] of Object.entries(component.composition.settings)) {
+-      const control = select([['inherit',`Source default · ${rule.default}`],...rule.values],component.id+'.'+key,record.document.compositionDefaults?.[component.id]?.[key] ?? 'inherit');
++      const labels = {standard:'Automatic',split:'Side by side',stack:'Stacked',grid:'Grid',wrap:'Wrap',scroll:'Scroll',priority:'Priority actions'};
++      const control = select([['inherit',`Shared default · ${labels[rule.default] ?? rule.default}`],...rule.values.map(value => [value,labels[value] ?? value])],component.id+'.'+key,record.document.compositionDefaults?.[component.id]?.[key] ?? 'inherit');
+       control.dataset.composition = component.id; control.dataset.setting = key; control.onchange = updateLayoutImpact;
+-      group.append(field(key,control));
++      group.append(field(key === 'variant' ? 'Layout' : key === 'crowding' ? 'When space is limited' : key,control));
+     }
+     target.append(group);
+   }
+diff --git a/test/composition-policy.browser.mjs b/test/composition-policy.browser.mjs
+index 7a27a84..be1e5f5 100644
+--- a/test/composition-policy.browser.mjs
++++ b/test/composition-policy.browser.mjs
+@@ -16,7 +16,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));buildSite();
+ const routes=new Map([
+  ['/renderer.mjs','src/studio/renderer.mjs'],['/editor.css','src/studio/editor.css'],
+  ...['registry','validation'].map(name=>['/src/studio/'+name+'.mjs','src/studio/'+name+'.mjs']),
+- ...['composition-policy-browser','studio-renderer-browser','studio-render-frame'].map(name=>['/test/'+name+'.html','test/'+name+'.html'])
++ ...['composition-policy-browser','composition-resilience-browser','studio-renderer-browser','studio-render-frame'].map(name=>['/test/'+name+'.html','test/'+name+'.html'])
+ ]);
+ const server=http.createServer((req,res)=>{
+  const name=new URL(req.url,'http://localhost').pathname;
+@@ -26,15 +26,16 @@ const server=http.createServer((req,res)=>{
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const origin='http://127.0.0.1:'+server.address().port;
+-const browser=await engines[engine].launch({headless:true}),results=[],errors=[];
+-let studio;
++const results=[],errors=[];
++let browser,studio;
+ const store=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'composition-browser-'));
+ try{
++ browser=await engines[engine].launch({headless:true,timeout:15000,...(process.env.UI_TEST_EXECUTABLE_PATH ? {executablePath:process.env.UI_TEST_EXECUTABLE_PATH} : {})});
+  for(const width of [390,1280]){
+   const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===390});
+   await context.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
+   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
+-  for(const name of ['composition-policy-browser','studio-renderer-browser']){
++  for(const name of ['composition-policy-browser','composition-resilience-browser','studio-renderer-browser']){
+    await page.goto(origin+'/test/'+name+'.html');
+    await page.waitForFunction(()=>document.documentElement.dataset.testResult,null,{timeout:15000});
+    const result=await page.locator('#result').textContent();
+@@ -65,10 +66,14 @@ try{
+  const page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(studio.url+'#'+studio.token);
+  const layout=page.locator('#composition-defaults-fields select[data-composition="control-group"]');await layout.waitFor();
++ const apply=page.getByRole('button',{name:'Apply shared layouts',exact:true});
++ await page.waitForFunction(()=>document.querySelector('#composition-defaults-form button[type=submit]')?.disabled===true);
++ assert.equal(await apply.isDisabled(),true,'No unchanged layout can be submitted');
+  const preview=page.frameLocator('#preview');await preview.getByRole('textbox',{name:'Editable field'}).fill('Keep this Studio input');
+- await layout.selectOption('grid');await page.getByRole('button',{name:'Apply shared layouts',exact:true}).click();
++ await layout.selectOption('grid');assert.equal(await apply.isEnabled(),true,'Changed layouts can be applied');await apply.click();
+  await page.waitForFunction(()=>document.querySelector('#composition-defaults-fields select[data-composition="control-group"]')?.value==='grid'&&!document.querySelector('#undo').disabled);
+  assert.equal(service.dispatch({method:'document.read',args:{documentId:'layout'}}).document.compositionDefaults['control-group'].variant,'grid');
++ assert.equal(await apply.isDisabled(),true,'Apply is disabled after the saved choice matches');
+  assert.equal(await preview.getByRole('textbox',{name:'Editable field'}).inputValue(),'Keep this Studio input');
+  await page.getByRole('button',{name:'Use source defaults',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#composition-defaults-fields select[data-composition="control-group"]')?.value==='inherit');
+@@ -81,4 +86,11 @@ try{
+  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+  fs.writeFileSync(path.join(root,'test-results','composition-'+engine+'.json'),JSON.stringify({browser:browser.version(),results},null,2)+'\n');
+  console.log(JSON.stringify({browser:browser.version(),results},null,2));
+-}finally{await browser.close();if(studio)await studio.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(store,{recursive:true,force:true});}
++}catch(error){
++ fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
++ fs.writeFileSync(path.join(root,'test-results','composition-'+engine+'.json'),JSON.stringify({browser:browser?.version()??null,results,errors,failure:{name:error.name,message:error.message,stack:error.stack}},null,2)+'\n');
++ throw error;
++}finally{
++ await Promise.allSettled([browser?.close(),studio?.close()]);
++ server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(store,{recursive:true,force:true});
++}
+diff --git a/test/composition.test.mjs b/test/composition.test.mjs
+index d187172..584e493 100644
+--- a/test/composition.test.mjs
++++ b/test/composition.test.mjs
+@@ -16,7 +16,7 @@ class Element {
+     this.nodeType=1;this.ownerDocument=doc;this.tagName=tag.toUpperCase();this.children=[];
+     this.className='';this.dataset={};this.parentNode=null;this.isConnected=false;this.properties=new Map();
+     this.localName=tag;this.classList={contains:name=>this.className.split(/\s+/).includes(name)};
+-    this.style={setProperty:(key,value)=>this.properties.set(key,value),removeProperty:key=>this.properties.delete(key)};
++    this.style={getPropertyValue:key=>this.properties.get(key)??'',getPropertyPriority:()=>'',setProperty:(key,value)=>this.properties.set(key,value),removeProperty:key=>this.properties.delete(key)};
+     this.value='';
+   }
+   append(...children){
