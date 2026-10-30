@@ -49,3 +49,23 @@ jobs:
           node-version: '22'
       - run: npm ci --prefix tools/studio-mcp --ignore-scripts
       - run: npm run studio:mcp:check
+  composition-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tools/browser --ignore-scripts
+      - run: ./tools/browser/node_modules/.bin/playwright install --with-deps chromium webkit
+      - run: npm run composition:browser
+      - run: UI_TEST_BROWSER=webkit npm run composition:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: composition-browser-${{ github.run_id }}
+          path: test-results/composition-*.json
+          retention-days: 7
