@@ -868,31 +868,63 @@
     listen(view,'pagehide',event=>{if(!event.persisted)dispose();});
     return {cancel,dispose};
   };
+  // Native preview density controls. Hosts resize their catalogue and images.
+  UI.createPreviewSizeControl=({root,value=160,min=96,max=320,step=16,sprite,onChange=()=>{}}={})=>{
+    if(!root?.ownerDocument)throw new TypeError('Preview size control needs a root element');
+    if(![min,max,step].every(Number.isFinite)||min<=0||max<min||step<=0||!Number.isFinite((max-min)/step))throw new TypeError('Use positive bounded preview sizes and step');
+    if(typeof onChange!=='function')throw new TypeError('Preview size change handler must be a function');
+    const doc=root.ownerDocument,group=doc.createElement('div'),input=doc.createElement('input'),smaller=doc.createElement('button'),larger=doc.createElement('button');
+    group.className='ui-inline';group.setAttribute('role','group');group.setAttribute('aria-label','Preview size');
+    Object.assign(group.style,{display:'flex',alignItems:'center',gap:'var(--ui-gap,6px)',inlineSize:'100%',minInlineSize:'0'});
+    input.type='range';input.className='ui-range';input.min=String(min);input.max=String(max);input.step=String(step);input.setAttribute('aria-label','Preview size');
+    Object.assign(input.style,{flex:'1 1 0',width:'auto',minWidth:'0'});
+    smaller.type=larger.type='button';
+    UI.adoptAction(smaller,{label:'Smaller previews',icon:'minus',iconOnly:true,sprite});
+    UI.adoptAction(larger,{label:'Larger previews',icon:'plus',iconOnly:true,sprite});
+    smaller.style.flex=larger.style.flex='0 0 auto';
+    const lastStep=Math.floor((max-min)/step+1e-9),normalize=raw=>{
+      if((typeof raw!=='number'&&typeof raw!=='string')||typeof raw==='string'&&!raw.trim()||!Number.isFinite(Number(raw)))throw new TypeError('Preview size must be a finite number');
+      const at=Math.max(0,Math.min(lastStep,Math.round((Number(raw)-min)/step)));
+      return Number((min+at*step).toPrecision(15));
+    };
+    let current=normalize(value),disposed=false;
+    function sync(){input.value=String(current);input.setAttribute('aria-valuetext',`${current} pixels`);smaller.disabled=current<=min;larger.disabled=current>=normalize(max);}
+    function setValue(next,{notify=false}={}){if(disposed)return current;const normalized=normalize(next),changed=normalized!==current;current=normalized;sync();if(changed&&notify)onChange(current);return current;}
+    const decrease=()=>setValue(current-step,{notify:true}),increase=()=>setValue(current+step,{notify:true}),inputChange=()=>setValue(input.value,{notify:true});
+    smaller.addEventListener('click',decrease);larger.addEventListener('click',increase);input.addEventListener('input',inputChange);input.addEventListener('change',inputChange);
+    group.append(smaller,input,larger);root.append(group);UI.observeActions?.(group);sync();
+    return {setValue,get value(){return current;},dispose(){if(disposed)return;disposed=true;smaller.removeEventListener('click',decrease);larger.removeEventListener('click',increase);input.removeEventListener('input',inputChange);input.removeEventListener('change',inputChange);UI.releaseActions?.(group);group.remove();}};
+  };
   // Host-owned content, one shared native preview/selection pattern.
   UI.createPreviewCatalogue=({root,onSelect=()=>{},onManage,sprite,minColumnWidth,aspectRatio='16 / 9',actionIcon='scenes'}={})=>{
-    if(minColumnWidth!==undefined&&!/^\d+(?:\.\d+)?(?:px|rem|em)$/.test(String(minColumnWidth)))throw new TypeError('Preview column width must use px, rem or em');
+    const columnWidth=value=>{const width=String(value);if(!/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)$/.test(width)||!Number.isFinite(parseFloat(width))||parseFloat(width)<=0)throw new TypeError('Preview column width must use positive px, rem or em');return width;};
+    if(minColumnWidth!==undefined)columnWidth(minColumnWidth);
     const doc=root.ownerDocument,original=root.className,originalColumns=root.style.gridTemplateColumns,cards=new Map();root.classList.add('ui-grid');root.dataset.uiGrid='fill';
-    if(minColumnWidth!==undefined)root.style.gridTemplateColumns=`repeat(auto-fill,minmax(min(100%,${minColumnWidth}),1fr))`;
+    let disposed=false;
+    function setMinColumnWidth(value){if(disposed)return;const width=columnWidth(value);root.style.gridTemplateColumns=`repeat(auto-fill,minmax(min(100%,${width}),1fr))`;return width;}
+    if(minColumnWidth!==undefined)setMinColumnWidth(minColumnWidth);
     function update(items,selectedId){
+      if(disposed)return;
       const keep=new Set(items.map(item=>String(item.id)));
       for(const [id,card]of cards)if(!keep.has(id)){card.element.remove();cards.delete(id);}
       for(const item of items){const id=String(item.id);let card=cards.get(id);
         if(!card){const element=doc.createElement('article');element.className='ui-card ui-stack ui-selectable';element.dataset.itemId=id;
           const media=doc.createElement('button');media.type='button';media.className='ui-media-button';media.style.aspectRatio=String(aspectRatio);
           const image=doc.createElement('img');image.alt='';image.loading='lazy';Object.assign(image.style,{inlineSize:'100%',blockSize:'100%',objectFit:'contain'});media.append(image);
-          const caption=doc.createElement('div');caption.className='ui-pad ui-stack';const action=doc.createElement('button');action.type='button';action.className='ui-item';action.dataset.uiVariant='quiet';UI.adoptAction(action,{label:item.label,...(actionIcon?{icon:actionIcon}:{}),sprite});
+          const caption=doc.createElement('div');caption.className='ui-pad ui-stack';Object.assign(caption.style,{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto',alignItems:'center',minWidth:'0',overflow:'hidden'});const action=doc.createElement('button');action.type='button';action.className='ui-item';action.dataset.uiVariant='quiet';Object.assign(action.style,{minWidth:'0',overflow:'hidden'});UI.adoptAction(action,{label:item.label,...(actionIcon?{icon:actionIcon}:{}),sprite});
           const detail=doc.createElement('small');detail.className='ui-meta';caption.append(action,detail);
+          detail.style.gridColumn='1 / -1';detail.style.gridRow='2';
           const select=()=>onSelect(id);media.addEventListener('click',select);action.addEventListener('click',select);
-          if(onManage){const manage=doc.createElement('button');manage.type='button';UI.adoptAction(manage,{label:'Manage '+item.label,icon:'more',sprite});manage.addEventListener('click',()=>onManage(id));caption.append(manage);}
+          if(onManage){const manage=doc.createElement('button');manage.type='button';UI.adoptAction(manage,{label:'Manage '+item.label,icon:'more',iconOnly:true,sprite});manage.style.gridColumn='2';manage.style.gridRow='1';manage.addEventListener('click',()=>onManage(id));caption.append(manage);}
           element.append(media,caption);card={element,media,image,action,detail};cards.set(id,card);
         }
         card.media.setAttribute('aria-label','Open '+item.label);card.media.setAttribute('aria-pressed',String(id===String(selectedId)));card.element.dataset.uiSelected=String(id===String(selectedId));
-        UI.setActionLabel(card.action,item.label);card.detail.textContent=item.detail||'';card.detail.hidden=!item.detail;
+        UI.setActionLabel(card.action,item.label);card.action.title=item.label;card.detail.textContent=item.detail||'';card.detail.hidden=!item.detail;
         if(item.image){if(card.image.getAttribute('src')!==item.image)card.image.src=item.image;card.image.hidden=false;}else{card.image.removeAttribute('src');card.image.hidden=true;}
         const position=items.findIndex(row=>String(row.id)===id);if(root.children[position]!==card.element)root.insertBefore(card.element,root.children[position]||null);
       }
     }
-    return {update,dispose(){root.replaceChildren();root.className=original;if(minColumnWidth!==undefined)root.style.gridTemplateColumns=originalColumns;delete root.dataset.uiGrid;cards.clear();}};
+    return {update,setMinColumnWidth,dispose(){if(disposed)return;disposed=true;root.replaceChildren();root.className=original;root.style.gridTemplateColumns=originalColumns;delete root.dataset.uiGrid;cards.clear();}};
   };
   // Searchable native preview catalogue. Apps supply images from their own renderer.
   UI.createShapeBrowser=({root,onSelect=()=>{},sprite}={})=>{
@@ -2133,6 +2165,7 @@ UI.createIntervalControl=({spec:initial,onSet,onError,model,document=window.docu
     setValue(value);return {element:handle,setValue,get value(){return size;}};
   };
 })();
+
 
 /* Native filter forms shared by tables, galleries and other collections. */
 (() => {
