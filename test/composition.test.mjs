@@ -16,7 +16,7 @@ class Element {
     this.nodeType=1;this.ownerDocument=doc;this.tagName=tag.toUpperCase();this.children=[];
     this.className='';this.dataset={};this.parentNode=null;this.isConnected=false;this.properties=new Map();
     this.localName=tag;this.classList={contains:name=>this.className.split(/\s+/).includes(name)};
-    this.style={setProperty:(key,value)=>this.properties.set(key,value),removeProperty:key=>this.properties.delete(key)};
+    this.style={getPropertyValue:key=>this.properties.get(key)??'',getPropertyPriority:()=>'',setProperty:(key,value)=>this.properties.set(key,value),removeProperty:key=>this.properties.delete(key)};
     this.value='';
   }
   append(...children){
