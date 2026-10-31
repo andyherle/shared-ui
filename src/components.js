@@ -802,8 +802,9 @@
 /* Fit registered native groups on size changes, without rebuilding app controls. */
 (() => {
   'use strict';
-  if(typeof window==='undefined'||!window.SharedUI)return;
-  const UI=window.SharedUI,pools=new WeakMap();
+  const UI=typeof module==='object'&&module.exports?module.exports:typeof window!=='undefined'?window.SharedUI:null;
+  if(!UI)return;
+  const pools=new WeakMap();
   const actionSelector='.ui-action',overflowSelector='details.ui-overflow';
   const fixedLabel='[data-ui-label=hidden],[data-ui-label=always],.ui-item,.ui-menu-panel .ui-action';
   const number=value=>parseFloat(value)||0;
@@ -975,7 +976,9 @@
     UI.adoptAction(summary,{icon:'more',label,iconOnly:true,sprite});summary.classList.add('ui-icon-button');nodes[0].before(details);body.append(...nodes);details.append(summary,body);
     const group=details.parentElement?.closest('.ui-actions,.ui-toolbar');if(group)UI.observeActions(group);return details;
   };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>UI.mountActions(document),{once:true});else UI.mountActions(document);
+  if(typeof document!=='undefined'){
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>UI.mountActions(document),{once:true});else UI.mountActions(document);
+  }
 UI.createCurveControl=({label='Response',points:initial=[1/3,0,2/3,1],defaults:initialDefaults=initial,invert=false,xLabel:horizontal='Progress',yLabel:vertical='Response',endpointLabels=['Start','End'],onChange=()=>{},onError=console.error,document=window.document}={})=>{
   const plot=([x,y])=>[30+x*240,144-y*120];
   function svgNode(name,attrs={}){const node=document.createElementNS('http://www.w3.org/2000/svg',name);for(const [key,value]of Object.entries(attrs))node.setAttribute(key,String(value));return node;}
