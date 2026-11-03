@@ -314,8 +314,8 @@
     .ui-overflow[data-ui-overflow=collapsed][open] { flex:1 1 100%; }
     :is(.ui-action[data-ui-compact],summary[data-ui-label=hidden])::after { display:none; }
     .ui-tabs { border-block-end:1px solid var(--ui-line); }
-    .ui-tabs [role=tab] { background:#0000; border:0; border-radius:0; border-block-end:2px solid #0000; padding:8px 4px; }
-    .ui-tabs [aria-selected=true] { border-block-end-color:var(--ui-accent); color:var(--ui-accent); }
+    .ui-tabs :is(a,[role=tab]) { background:#0000; border:0; border-radius:0; border-block-end:2px solid #0000; }
+    .ui-tabs :is([aria-current=page],[aria-selected=true]) { border-block-end-color:var(--ui-accent); color:var(--ui-accent); }
     .ui-stack { display:flex; flex-direction:column; gap:var(--ui-gap); min-inline-size:0; }
     .ui-stack>* { margin-block:0; }
     :is(.ui-split,.ui-tags) { display:flex; flex-wrap:wrap; gap:var(--ui-gap); min-inline-size:0; }
