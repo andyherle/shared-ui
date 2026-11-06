@@ -59,3 +59,14 @@ test('composed numerical fields retain intrinsic space without an app width',()=
  assert.match(page,/aria-label="Compact numerical fields"/);
  assert.match(page,/name="amount"[^>]+type="number"[^>]+step="any"/);
 });
+
+test('native navigation links share tab paint without impersonating ARIA tabs',()=>{
+ assert.ok(css.includes('.ui-tabs :is(a,[role=tab])'));
+ assert.ok(css.includes('.ui-tabs :is([aria-current=page],[aria-selected=true])'));
+ const fixture=fs.readFileSync(new URL('../src/fixture.html',import.meta.url),'utf8');
+ const navigation=fixture.match(/<nav class="ui-tabs" aria-label="Fixture record views">([\s\S]*?)<\/nav>/)?.[1];
+ assert.ok(navigation);
+ assert.equal((navigation.match(/<a /g)||[]).length,3);
+ assert.equal((navigation.match(/aria-current="page"/g)||[]).length,1);
+ assert.doesNotMatch(navigation,/role="tab|aria-selected/);
+});
