@@ -1223,3 +1223,6 @@ Static responses are cached with gzip level 9. The builder, Studio validator and
 Coarse pointers reset composed-field padding with their 44px density. A comfortable desktop profile no longer leaves oversized internal padding when the same container is used on touch.
 
 Status messages use the reading font; numeric outputs and read-only values retain monospace. Repeatable action completion is announced in the existing polite live region while the action keeps its stable accessible name.
+
+
+Isolated component hosts may set `data-ui-runtime="manual"` on the document before loading runtime.js. This exports `SharedUI` without automatically mounting or starting the stylesheet update channel. Explicit `SharedUI.mount` remains available; normal hosts retain automatic mounting. Optional `src/card-interactions.mjs` supplies pack-independent native card toggles and contextual popovers; its opt-in prototype usage is documented in `src/next/README.md`.

@@ -830,7 +830,7 @@
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(typeof window!=='undefined'&&typeof document!=='undefined'){
     window.SharedUI=api;api.setMode=mode=>{if(!api.instance)api.instance=mount(document);api.instance.setMode?.(mode);};
-    function start(){if(!api.instance)api.instance=mount(document);}
+    function start(){if(document.documentElement.dataset.uiRuntime!=='manual'&&!api.instance)api.instance=mount(document);}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   }
 })();
