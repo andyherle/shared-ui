@@ -1,4 +1,4 @@
-/* Experimental next generation. Opt in explicitly; never shipped on v1. */
+/* Approved Personal generation. Bundled explicitly; independent of v1 automatic CSS. */
 @layer ui.tokens, ui.base, ui.controls, app;
 @scope ([data-ui="personal"][data-ui-generation="next"]) {
 @layer ui.tokens {
@@ -53,7 +53,20 @@
 }
 @layer ui.controls {
   .ui-actions,.ui-toolbar,.ui-inline { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-gap); min-inline-size: 0; }
-  .ui-stack { display: grid; align-content: start; gap: 16px; min-inline-size: 0; }
+  .ui-filter-bar { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--ui-gap); min-inline-size: 0; }
+  .ui-filter-bar > .ui-field { flex: 1 1 14rem; }
+  .ui-filter-bar > .ui-action { flex: 1 1 6rem; }
+  .ui-filter-bar > datalist { display: none; }
+  .ui-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,16rem),1fr)); gap: var(--ui-space-2); }
+  .ui-fill > .ui-action { flex: 1; }
+  .ui-section { border-block-start: 1px solid var(--ui-line); padding-block: var(--ui-space-2); }
+  .ui-section > summary { cursor: pointer; min-block-size: 44px; }
+  .ui-section > summary > :is(h2,h3,h4) { display: inline; }
+  .ui-section > :not(summary) { margin-block-start: var(--ui-space-2); }
+  .ui-notice { padding: var(--ui-space-2); border: 1px solid var(--ui-line); border-radius: var(--ui-radius); }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; max-inline-size: 100%; }
+  .ui-table-scroll { overflow: auto; min-inline-size: 0; }
+  .ui-stack { display: grid; grid-template-columns: minmax(0,1fr); align-content: start; gap: 16px; min-inline-size: 0; }
   .ui-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-block-size: var(--ui-control-height); padding: 10px var(--ui-action-inset,16px); border: 1px solid var(--ui-control-line); border-radius: var(--ui-radius-small); background: var(--ui-surface); color: var(--ui-text); font-size: var(--ui-control-size); font-weight: 550; line-height: 1.4; text-decoration: none; cursor: pointer; touch-action: manipulation; }
   .ui-action:hover { background: var(--ui-surface-soft); }
   .ui-action[data-ui-variant="primary"] { background: var(--ui-primary); color: var(--ui-on-primary); border-color: var(--ui-primary); }
@@ -70,10 +83,13 @@
   .ui-field > :is(input,select) { inline-size: 100%; min-inline-size: 0; min-block-size: var(--ui-control-height); border: 0; background: transparent; outline: none; font-size: var(--ui-control-size); }
   .ui-field select,.ui-field option { color: var(--ui-text); background-color: var(--ui-surface); }
   .ui-field > .ui-label { font-size: 13px; color: var(--ui-muted); flex: none; }
-  .ui-input,textarea { inline-size: 100%; min-inline-size: 0; min-block-size: var(--ui-control-height); padding: 12px 14px; border: 1px solid var(--ui-control-line); border-radius: var(--ui-radius-small); background: var(--ui-surface); }
+  :where(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),select),.ui-input,textarea { inline-size: 100%; min-inline-size: 0; min-block-size: var(--ui-control-height); padding: 12px 14px; border: 1px solid var(--ui-control-line); border-radius: var(--ui-radius-small); background: var(--ui-surface); }
+  .ui-field > :is(input,select) { padding: 0; border: 0; border-radius: 0; background: transparent; }
   textarea { resize: vertical; line-height: 1.6; }
   ::placeholder { color: var(--ui-muted); opacity: 1; }
   .ui-card { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-radius); min-inline-size: 0; }
+  a.ui-card { color: var(--ui-text); text-decoration: none; }
+  a.ui-card:hover { border-color: var(--ui-accent); }
   .ui-pad { padding: var(--ui-space); }
   details.ui-card[data-ui-variant="list"] { background: transparent; border: 1px solid transparent; border-block-start-color: var(--ui-line); border-radius: 0; overflow-anchor: none; }
   details.ui-card[data-ui-variant="list"] > summary { padding-inline: var(--ui-space-2); }
@@ -91,6 +107,7 @@
   .ui-composer { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-radius); padding: var(--ui-space); }
   .ui-composer:focus-within { border-color: var(--ui-accent); }
   .ui-composer > textarea { border: 0; padding: 0; min-block-size: 96px; max-block-size: 384px; field-sizing: content; outline-offset: 8px; font-size: var(--ui-body-size); background: transparent; }
+  .ui-composer > footer > .ui-actions { flex: 1 1 auto; }
   .ui-composer > footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-block-start: var(--ui-space-3); }
   .ui-nav { display: grid; align-content: start; gap: 6px; }
   .ui-nav > a { display: flex; gap: 12px; align-items: center; padding: 10px 16px; min-block-size: 44px; border-radius: var(--ui-radius-small); text-decoration: none; color: var(--ui-muted); font-weight: 550; }
@@ -149,7 +166,7 @@
   .ui-card-body > .ui-options[data-ui-variant="segmented"] { margin: 0 var(--ui-space-2) var(--ui-space-2) var(--ui-response-start); }
   .ui-card-body > :is(.ui-card-status,output):not(:empty):not(:has(> output:empty)) { padding: 8px 12px; }
   .ui-card-status:has(> output:empty) { display: none; }
-  .ui-draft-preview { margin: 0; padding: 12px; color: var(--ui-text); line-height: 1.5; background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-radius-small); }
+  .ui-draft-preview { white-space: pre-wrap; margin: 0; padding: 12px; color: var(--ui-text); line-height: 1.5; background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-radius-small); }
   .ui-reply { min-inline-size: 0; }
   .ui-reply > summary.ui-action { color: var(--ui-text); font: 550 var(--ui-control-size)/1.4 var(--ui-font); }
   .ui-disclosure.ui-reply > summary::after { content: none; }

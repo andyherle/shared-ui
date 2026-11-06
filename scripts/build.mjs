@@ -84,6 +84,9 @@ export function buildSite(directory=root){
   const rawBytes=Buffer.byteLength(css),gzipBytes=gzipSync(css,{level:9}).length;
   if(rawBytes>36864||gzipBytes>8192||/@import|url\s*\(/i.test(css))
     throw new Error(`Styles must remain within 36 KiB raw / 8 KiB gzip with no external imports (actual: ${rawBytes} raw / ${gzipBytes} gzip bytes)`);
+  const personalCss=compactCSS(read('next/controls.css'))+'\n';
+  const personalRaw=Buffer.byteLength(personalCss),personalGzip=gzipSync(personalCss,{level:9}).length;
+  if(personalRaw>36864||personalGzip>8192||/@import|url\s*\(/i.test(personalCss))throw new Error('Personal CSS exceeds its shared budget');
   const release=manifest(css);
   const icons=JSON.parse(read('icons.json'));
   const symbols=Object.entries(icons).map(([name,paths])=>{
@@ -97,6 +100,9 @@ export function buildSite(directory=root){
     ['v1/'+release.stylesheet,css],['v1/styles.css',css],['v1/control-tree.css',controlTreeCss],
     ['v1/runtime.js',read('runtime.js')+'\n'+read('components.js')+'\n'+read('filters.js')+'\n'+compositions+'\n'+helper+'\n'+read('diagnostics.js')],
     ['v1/compositions.js',compositions],
+    ['v1/personal.css',personalCss],['v1/card-interactions.mjs',read('card-interactions.mjs')],
+    ['personal-catalogue.css',read('next/catalogue.css')],['personal-catalogue.mjs',read('next/catalogue.mjs')],['personal-theme.js',read('next/theme.js')],
+    ['personal.html',read('next/index.html').replaceAll('/shared-next.css','./v1/personal.css').replaceAll('/icons.svg','./v1/icons.svg')],
     ['v1/floating-panel.fixture.css',floatingCss],
     ['v1/icons.svg','<svg xmlns="http://www.w3.org/2000/svg"><defs>'+symbols+'</defs></svg>'],
     ['index.html',read('index.html').replace('@@CONTROL_FIXTURE@@',read('fixture.html')).replaceAll('@@REVISION@@',release.revision).replaceAll('@@VERSION@@',release.version)],
@@ -107,6 +113,7 @@ export function buildSite(directory=root){
   for(const [name,content] of assets)if(name.endsWith('.js'))new vm.Script(content,{filename:name});
   publishGeneratedFiles(path.join(directory,'public'),assets);
   return {revision:release.revision,cssBytes:Buffer.byteLength(css),gzipBytes:gzipSync(css,{level:9}).length,
+    personalCssBytes:personalRaw,personalGzipBytes:personalGzip,
     floatingFixtureCssBytes:Buffer.byteLength(floatingCss),
     floatingFixtureCssSha256:createHash('sha256').update(floatingCss).digest('hex'),
     floatingHelperSha256:createHash('sha256').update(helper).digest('hex')};

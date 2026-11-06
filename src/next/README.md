@@ -1,6 +1,6 @@
 # Next interface prototype
 
-Unapproved, opt-in design exploration. This source is served only by Portal's local flow lab. It is not part of the v1 build or its automatic update channel.
+Approved Personal interface. Build and install `personal.css` and `card-interactions.mjs` with the shared installer. Load Personal CSS instead of v1 styles for opted-in pages. This bundled generation is independent of the v1 automatic CSS channel; use `data-ui-runtime="manual"` and mount only needed helpers. Postvisual remains unchanged.
 
 Use `data-ui="personal" data-ui-generation="next"` and `data-theme="light|dark"`. The same native elements, tokens and component definitions are used in the catalogue and prototype. Action captions stay visible at every width; only an explicit `data-ui-label="hidden"` hides a label. There is no automatic density scaling or label compaction.
 
@@ -12,11 +12,11 @@ Use `data-ui="personal" data-ui-generation="next"` and `data-theme="light|dark"`
 - Collapsible cards: native `details.ui-card` with a direct `summary` (headline and optional compact context) and `.ui-card-body`. Use `open` for the initial expanded state. The whole heading toggles; no button nested inside the summary. Inputs stay mounted when collapsed. Apps may retain the open state by stable card ID.
 - Feedback: `.ui-status` with a polite live region and pending/success/error states; status text never replaces an action's accessible name.
 
-Portal's local lab exposes `/catalogue` to inspect these components with the same stylesheet, icons and theme. Domain placement belongs in Portal's `@layer app`. Packaging and consumer adoption follow design approval.
+Portal's local lab exposes `/catalogue` to inspect these components with the same stylesheet, icons and theme. Domain placement belongs in Portal's `@layer app`. Portal uses the same generated bundle.
 
-## Visual rules under review
+## Approved visual rules
 
-The palette under review uses white surfaces with blue accents in light mode, and navy/blue surfaces in dark mode. Text is always pure black or white, including metadata, hints, placeholders and disabled captions. Layout, weight and surfaces carry the hierarchy.
+The palette uses white surfaces with blue accents in light mode, and navy/blue surfaces in dark mode. Text is always pure black or white, including metadata, hints, placeholders and disabled captions. Layout, weight and surfaces carry the hierarchy.
 
 - Palette: white and navy surfaces, blue for focus, the main action and selected navigation. Text is strictly black or white, including metadata, hints, placeholders and disabled labels. Filled actions use whichever of black/white contrasts with their blue fill. Status uses clear words, not colored text. No shadows or gradients.
 - Surfaces: one page background and one editable surface. Queue cards are flat rows divided by one quiet rule. Do not nest decorative panels.
@@ -40,7 +40,7 @@ For two or three short poll options, use `fieldset.ui-options[data-ui-variant="s
 
 Reply always addresses the agent. A prepared outbound draft offers Copy draft, not a send action. Reply opens its native form below the same action row. Direct decisions use native form associations, and invalid unanswered choices disable their submit action only after enhancement; native validation remains the fallback. Status stays with the form. Collapse/reopen preserves input and focusable elements.
 
-The catalogue and Portal Card types scenario demonstrate these same controls. Packaging and production integration remain subject to design approval.
+The catalogue and Portal Card types scenario demonstrate these same controls. Production integration preserves native handlers and exact editions.
 
 
 ## Personal scope and reusable behavior
@@ -50,3 +50,7 @@ This visual exploration applies only within `data-ui="personal" data-ui-generati
 Use `.ui-section-toggle` on a native heading button; retain the label and count. Closed/open card summaries have exactly the same insets, border footprint, and margin. The shared helper also compensates browser viewport scroll anchoring on individual toggles.
 
 Use `.ui-card-content` inside the same card body for a document or diff. `.ui-document-preview` hosts the shared optional `openPDF` renderer. Apps authorize exact editions, load lazily, and dispose when hidden. `.ui-diff` uses semantic addition/removal signs plus surface differences; text remains black/white. Use `.ui-table-region` with an accessible region name and keyboard scrolling around a native `.ui-table`; sortable headers are real links with `aria-sort` on the active header. Do not hide data on phones.
+
+Use `.ui-filter-bar` for wrapping filters and their Apply action. Each native field and action grows to fill its row, so stacked rows share the same left and right edges. The search field may occupy a full preceding row. Do not set fixed mobile field widths.
+
+Tool destinations use a native `a.ui-card.ui-pad.ui-stack` with a shared icon, heading and optional short context. The whole card is one link; do not nest buttons or recreate the old launcher tile paint. The standalone Personal catalogue demonstrates this pattern.

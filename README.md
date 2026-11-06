@@ -1226,3 +1226,7 @@ Status messages use the reading font; numeric outputs and read-only values retai
 
 
 Isolated component hosts may set `data-ui-runtime="manual"` on the document before loading runtime.js. This exports `SharedUI` without automatically mounting or starting the stylesheet update channel. Explicit `SharedUI.mount` remains available; normal hosts retain automatic mounting. Optional `src/card-interactions.mjs` supplies pack-independent native card toggles and contextual popovers; its opt-in prototype usage is documented in `src/next/README.md`.
+
+### Approved Personal generation
+
+Portal adopts the bundled Personal interface described in [src/next/README.md](src/next/README.md). Its independent `personal.css` uses white/blue and navy/blue surfaces, black/white text, visible action captions, 44px targets, native cards and aligned wrapping filters. The installer packages it with shared card behavior. This opt-in generation does not change Postvisual or the v1 automatic style channel.

@@ -1,0 +1,1 @@
+try{const theme=localStorage.getItem('shared-personal-theme');document.documentElement.dataset.theme=theme==='light'||theme==='dark'?theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch{}
