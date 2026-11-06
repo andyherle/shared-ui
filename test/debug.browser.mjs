@@ -17,7 +17,7 @@ try{
  const page=await browser.newPage({viewport:{width:1600,height:1100}});page.on('pageerror',error=>errors.push(error.message));
  await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
  await page.goto('http://127.0.0.1:'+server.address().port+'/debug.html');await page.waitForSelector('.ui-debug-grid dd');
- const first=page.locator('.ui-debug').first();assert.equal(await page.locator('.ui-debug').count(),2);
+ const first=page.locator('[data-ui-component=debug]').first();assert.equal(await page.locator('[data-ui-component=debug]').count(),2);
  for(const pack of ['postvisual','personal'])for(const theme of ['dark','light']){
   await page.selectOption('#debug-pack',pack);await page.selectOption('#debug-theme',theme);
   for(const width of [1600,1024,390]){
@@ -31,10 +31,18 @@ try{
  for(const mode of ['overview','scope','lanes','metrics','program','raw','overwhelm']){await view.selectOption(mode);await page.waitForTimeout(40);assert.equal(await first.getAttribute('data-debug-view'),mode);}
  const frozen=await first.locator('.ui-debug-sample').textContent();await first.getByRole('button',{name:'Freeze',exact:true}).click();await page.click('#debug-advance');await page.waitForTimeout(80);
  assert.equal((await first.locator('.ui-debug-sample').textContent()).replace('FROZEN · ',''),frozen);
- assert.notEqual(await page.locator('.ui-debug').nth(1).locator('.ui-debug-sample').textContent(),frozen);
+ assert.notEqual(await page.locator('[data-debug-example]').nth(1).locator('.ui-debug-sample').textContent(),frozen);
  await first.getByRole('button',{name:'Resume',exact:true}).click();
  const search=first.locator('input[type=search]');await search.fill('channel_000');await page.click('#debug-advance');await search.focus();await page.waitForTimeout(50);assert.equal(await first.locator('.ui-debug-grid dd').count(),1);
  await search.fill('');await view.selectOption('scope');await first.locator('canvas').focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(70);assert.match(await first.locator('.ui-debug-readout').textContent(),/Nearest supplied/);
+ const hosted=await page.evaluate(()=>{
+  const host=document.createElement('header'),other=document.createElement('input');other.value='Keep this draft';host.append(other);document.body.append(host);
+  const panel=SharedUI.createDebugPanel({controlsHost:host});document.body.append(panel.element);
+  const search=host.querySelector('input[type=search]');search.value='native draft';panel.setVisible(false);
+  if(!host.querySelector('.ui-debug').hidden||other.hidden)throw Error('Hosted control visibility escaped its owner');
+  panel.setVisible(true);panel.setView('raw');if(host.querySelector('input[type=search]')!==search||search.value!=='native draft')throw Error('Hosted controls were replaced');
+  panel.destroy();const retained=host.children.length===1&&host.firstElementChild===other&&other.value==='Keep this draft';host.remove();return retained;
+ });assert.equal(hosted,true);
  const lifecycle=await page.evaluate(async()=>{
   const panel=SharedUI.createDebugPanel();document.body.append(panel.element);
   let receive,resolve,unsub=0,deleted=0,updates=0;

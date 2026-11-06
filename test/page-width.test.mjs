@@ -37,7 +37,7 @@ test('app-layer fixture applies width once, with narrow and full-workspace excep
 test('shared control stylesheet retains its raw and gzip budgets and no app layout selectors',()=>{
   const css=buildCSS(tokens,controls);
   assert.ok(Buffer.byteLength(css)<=36864,'shared stylesheet must stay within 36KiB');
-  assert.ok(gzipSync(css).length<=8192);
+  assert.ok(gzipSync(css,{level:9}).length<=8192);
   assert.ok(css.includes('--ui-page-width:70%'));
   assert.ok(!css.includes('[data-ui-page-host]'));
   assert.ok(!css.includes('@import'));

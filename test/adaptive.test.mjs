@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 const source=fs.readFileSync(new URL('../src/components.js',import.meta.url),'utf8');
-function fixture(){
+function fixture(commonjs=false){
   class Target{listeners=new Map();addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,new Set());this.listeners.get(type).add(fn);}removeEventListener(type,fn){this.listeners.get(type)?.delete(fn);}fire(type,event={}){for(const fn of this.listeners.get(type)||[])fn(event);}}
   const frames=new Map();let next=0,observer;
   const defaults={display:'flex',flexDirection:'row',font:'12px sans-serif',letterSpacing:'normal',columnGap:'6px',paddingLeft:'5px',paddingRight:'5px',borderLeftWidth:'1px',borderRightWidth:'1px',marginLeft:'0px',marginRight:'0px',minWidth:'30px',width:'30px',position:'static'};
   const view=new Target();Object.assign(view,{getComputedStyle:node=>({...defaults,...node.css}),requestAnimationFrame:fn=>{frames.set(++next,fn);return next;},cancelAnimationFrame:id=>frames.delete(id),ResizeObserver:class{targets=new Set();constructor(fn){this.callback=fn;observer=this;}observe(node){this.targets.add(node);}unobserve(node){this.targets.delete(node);}disconnect(){this.targets.clear();}notify(node){this.callback([{target:node}]);}}});
-  const doc=new Target();Object.assign(doc,{defaultView:view,visibilityState:'visible',readyState:'complete',documentElement:{dataset:{ui:'postvisual'}},activeElement:null,querySelectorAll:()=>[],createElement:()=>({getContext:()=>({measureText:text=>({width:text.length*6})})})});
+  const doc=new Target();Object.assign(doc,{baseURI:'https://example.test/panel',defaultView:view,visibilityState:'visible',readyState:'complete',documentElement:{dataset:{ui:'postvisual'}},activeElement:null,querySelectorAll:()=>[],createElement:()=>({getContext:()=>({measureText:text=>({width:text.length*6})})})});
   class Node{constructor(tag,className='',width=30){this.tagName=tag.toUpperCase();this.className=className;this.children=[];this.dataset={};this.attrs=new Map();this.ownerDocument=doc;this.isConnected=true;this.clientWidth=width;this.css={};this.textContent='';this.open=false;}
+    get classList(){return {contains:name=>this.className.split(' ').includes(name),add:name=>{this.className+=' '+name;}};}
     append(...nodes){for(const node of nodes){node.parentElement=this;this.children.push(node);}}
     getBoundingClientRect(){return {width:this.clientWidth,height:30};}
     matches(selector){return selector.split(',').some(part=>{const tag=part.match(/^[a-z]+/)?.[0];if(tag&&this.tagName!==tag.toUpperCase())return false;const classes=[...part.matchAll(/\.([\w-]+)/g)].map(m=>m[1]);if(classes.some(name=>!this.className.split(' ').includes(name)))return false;const attrs=[...part.matchAll(/\[([\w-]+)(?:=([^\]]+))?\]/g)];return attrs.every(([,key,value])=>key==='open'?this.open:this.getAttribute(key)!==null&&(value===undefined||this.getAttribute(key)===value));});}
@@ -22,7 +23,9 @@ function fixture(){
   const row=new Node('div','ui-actions',400);row.css={paddingLeft:'0px',paddingRight:'0px',borderLeftWidth:'0px',borderRightWidth:'0px'};
   function action(text,{primary=false,always=false}={}){const node=new Node('button','ui-action'+(primary?' primary':''));node.textContent=text;if(always)node.setAttribute('data-ui-label','always');const icon=new Node('svg','ui-icon',18);icon.css.width='18px';const label=new Node('span','ui-label');label.textContent=text;node.append(icon,label);node.onclick=()=>text;return node;}
   function overflow(actions,priority=0){const node=new Node('details','ui-disclosure ui-overflow');node.dataset.uiPriority=String(priority);const summary=action('More');summary.tagName='SUMMARY';summary.dataset.uiLabel='hidden';summary.setAttribute('data-ui-label','hidden');const body=new Node('div','ui-actions ui-disclosure-body');body.append(...actions);node.append(summary,body);return node;}
-  const UI={};vm.runInNewContext(source,{window:{SharedUI:UI},document:doc,WeakMap,Map,Set});
+  let UI;
+  if(commonjs){const module={exports:{}};vm.runInNewContext(fs.readFileSync(new URL('../src/runtime.js',import.meta.url),'utf8')+'\n'+source,{module,URL});UI=module.exports;}
+  else{UI={};vm.runInNewContext(source,{window:{SharedUI:UI},document:doc,WeakMap,Map,Set});}
   const flush=()=>{for(let count=0;frames.size&&count<10;count++){const work=[...frames.values()];frames.clear();for(const fn of work)fn();}assert.equal(frames.size,0);};
   const resize=width=>{row.clientWidth=width;observer.notify(row);flush();};
   return {UI,doc,view,row,action,overflow,flush,resize,get observer(){return observer;},frames,Node};
@@ -144,4 +147,20 @@ test('an adopted toolbar follows its container when moved into a context dock',(
  assert.equal(f.observer.targets.has(original),false);assert.equal(f.observer.targets.has(dock),true);
  dock.clientWidth=140;f.observer.notify(dock);f.flush();assert.equal(a.hasAttribute('data-ui-compact'),true);
  dock.clientWidth=800;f.observer.notify(dock);f.flush();assert.equal(a.hasAttribute('data-ui-compact'),false);
+});
+
+
+test('CommonJS import stays inert and native adoption shares isolated view lifecycles',()=>{
+ const f=fixture(true),view=new f.Node('section'),other=new f.Node('div','ui-actions',100);
+ assert.equal(f.observer,undefined);assert.equal(f.doc.listeners.size,0);assert.equal(f.frames.size,0);
+ const first=f.action('First'),second=f.action('Second'),handler=first.onclick;
+ view.append(f.row);f.row.append(first);other.append(second);f.doc.activeElement=first;
+ assert.equal(f.UI.adoptAction(first),first);f.UI.adoptAction(second);f.flush();
+ assert.equal(first.onclick,handler);assert.equal(f.doc.activeElement,first);assert.equal(f.observer.targets.size,2);
+ f.UI.releaseActions(view);assert.equal(f.observer.targets.has(f.row),false);assert.equal(f.observer.targets.has(other),true);
+ other.clientWidth=40;f.observer.notify(other);f.flush();assert.equal(second.hasAttribute('data-ui-compact'),true);
+ f.UI.refreshActions(f.doc);f.flush();assert.equal(f.observer.targets.has(f.row),false);
+ f.UI.disposeActions(f.doc);assert.equal(f.observer.targets.size,0);assert.equal(f.frames.size,0);assert.equal(f.doc.listeners.get('visibilitychange').size,0);
+ f.UI.observeActions(f.row);f.flush();assert.equal(f.observer.targets.has(f.row),true);assert.equal(first.onclick,handler);assert.equal(f.doc.activeElement,first);
+ f.UI.disposeActions(f.doc);
 });

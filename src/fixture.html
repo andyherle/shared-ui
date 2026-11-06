@@ -85,7 +85,7 @@
       <div class="ui-tags" id="fixture-tags" aria-label="Fixture quick tags"><form class="ui-field" id="fixture-tag-form"><input id="fixture-tag-input" aria-label="Fixture add tag" placeholder="Type a tag…" autocomplete="off"></form></div>
       <p class="ui-status" id="fixture-tag-status" role="status"></p>
     </article>
-    <header class="ui-header ui-toolbar ui-chrome" data-ui-layout="workspace"><nav data-ui-header-nav><a class="ui-action" href="#control-fixture">Back</a></nav><div class="ui-actions ui-inline" data-ui-header-actions><button type="button">Save</button></div></header>
+    <header class="ui-header ui-toolbar ui-chrome" data-ui-layout="workspace"><nav class="ui-actions ui-inline" data-ui-header-nav><a class="ui-action" href="#control-fixture">Back</a><div class="ui-actions ui-inline"><strong class="ui-truncate">A long workspace title with independent scene settings</strong><span class="ui-status">Saved</span></div></nav><div class="ui-actions ui-inline" data-ui-header-actions><button type="button">Save</button></div></header>
     <article class="ui-card ui-pad ui-stack" aria-label="Anchored colour palette"><button id="fixture-colour" type="button">Card colour</button><div id="fixture-colour-card" class="ui-card ui-pad">Approval, pastel and custom colours adapt to the active theme.</div></article>
     <article class="ui-card ui-chrome" aria-label="Centred editable heading examples">
       <div class="ui-editable-heading ui-section-title"><div class="ui-prose" tabindex="0">Scene direction — reference set</div><span class="ui-meta">3 cards</span></div>
@@ -176,6 +176,7 @@
 <section class="ui-card ui-pad ui-stack" aria-label="Independent workspace panels"><h3>Workspace panels</h3><div id="fixture-panel-toggles" class="ui-actions ui-inline" role="group" aria-label="Visible panels"><button type="button" data-panel="timeline" data-ui-icon="timeline">Timeline</button><button type="button" data-panel="activity" data-ui-icon="terminal">Activity</button><button type="button" data-panel="debug" data-ui-icon="code">Debug</button></div><section id="fixture-panel-timeline" class="ui-card ui-pad">Timeline panel</section><section id="fixture-panel-activity" class="ui-card ui-pad">Activity panel</section><section id="fixture-panel-debug" class="ui-card ui-pad">Debug panel</section></section>
 <section class="ui-stack" aria-label="Native timeline playhead">
  <h5>Native timeline playhead</h5>
+ <div class="ui-toolbar" aria-label="Timeline transport"><button type="button" data-ui-icon="play">Play</button><label class="ui-check"><input type="checkbox" checked aria-label="Timeline loop">Loop</label><label class="ui-field"><span class="ui-label">Loop range</span><select aria-label="Timeline loop range"><option>Full timeline</option><option>In / Out</option></select></label></div>
  <label class="ui-field"><span class="ui-label">Frame</span><input class="ui-range" data-ui-timeline type="range" min="0" max="100" step="1" value="30" aria-label="Timeline frame"></label>
  <div class="ui-timeline-ticks ui-actions" aria-hidden="true"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70</span><span>80</span><span>90</span><span>100</span></div>
 </section>

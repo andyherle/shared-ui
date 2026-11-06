@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 function kit(){
- class Node{dataset={};style={};attrs=new Map();listeners=new Map();textContent='Rotation';isConnected=true;setAttribute(k,v){this.attrs.set(k,String(v));}addEventListener(k,f){this.listeners.set(k,f);}replaceWith(node){this.replacement=node;}}
+ class Node{dataset={};style={};children=[];attrs=new Map();listeners=new Map();textContent='Rotation';isConnected=true;get firstChild(){return this.children[0]||null;}insertBefore(node){this.children.unshift(node);}setAttribute(k,v){this.attrs.set(k,String(v));}addEventListener(k,f){this.listeners.set(k,f);}replaceWith(node){this.replacement=node;}}
  const doc={addEventListener(){},createElement(){return new Node();}},UI={adoptAction(node,{label}){node.textContent=label;}};
  vm.runInNewContext(fs.readFileSync(new URL('../src/components.js',import.meta.url),'utf8'),{window:{SharedUI:UI},document:doc,WeakMap,Map,Set,setTimeout,clearTimeout});
  const label=new Node(),row={ownerDocument:doc,querySelector:()=>label.replacement||label};return {UI,row,label};
@@ -21,9 +21,9 @@ test('property names reset only on double-click or keyboard activation, coalesci
  UI.setPropertyAction(row,{onReset:undefined});assert.equal(name.disabled,true);name.listeners.get('dblclick')();assert.equal(keyboardCalls,1,'capability removal gates handler');
 });
 test('canonical action order preserves nodes and avoids repeated moves',()=>{
- const {UI}=kit(),make=role=>({dataset:{uiPropertyAction:role}}),key=make('keyframe'),fx=make('fx'),event=make('event');let moves=0;
- const group={children:[fx,key],append(...nodes){moves++;this.children=nodes;}};
- UI.orderPropertyActions(group);assert.deepEqual(group.children,[key,fx]);UI.orderPropertyActions(group);assert.equal(moves,1);
+ const {UI}=kit(),make=role=>({dataset:{uiPropertyAction:role}}),key=make('keyframe'),fx=make('fx'),link=make('scope');let moves=0;
+ const group={children:[link,fx,key],append(...nodes){moves++;this.children=nodes;}};
+ UI.orderPropertyActions(group);assert.deepEqual(group.children,[key,fx,link]);UI.orderPropertyActions(group);assert.equal(moves,1);
 });
 
 test('event names reveal their event by pointer or keyboard and double-click resets',async()=>{
@@ -33,4 +33,11 @@ test('event names reveal their event by pointer or keyboard and double-click res
  name.listeners.get('dblclick')();await new Promise(setImmediate);assert.equal(resets,1);
  name.listeners.get('click')({detail:0});assert.equal(visits,2,'keyboard reveals events');
  UI.setPropertyAction(row,{onActivate:undefined});name.listeners.get('click')({detail:1});assert.equal(visits,2);
+});
+
+test('a reset action keeps the existing tree-control decoration when it replaces the label',()=>{
+ const {UI,row,label}=kit(),icon={dataset:{uiTreeIcon:'control'}};label.dataset.uiTreeRow='control';label.children.push(icon);
+ UI.setPropertyAction(row,{onReset(){}});const name=label.replacement;
+ assert.equal(name.dataset.uiTreeRow,'control');assert.equal(name.firstChild,icon);assert.equal(name.textContent,'Rotation');
+ UI.setPropertyAction(row,{onActivate(){}});assert.equal(name.children.length,1);assert.equal(name.firstChild,icon);
 });

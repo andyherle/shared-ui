@@ -1,5 +1,7 @@
 # Shared UI
 
+**Consistency is the first design priority.** The same component uses the same padding, text sizing, spacing and positional order everywhere. Each semantic role has one shared definition at a given density. Improve the shared owner and catalogue before adopting it in an app; do not create local exceptions for visual novelty or convenience.
+
 One native HTML control language for Aura, StaticRef and Portal. Personal mirrors Postvisual, with explicit overrides available through Studio. Theme, control density and application layout are separate choices.
 
 The package has no runtime dependencies. Shared CSS is bounded to 36 KiB raw and 8 KiB gzip, including the shared floating review panel. Build and source validation use Node's standard library:
@@ -815,7 +817,15 @@ Use `data-ui-header-nav` for optional Home/Back/Exit navigation on the left and
 `data-ui-header-actions` for commands on the right. Mark the native application
 `details.ui-menu` with `data-ui-header-menu`; it stays last, with a `menu` icon
 and a named, hidden `.ui-label`. A launcher link is navigation, never a menu trigger.
-The header can wrap into available container space. Controls use native density;
+The default header can wrap into available container space. For an output workspace
+that must keep one row, use `header.ui-header.ui-toolbar[data-ui-layout="workspace"]`.
+Its direct native navigation and command groups use `data-ui-header-nav` and
+`data-ui-header-actions`. Put a long identity in `.ui-truncate` beside its status
+inside `.ui-actions.ui-inline`. Move secondary controls through `createAdaptiveSlot`
+with a dedicated empty `.ui-secondary-slot` in the menu; never pass an occupied
+command group as the slot. Menus remain visible beyond the header and keyboard
+focus/native fields stay intact. The Control fixture demonstrates this at narrow
+and desktop widths in both packs. Controls use native density;
 content zoom never scales application chrome.
 
 Command panels use `.ui-menu-panel`, independently sized from their trigger and
@@ -898,13 +908,13 @@ Content-oriented inline editing retains its explicit role.
 
 ## Optional debug console
 
-The reusable [debug console](docs/DEBUG.md) provides evaluated-state tables, sampled all-channel plots, lane views and machine-style diagnostic traces. It is a separate reviewed add-on, with a portable packet/adapter API and no application state or transport. Open `public/debug.html` for the interactive synthetic fixtures.
+The reusable [debug console](docs/DEBUG.md) provides evaluated-state tables, sampled all-channel plots, lane views and machine-style diagnostic traces. It is a separate reviewed add-on, with a portable packet/adapter API and no application state or transport. Pass `controlsHost: header` to keep the same view, filter, Freeze and Copy controls in a dock header above its scrolling body. The host must share the panel document; visibility and disposal cover both surfaces and leave other host content intact. Open `public/debug.html` for the interactive synthetic fixtures, including an external tools header.
 
 ### Independent workspace panels and timeline scrubber
 
 `SharedUI.createPanelToggles({items, selected, maxSelected:2, onChange})` connects native buttons and existing panel elements. Each item is `{id,button,panel}`. Buttons retain independent `aria-pressed` states; a second press closes a panel. At most two panels are visible, replacing the oldest selection when a third opens. `show(id)` reveals a panel without toggling it closed; `dispose()` releases listeners. Host layout owns panel placement.
 
-For native line playheads, load the optional, separately validated `v1/timeline.css` with `scripts/install-timeline.mjs`, then add `data-ui-timeline` to `.ui-range`. `.ui-timeline-ticks` shares tick typography and line paint; hosts position ticks using actual frame bounds. The base CSS budget is unchanged.
+For native line playheads, load the optional, separately validated `v1/timeline.css` with `scripts/install-timeline.mjs`, then add `data-ui-timeline` to `.ui-range`. `.ui-timeline-ticks` shares tick typography and line paint; hosts position ticks using actual frame bounds. Keep a native Loop toggle and loop-range field in the transport `.ui-toolbar`, outside timing disclosures. The app owns playback and In/Out; paused scrubbing uses the complete timeline and never clips to loop marks. Put each independent panel’s `.ui-toolbar` immediately before its scrolling body, retaining the same controls when switching or splitting panels. The catalogue demonstrates the exposed native loop control. The base CSS budget is unchanged.
 
 ### Section actions and preview inspection
 
@@ -1186,3 +1196,30 @@ Launcher tiles use `.ui-app-tile` with `.ui-app-symbol` and `.ui-label`. Shared 
 A fixed mobile launcher row can set `--ui-fill:4`, `--ui-grid-min:0px` and `--ui-grid-max:1fr` on `.ui-grid`; center and bound the grid with domain placement. Keep shared tile sizing and touch targets.
 
 Launcher layout regression: serve the repository and open `test/app-tiles.browser.html`. Run its checks to verify destination captions beneath symbols in both packs, both themes, every action appearance and narrow/desktop containers.
+
+
+### Compact response-curve values
+
+Use `createCurveValue(options)` in a property row for a cubic response curve. It accepts the same label, points, defaults, invert, axis labels, endpoint labels, onChange and onError as `createCurveControl`, plus the local sprite. Its native value button shows a small live curve preview; opening it reveals the existing full editor in a bounded `.ui-popout`. Exact handle fields are disclosed deliberately. Escape, outside dismissal, focus return, native keyboard handles and draft preservation use the shared popover/editor owners. `sync`, `open`, `close` and `dispose` retain those same nodes. The consumer owns accepted values, scalar mapping and History. The Effects control panel catalogue demonstrates it in both packs.
+
+
+Switchable rows in the compact control tree expose a native choices action when `onContextMenu` is supplied. Pointer, touch and keyboard users can open the same application-owned choices; right-click and Shift+F10 remain available. The action never selects a variation by itself, and rows without choices gain no action. Native child controls keep their normal editing keys.
+
+
+### Clear decisions, feedback and removable filters (1.21)
+
+Explicitly visible action labels wrap within narrow buttons instead of overflowing. Primary actions retain their visible caption by default when adopted, including narrow containers and icon appearance. An explicit `iconOnly:true` or `data-ui-label="hidden"` still requests a symbol. Property actions keep the action verb beside the glyph. Existing nodes, native submission and saved appearance remain intact.
+
+Use `.ui-info`, `.ui-success`, `.ui-warning` or `.ui-error` on `.ui-status` or `.ui-tag` for contextual, successful, attention-needed or failed states. Always include meaningful text: colour never replaces the state name. Do not use success to imply that a local override is wrong, or error to mean merely different. Foundations demonstrates this contract in both packs.
+
+Composed fields show one focus ring on the field shell. Explicit `aria-invalid="true"` or native `:user-invalid` marks that same outer border; describe the correction with associated text. Field values, native validation and keyboard behavior stay native.
+
+Pass `summary: host` to `createFilterMenu` with an authored `<div class="ui-actions ui-tags" data-ui-filter-summary aria-label="Active filters"></div>` outside the native details. Active criteria become labelled removable chips; removing one restores just that criterion's configured default. Other filters, disabled controls, drafts and menu state survive. `clear(name)` provides the same operation programmatically; `clear()` clears all enabled criteria. The native form `reset` event refreshes state after the browser restores defaults; a cancelled reset does nothing. Chips retain their nodes through refresh, focus moves to another chip or the filter summary on removal, and disposal removes only owned chips/listeners. The Collection filters catalogue demonstrates this pattern.
+
+Standard property rows bound their label column to 18 characters (or 35% in a narrow panel), reserve two action slots so values stay aligned, and leave the rest for the value. `--ui-property-actions-width` can declare a different shared action gutter. Set `--ui-property-label-width` to tune a domain's label width. This removes wide empty label gutters without compressing native value fields. Compact, leading-actions and trailing layouts retain their existing contracts.
+
+Static responses are cached with gzip level 9. The builder, Studio validator and local host measure/use the same compression; source and generated CSS remain bounded to 36 KiB raw / 8 KiB gzip.
+
+Coarse pointers reset composed-field padding with their 44px density. A comfortable desktop profile no longer leaves oversized internal padding when the same container is used on touch.
+
+Status messages use the reading font; numeric outputs and read-only values retain monospace. Repeatable action completion is announced in the existing polite live region while the action keeps its stable accessible name.

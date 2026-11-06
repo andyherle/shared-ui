@@ -12,7 +12,7 @@
    traces:Array.from({length:32},(_,index)=>({id:'cue-'+index,x:index*4,op:index%3?'STATE':'CUE',text:'Synthetic fixture record',fields:{enabled:true,iteration:index,weight:Number(Math.sin(index).toFixed(5)),source:'fixture'}})),
    provenance:['Synthetic deterministic demonstration. No private application data.','Both instances use the same component; selection, freeze, view and cursor are independent.']};
  }
- roots.forEach((root,index)=>{const panel=UI.createDebugPanel({title:'Debug',view:index?'program':'overwhelm',sprite:'./v1/icons.svg'});root.append(panel.element);panels.push(panel);panel.update(packet(index?24:96,index?'catalogue-b':'catalogue-a'));});
+ roots.forEach((root,index)=>{const tools=index?document.createElement('header'):null;if(tools)root.append(tools);const panel=UI.createDebugPanel({controlsHost:tools,title:'Debug',view:index?'program':'overwhelm',sprite:'./v1/icons.svg'});root.append(panel.element);panels.push(panel);panel.update(packet(index?24:96,index?'catalogue-b':'catalogue-a'));});
  document.getElementById('debug-advance')?.addEventListener('click',()=>{cursor=(cursor+8)%161;panels.forEach((panel,index)=>panel.update(packet(index?24:96,index?'catalogue-b':'catalogue-a')));});
  document.getElementById('debug-pack')?.addEventListener('change',event=>{document.documentElement.dataset.ui=event.target.value;panels.forEach(panel=>panel.refresh());});
  document.getElementById('debug-theme')?.addEventListener('change',event=>{document.documentElement.dataset.theme=event.target.value;panels.forEach(panel=>panel.refresh());});
